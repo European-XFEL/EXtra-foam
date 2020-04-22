@@ -107,21 +107,20 @@ class MultiCamViewWindow(_SpecialAnalysisBase):
             right_layout.addWidget(view, i // 2, i % 2)
         right_panel.setLayout(right_layout)
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes(
-            [self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw = self.centralWidget()
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
         """Override."""
-        for i, (ch, ppt) in enumerate(zip(self._ctrl_widget.output_channels,
-                                          self._ctrl_widget.properties)):
+        for i, (ch, ppt) in enumerate(zip(self._ctrl_widget_st.output_channels,
+                                          self._ctrl_widget_st.properties)):
             ch.value_changed_sgn.connect(
-                functools.partial(self._worker.onOutputChannelChanged, i))
+                functools.partial(self._worker_st.onOutputChannelChanged, i))
             ch.returnPressed.emit()
 
             ppt.value_changed_sgn.connect(
-                functools.partial(self._worker.onPropertyChanged, i))
+                functools.partial(self._worker_st.onPropertyChanged, i))
             ppt.returnPressed.emit()

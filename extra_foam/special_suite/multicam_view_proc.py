@@ -45,15 +45,15 @@ class MultiCamViewProcessor(QThreadWorker):
         """Override."""
         data, meta = data["raw"], data["meta"]
 
-        tid = self._get_tid(meta)
+        tid = self.getTrainId(meta)
 
         channels = {i: None for i in range(self._N_CAMERAS)}
         images = {i: None for i in range(self._N_CAMERAS)}
         for i, (ch, ppt) in enumerate(zip(self._output_channels,
                                           self._properties)):
             if ch and ppt:
-                images[i] = self._squeeze_camera_image(
-                    tid, self._get_property_data(data, ch, ppt))
+                images[i] = self.squeezeToImage(
+                    tid, self.getPropertyData(data, ch, ppt))
             else:
                 images[i] = None
             channels[i] = ch

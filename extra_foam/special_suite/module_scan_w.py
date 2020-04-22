@@ -91,10 +91,9 @@ class ModuleScanWindow(_SpecialAnalysisBase):
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._scan_plot)
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes(
-            [self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw = self.centralWidget()
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 

@@ -94,49 +94,49 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         cls._win = DummyWindow('DET')
 
     def testGeneral(self):
-        self.assertEqual('DET', self._win._ctrl_widget._topic)
+        self.assertEqual('DET', self._win._ctrl_widget_st.topic)
 
     def testPlotWidgets(self):
         win = self._win
 
-        self.assertEqual(2, len(win._plot_widgets))
-        self.assertIn(win._line, win._plot_widgets)
-        self.assertIn(win._view, win._plot_widgets)
-        self.assertEqual(1, len(win._image_views))
-        self.assertIn(win._view, win._image_views)
+        self.assertEqual(2, len(win._plot_widgets_st))
+        self.assertIn(win._line, win._plot_widgets_st)
+        self.assertIn(win._view, win._plot_widgets_st)
+        self.assertEqual(1, len(win._image_views_st))
+        self.assertIn(win._view, win._image_views_st)
 
         with patch.object(win._view, "updateImageWithAutoLevel") as update_image:
-            QTest.mouseClick(win._com_ctrl.auto_level_btn, Qt.LeftButton)
+            QTest.mouseClick(win._com_ctrl_st.auto_level_btn, Qt.LeftButton)
             update_image.assert_called_once()
 
         with patch.object(win._view, "updateF") as update_view:
             with patch.object(win._line, "updateF") as update_line:
-                win.updateWidgetsF()
+                win.updateWidgetsST()
                 # win._data is empty
                 update_line.assert_not_called()
                 update_view.assert_not_called()
-                # patch win._worker.get()
-                with patch.object(win._worker, "get"):
-                    win.updateWidgetsF()
+                # patch win._worker_st.get()
+                with patch.object(win._worker_st, "getOutputDataST"):
+                    win.updateWidgetsST()
                     update_line.assert_called_once()
                     update_view.assert_called_once()
 
     def testCommonStartStopReset(self):
         win = self._win
-        com_ctrl_widget = win._com_ctrl
-        ctrl_widget = win._ctrl_widget
-        client = win._client
+        com_ctrl_widget = win._com_ctrl_st
+        ctrl_widget = win._ctrl_widget_st
+        client = win._client_st
 
         self.assertFalse(com_ctrl_widget.stop_btn.isEnabled())
 
-        self.assertIsNone(client._endpoint)
-        with patch.object(win._client, "start") as client_start:
-            with patch.object(win._plot_timer, "start") as timer_start:
+        self.assertIsNone(client._endpoint_st)
+        with patch.object(win._client_st, "start") as client_start:
+            with patch.object(win._plot_timer_st, "start") as timer_start:
                 spy = QSignalSpy(win.started_sgn)
                 QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
 
                 self.assertEqual(f"tcp://{com_ctrl_widget._hostname_le.text()}:"
-                                 f"{com_ctrl_widget._port_le.text()}", client._endpoint)
+                                 f"{com_ctrl_widget._port_le.text()}", client._endpoint_st)
 
                 self.assertEqual(1, len(spy))
                 self.assertTrue(com_ctrl_widget.stop_btn.isEnabled())
@@ -148,8 +148,8 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 client_start.assert_called_once()
                 timer_start.assert_called_once()
 
-        with patch.object(win._client, "stop") as client_stop:
-            with patch.object(win._plot_timer, "stop") as timer_stop:
+        with patch.object(win._client_st, "terminateRunST") as client_stop:
+            with patch.object(win._plot_timer_st, "stop") as timer_stop:
                 spy = QSignalSpy(win.stopped_sgn)
                 QTest.mouseClick(com_ctrl_widget.stop_btn, Qt.LeftButton)
                 self.assertEqual(1, len(spy))
@@ -162,13 +162,11 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 client_stop.assert_called_once()
                 timer_stop.assert_called_once()
 
-        with patch.object(win._client, "reset") as client_reset:
-            with patch.object(win._worker, "reset") as worker_reset:
+        with patch.object(win._client_st, "onResetST") as client_reset:
+            with patch.object(win._worker_st, "onResetST") as worker_reset:
                 with patch.object(win._line, "reset") as line_reset:
                     with patch.object(win._view, "reset") as view_reset:
-                        spy = QSignalSpy(win.reset_sgn)
                         QTest.mouseClick(com_ctrl_widget.reset_btn, Qt.LeftButton)
-                        self.assertEqual(1, len(spy))
 
                         client_reset.assert_called_once()
                         worker_reset.assert_called_once()
@@ -177,16 +175,16 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
 
     def testCommonDarkOperation(self):
         win = self._win
-        widget = win._com_ctrl
-        worker = win._worker
+        widget = win._com_ctrl_st
+        worker = win._worker_st
 
         # recording dark
-        self.assertFalse(worker._recording_dark)  # default value
+        self.assertFalse(worker.recordingDark())  # default value
         QTest.mouseClick(widget.record_dark_btn, Qt.LeftButton)
-        self.assertTrue(worker._recording_dark)
+        self.assertTrue(worker.recordingDark())
         self.assertTrue(widget.record_dark_btn.isChecked())
         QTest.mouseClick(widget.record_dark_btn, Qt.LeftButton)
-        self.assertFalse(worker._recording_dark)
+        self.assertFalse(worker.recordingDark())
         self.assertFalse(widget.record_dark_btn.isChecked())
 
         # load dark run
@@ -208,9 +206,9 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         self.assertTrue(worker._dark_removed)
 
         # subtract dark
-        self.assertTrue(worker._subtract_dark)  # default value
+        self.assertTrue(worker.subtractDark())  # default value
         widget.dark_subtraction_cb.setChecked(False)
-        self.assertFalse(worker._subtract_dark)
+        self.assertFalse(worker.subtractDark())
 
     def testSqueezeCameraImage(self):
         a1d = np.ones((4, ))
@@ -219,7 +217,7 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         a3d_f = np.ones((3, 3, 2))
         a4d = np.ones((2, 2, 2, 2))
 
-        func = functools.partial(self._win._worker._squeeze_camera_image, 1234)
+        func = functools.partial(self._win._worker_st.squeezeToImage, 1234)
 
         assert func(None) is None
         assert func(a1d) is None

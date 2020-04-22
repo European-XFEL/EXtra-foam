@@ -132,7 +132,7 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
             self._energy_range = value
             self._bin2d = True
 
-    def onReset(self):
+    def reset(self):
         """Override."""
         self._reset = True
 
@@ -226,12 +226,12 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
 
         if not self._delay_device or not self._delay_ppt:
             return
-        delay = self._get_property_data(
+        delay = self.getPropertyData(
             raw, self._delay_device, self._delay_ppt)
 
         if not self._energy_device or not self._energy_ppt:
             return
-        energy = self._get_property_data(
+        energy = self.getPropertyData(
             raw, self._energy_device, self._energy_ppt)
 
         return roi1, roi2, roi3, sum1, sum2, sum3, delay, energy

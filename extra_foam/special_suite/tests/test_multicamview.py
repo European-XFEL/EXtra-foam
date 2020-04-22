@@ -35,20 +35,20 @@ class TestMultiCamView(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(4, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(4, counter[CameraView])
 
-        win.updateWidgetsF()
+        win.updateWidgetsST()
 
     def testCtrl(self):
 
         win = self._win
-        ctrl_widget = win._ctrl_widget
-        proc = win._worker
+        ctrl_widget = win._ctrl_widget_st
+        proc = win._worker_st
 
         # test default values
 

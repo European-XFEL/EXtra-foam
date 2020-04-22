@@ -36,16 +36,16 @@ class TestTrxasWindow(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(6, len(win._plot_widgets))
+        self.assertEqual(6, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(3, counter[TrxasRoiImageView])
         self.assertEqual(2, counter[TrxasAbsorptionPlot])
         self.assertEqual(1, counter[TrxasHeatmap])
 
-        win.updateWidgetsF()
+        win.updateWidgetsST()
 
     def testCtrl(self):
         from extra_foam.special_suite.trxas_w import (
@@ -55,8 +55,8 @@ class TestTrxasWindow(unittest.TestCase):
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
 
         win = self._win
-        ctrl_widget = win._ctrl_widget
-        proc = win._worker
+        ctrl_widget = win._ctrl_widget_st
+        proc = win._worker_st
 
         # test default values
         self.assertTupleEqual(default_bin_range, proc._delay_range)
@@ -128,7 +128,7 @@ class TestTrxasWindow(unittest.TestCase):
 
         # test reset button
         proc._reset = False
-        win.reset_sgn.emit()
+        win._onResetST()
         self.assertTrue(proc._reset)
 
     def testAbsorptionPlot(self):

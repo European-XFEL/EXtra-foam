@@ -102,23 +102,22 @@ class CamViewWindow(_SpecialAnalysisBase):
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._view)
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes(
-            [self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw = self.centralWidget()
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
         """Override."""
-        self._ctrl_widget.output_ch_le.value_changed_sgn.connect(
-            self._worker.onOutputChannelChanged)
-        self._ctrl_widget.output_ch_le.returnPressed.emit()
+        self._ctrl_widget_st.output_ch_le.value_changed_sgn.connect(
+            self._worker_st.onOutputChannelChanged)
+        self._ctrl_widget_st.output_ch_le.returnPressed.emit()
 
-        self._ctrl_widget.property_le.value_changed_sgn.connect(
-            self._worker.onPropertyChanged)
-        self._ctrl_widget.property_le.returnPressed.emit()
+        self._ctrl_widget_st.property_le.value_changed_sgn.connect(
+            self._worker_st.onPropertyChanged)
+        self._ctrl_widget_st.property_le.returnPressed.emit()
 
-        self._ctrl_widget.ma_window_le.value_changed_sgn.connect(
-            self._worker.onMaWindowChanged)
-        self._ctrl_widget.ma_window_le.returnPressed.emit()
+        self._ctrl_widget_st.ma_window_le.value_changed_sgn.connect(
+            self._worker_st.onMaWindowChanged)
+        self._ctrl_widget_st.ma_window_le.returnPressed.emit()
