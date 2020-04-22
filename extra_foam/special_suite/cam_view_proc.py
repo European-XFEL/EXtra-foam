@@ -78,19 +78,25 @@ class CamViewProcessor(QThreadWorker):
                 self.log.error(f"Unexpect exception when getting data array: "
                                f"{repr(e)}")
 
+    def sources(self):
+        """Override."""
+        return [
+            (self._output_channel, self._ppt),
+        ]
+
     @profiler("Camera view processor")
     def process(self, data):
         """Override."""
-        data, _ = data
+        data, meta = data["raw"], data["meta"]
 
-        data = data[self._output_channel]
-        tid = data['metadata']["timestamp.tid"]
+        tid = self._get_tid(meta)
 
-        img = data[self._ppt].astype(_IMAGE_DTYPE)
-
-        if img.ndim != 2:
-            raise ProcessingError(f"Image data must be a 2D array: "
-                                  f"actual {img.ndim}D")
+        if not self._output_channel or not self._ppt:
+            return
+        img = self._squeeze_camera_image(
+            tid, self._get_property_data(data, self._output_channel, self._ppt))
+        if img is None:
+            return
 
         if self._recording_dark:
             self._dark_ma = img

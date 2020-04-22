@@ -1,3 +1,3 @@
 from .metadata import Metadata, MetaProxy
 from .mondata import MonProxy
-from .data_source import DataTransformer, SourceCatalog, SourceItem
+from .data_source import SourceCatalog, SourceItem

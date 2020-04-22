@@ -19,6 +19,7 @@ from extra_foam.special_suite.gotthard_w import (
 from extra_foam.special_suite.special_analysis_base import (
     ProcessingError
 )
+from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 
@@ -118,7 +119,7 @@ class TestGotthard(unittest.TestCase):
         self.assertTrue(proc._hist_over_ma)
 
 
-class TestGotthardProcessor:
+class TestGotthardProcessor(_RawDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = GotthardProcessor(object(), object())
@@ -126,36 +127,21 @@ class TestGotthardProcessor:
         self._proc._output_channel = "gotthard:output"
         self._adc = np.random.randint(0, 100, size=(4, 4), dtype=np.uint16)
 
-    def _get_data(self, times=1):
+    def _get_data(self, tid, times=1):
         # data, meta
-        return (
-            {
-                self._proc._output_channel: {
-                    "metadata": {"timestamp.tid": 12345},
-                    GotthardProcessor._DATA_PROPERTY: self._adc * times,
-                    "data.3d": np.ones((4, 2, 2))
-                },
-            },
-            {}
-        )
+        return self._gen_data(tid, {
+            "gotthard:output": [
+                ("data.adc", times * self._adc),
+                ("data.3d", np.ones((4, 2, 2)))
+            ]})
 
     def testPreProcessing(self):
         proc = self._proc
-        data = self._get_data()
-
-        with pytest.raises(KeyError, match='false:output'):
-            with patch.object(GotthardProcessor, "_output_channel",
-                              new_callable=PropertyMock, create=True, return_value='false:output'):
-                proc.process(data)
-
-        with pytest.raises(ProcessingError, match="must contain property"):
-            with patch.object(GotthardProcessor, "_DATA_PROPERTY",
-                              new_callable=PropertyMock, return_value="false_ppt"):
-                proc.process(data)
+        data = self._get_data(12345)
 
         with pytest.raises(ProcessingError, match="actual 3D"):
-            with patch.object(GotthardProcessor, "_DATA_PROPERTY",
-                              new_callable=PropertyMock, return_value="data.3d"):
+            with patch.object(GotthardProcessor, "_ppt",
+                              new_callable=PropertyMock, create=True, return_value="data.3d"):
                 proc.process(data)
 
         with pytest.raises(ProcessingError, match="out of boundary"):
@@ -185,6 +171,7 @@ class TestGotthardProcessor:
             data_collection.get_array.return_value = DataArray(np.random.randn(4, 3))
             proc.onLoadDarkRun("run/path")
             error.assert_called_once()
+            assert "Data must be a 3D array" in error.call_args[0][0]
             error.reset_mock()
 
             # get_array returns a correct shape
@@ -192,6 +179,7 @@ class TestGotthardProcessor:
             with patch.object(proc.log, "info") as info:
                 proc.onLoadDarkRun("run/path")
                 info.assert_called_once()
+                assert "Found dark data with shape" in info.call_args[0][0]
                 error.assert_not_called()
 
     def testProcessingWhenRecordingDark(self):
@@ -208,7 +196,7 @@ class TestGotthardProcessor:
         adc_gt_avg = 1.5 * self._adc
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         np.testing.assert_array_almost_equal(adc_gt, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
@@ -219,7 +207,7 @@ class TestGotthardProcessor:
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
-        processed = proc.process(self._get_data(2))
+        processed = proc.process(self._get_data(12346, 2))
         np.testing.assert_array_almost_equal(adc_gt_avg, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
@@ -231,7 +219,7 @@ class TestGotthardProcessor:
 
         # 3nd train
         proc._hist_over_ma = True
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         np.testing.assert_array_almost_equal(adc_gt2, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), proc._dark_mean_ma)
         assert np.mean(adc_gt2) == processed["hist"][2]
@@ -258,7 +246,7 @@ class TestGotthardProcessor:
             adc_gt_avg -= offset
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         assert 1 == processed["poi_index"]
         np.testing.assert_array_almost_equal(adc_gt, processed["displayed"])
         np.testing.assert_array_almost_equal(adc_gt, processed["displayed_ma"])
@@ -268,7 +256,7 @@ class TestGotthardProcessor:
 
         # 2nd train
         proc._setMaWindow(3)
-        processed = proc.process(self._get_data(2))
+        processed = proc.process(self._get_data(12346, 2))
         assert 1 == processed["poi_index"]
         np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
         np.testing.assert_array_almost_equal(adc_gt_avg, processed["displayed_ma"])
@@ -278,7 +266,7 @@ class TestGotthardProcessor:
 
         # 3nd train
         proc._hist_over_ma = True
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         assert np.mean(adc_gt2) == processed["hist"][2]
 
     def testPulseSlicerChange(self):

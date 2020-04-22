@@ -225,7 +225,7 @@ class GotthardWindow(_SpecialAnalysisBase):
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._hist)
         right_panel.addWidget(self._heatmap)
-        right_panel.setSizes([0.4 * self._TOTAL_H, 0.6 * self._TOTAL_H])
+        right_panel.setSizes([self._TOTAL_H / 2, self._TOTAL_H / 2])
 
         self._cw.addWidget(self._left_panel)
         self._cw.addWidget(middle_panel)

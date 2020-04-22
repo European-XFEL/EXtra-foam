@@ -29,6 +29,7 @@ _MIN_INT32 = np.iinfo(np.int32).min
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge
+    UNKNOWN = 2  # not specified
 
 
 class PumpProbeMode(IntEnum):
@@ -221,8 +222,6 @@ class _Config(dict):
         "PIPELINE_SLOW_POLICY": PipelineSlowPolicy.DROP,
         # timeout of the zmq bridge, in second
         "BRIDGE_TIMEOUT": 0.1,
-        # maximum length of the cache used in data correlation by train ID
-        "CORRELATION_QUEUE_CACHE_SIZE": 20,
         # default extension port
         "EXTENSION_PORT": 5555,
         # -------------------------------------------------------------

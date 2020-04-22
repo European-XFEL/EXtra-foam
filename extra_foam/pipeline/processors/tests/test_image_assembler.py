@@ -109,7 +109,7 @@ class TestAgipdAssembler:
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                 }
             },
             'raw': {
@@ -141,7 +141,7 @@ class TestAgipdAssembler:
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -171,7 +171,7 @@ class TestAgipdAssembler:
                 'catalog': catalog,
                 'meta': {
                     src: {
-                        'tid': 10001,
+                        'train_id': 10001,
                         'source_type': DataSource.BRIDGE,
                     }
                 },
@@ -339,7 +339,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -372,7 +372,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
                 'catalog': catalog,
                 'meta': {
                     src: {
-                        'tid': 10001,
+                        'train_id': 10001,
                         'source_type': DataSource.BRIDGE,
                     }
                 },
@@ -411,7 +411,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -457,7 +457,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -525,7 +525,7 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -567,7 +567,7 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
                 'catalog': catalog,
                 'meta': {
                     src: {
-                        'tid': 10001,
+                        'train_id': 10001,
                         'source_type': DataSource.BRIDGE,
                     }
                 },
@@ -603,7 +603,7 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -630,7 +630,7 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -674,7 +674,7 @@ class TestJungfrauAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -702,7 +702,7 @@ class TestJungfrauAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -748,7 +748,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -823,7 +823,7 @@ class TestFastccdAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -851,7 +851,7 @@ class TestFastccdAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -899,7 +899,7 @@ class TestEPix100Assembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.FILE,
                 }
             },
@@ -927,7 +927,7 @@ class TestEPix100Assembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },
@@ -973,7 +973,7 @@ class TestBaslerCameraAssembler(unittest.TestCase):
             'catalog': catalog,
             'meta': {
                 src: {
-                    'tid': 10001,
+                    'train_id': 10001,
                     'source_type': DataSource.BRIDGE,
                 }
             },

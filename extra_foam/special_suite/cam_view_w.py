@@ -16,7 +16,7 @@ from .special_analysis_base import (
     create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-from ..gui.plot_widgets import ImageAnalysis, PlotWidgetF
+from ..gui.plot_widgets import ImageViewF, PlotWidgetF
 from ..gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
 )
@@ -43,6 +43,8 @@ class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.ma_window_le.setValidator(validator)
 
         self._non_reconfigurable_widgets = [
+            self.output_ch_le,
+            self.property_le,
         ]
 
         self.initUI()
@@ -65,7 +67,7 @@ class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
         pass
 
 
-class CameraView(ImageAnalysis):
+class CameraView(ImageViewF):
     """CameraView class.
 
     Visualize the camera image.

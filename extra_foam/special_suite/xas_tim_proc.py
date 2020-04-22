@@ -118,32 +118,39 @@ class XasTimProcessor(QThreadWorker):
     def onNoBinsChanged(self, value: str):
         self._n_bins = int(value)
 
+    def sources(self):
+        """Override."""
+        return [
+            (self._xgm_output_channel, self._xgm_ppt),
+            *[(self._digitizer_output_channel, ppt)
+              for ppt in self._digitizer_ppts],
+            (self._mono_device_id, self._mono_ppt)
+        ]
+
     @profiler("XAS-TIM Processor")
     def process(self, data):
         """Override."""
-        data, meta = data
+        data, meta = data["raw"], data["meta"]
 
         tid = self._get_tid(meta)
 
-        xgm_intensity = self._fetch_property_data(
-            tid, data, self._xgm_output_channel, self._xgm_ppt)
-        if xgm_intensity is None:
+        if not self._xgm_output_channel:
             return
+        xgm_intensity = self._get_property_data(
+            data, self._xgm_output_channel, self._xgm_ppt)
 
+        if not self._digitizer_output_channel:
+            return
         digitizer_apds = []
         for i, ppt in enumerate(self._digitizer_ppts):
-            apd = self._fetch_property_data(
-                tid, data, self._digitizer_output_channel, ppt)
+            apd = self._get_property_data(
+                data, self._digitizer_output_channel, ppt)
             digitizer_apds.append(apd)
-            if apd is None:
-                # It must contain all apd data. Otherwise, it will result
-                # in length mismatch between apd data and other data.
-                return
 
-        energy = self._fetch_property_data(
-            tid, data, self._mono_device_id, self._mono_ppt)
-        if energy is None:
+        if not self._mono_device_id:
             return
+        energy = self._get_property_data(
+            data, self._mono_device_id, self._mono_ppt)
 
         # check and slice XGM intensity
         pulse_slicer = slice(0, self._n_pulses_per_train)

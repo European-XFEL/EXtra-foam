@@ -32,10 +32,18 @@ class MultiCamViewProcessor(QThreadWorker):
     def onPropertyChanged(self, idx: int, value: str):
         self._properties[idx] = value
 
+    def sources(self):
+        """Override."""
+        srcs = []
+        for ch, ppt in zip(self._output_channels, self._properties):
+            if ch and ppt:
+                srcs.append((ch, ppt))
+        return srcs
+
     @profiler("Multi-camera views Processor")
     def process(self, data):
         """Override."""
-        data, meta = data
+        data, meta = data["raw"], data["meta"]
 
         tid = self._get_tid(meta)
 
@@ -43,9 +51,11 @@ class MultiCamViewProcessor(QThreadWorker):
         images = {i: None for i in range(self._N_CAMERAS)}
         for i, (ch, ppt) in enumerate(zip(self._output_channels,
                                           self._properties)):
-            img = self._fetch_property_data(tid, data, ch, ppt)
-
-            images[i] = self._squeeze_camera_image(tid, img)
+            if ch and ppt:
+                images[i] = self._squeeze_camera_image(
+                    tid, self._get_property_data(data, ch, ppt))
+            else:
+                images[i] = None
             channels[i] = ch
 
         self.log.info(f"Train {tid} processed")

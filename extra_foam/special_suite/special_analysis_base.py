@@ -29,10 +29,12 @@ from karabo_bridge import Client as KaraboBridgeClient
 
 from .. import __version__
 from ..config import config
+from ..database import SourceCatalog
 from ..gui.ctrl_widgets.smart_widgets import SmartLineEdit
 from ..gui.plot_widgets import ImageViewF
 from ..gui.misc_widgets import GuiLogger, set_button_color
 from ..pipeline.f_queue import SimpleQueue
+from ..pipeline.f_transformer import DataTransformer
 from ..logger import logger_suite as logger
 from ..pipeline.f_zmq import FoamZmqClient
 from ..pipeline.exceptions import ProcessingError
@@ -237,6 +239,12 @@ class QThreadWorker(QObject):
 
         self.log = _ThreadLogger()
 
+    def reset(self):
+        """Reset the internal state of process worker."""
+        self._input.clear()
+        self._output.clear()
+        self.onReset()
+
     def onReset(self):
         """Interface method."""
         pass
@@ -271,12 +279,10 @@ class QThreadWorker(QObject):
     def run(self):
         """Override."""
         self._running = True
-        self._input.clear()
-        self._output.clear()
+        self.reset()
         while self._running:
             try:
                 data = self._input.get_nowait()
-
                 try:
                     processed = self.process(data)
 
@@ -306,9 +312,29 @@ class QThreadWorker(QObject):
                 if not self._running:
                     break
 
+    def sources(self):
+        """Return a list of (device ID/output channel, property).
+
+        Interface method.
+
+        Child class should implement this method in order to receive data
+        from the bridge.
+        """
+        return []
+
     @abc.abstractmethod
     def process(self, data):
-        """Process data."""
+        """Process data.
+
+        :param dict data: Data received by ZMQ clients have four keys:
+            "raw", "processed", "meta", "catalog". data["processed"] is a
+             ProcessedData object if the client is a QThreadFoamClient
+             instance, and is None if the client is a QThreadKbClient
+             instance. It should be noted that the "raw" and "meta" data
+             here are different from the data received directly from a
+             Karabo bridge. For details, one can check DataTransformer
+             class.
+        """
         raise NotImplementedError
 
     def get(self):
@@ -325,37 +351,20 @@ class QThreadWorker(QObject):
         :param dict meta: meta data.
         """
         try:
-            return next(iter(meta.values()))["timestamp.tid"]
+            return next(iter(meta.values()))["train_id"]
         except (StopIteration, KeyError) as e:
             raise ProcessingError(f"Train ID not found in meta data: {str(e)}")
 
-    def _fetch_property_data(self, tid, data, src, ppt):
-        """Fetch property data from raw data.
+    def _get_property_data(self, data, name, ppt):
+        """Convenience method to get property data from raw data.
 
-        :param int tid: train ID.
         :param dict data: data.
-        :param str src: device ID / output channel.
+        :param str name: device ID / output channel.
         :param str ppt: property.
 
         :returns (value, error str)
         """
-        if not src or not ppt:
-            # not activated is not an error
-            return
-
-        if src not in data:
-            self.log.error(f"[{tid}] Source '{src}' not found!")
-            return
-
-        try:
-            return data[src][ppt]
-        except KeyError:
-            try:
-                # slow data saved in file
-                return data[src][f"{ppt}.value"]
-            except KeyError:
-                self.log.error(
-                    f"[{tid}] Property '{ppt}'not found in source '{src}'!")
+        return data[f"{name} {ppt}"]
 
     def _squeeze_camera_image(self, tid, arr):
         """Return a 2D image data.
@@ -393,27 +402,80 @@ class QThreadWorker(QObject):
 
 
 class _BaseQThreadClient(QThread):
-    def __init__(self, queue, condition, *args, **kwargs):
+    def __init__(self, queue, condition, catalog, *args, **kwargs):
+        """Initialization.
+
+        :param queue:
+        :param Condition condition:
+        :param SourceCatalog catalog:
+        """
         super().__init__(*args, **kwargs)
 
         self._output = queue
         self._cv = condition
+        self._catalog = catalog
+        self._transformer = DataTransformer(catalog)
 
         self._endpoint = None
 
         self.log = _ThreadLogger()
 
+    @abc.abstractmethod
     def run(self):
         """Override."""
+        raise NotImplementedError
+
+    def get(self):
+        return self._cache.get_nowait()
+
+    def stop(self):
+        self.requestInterruption()
+
+    def reset(self):
+        """Reset the internal state of the client."""
+        self._transformer.reset()
         self._output.clear()
+
+    def updateParams(self, params):
+        self._endpoint = params["endpoint"]
+        ctl = self._catalog
+
+        ctl.clear()
+        for name, ppt in params["sources"]:
+            ctl.add_item(None, name, None, ppt, None, None)
+
+
+class QThreadFoamClient(_BaseQThreadClient):
+    _client_instance_type = FoamZmqClient
+
+    def run(self):
+        """Override."""
+        self.reset()
 
         with self._client_instance_type(
                 self._endpoint, timeout=config["BRIDGE_TIMEOUT"]) as client:
+
             self.log.info(f"Connected to {self._endpoint}")
+
             while not self.isInterruptionRequested():
                 try:
                     data = client.next()
                 except TimeoutError:
+                    continue
+
+                if data["processed"] is None:
+                    self.log.error("Processed data not found! Please check "
+                                   "the ZMQ connection!")
+                    continue
+
+                # check whether all the requested sources are in the data
+                not_found = False
+                for src in self._catalog:
+                    if src not in data["catalog"]:
+                        self.log.error(f"{src} not found in the data!")
+                        not_found = True
+                        break
+                if not_found:
                     continue
 
                 # keep the latest processed data in the output
@@ -423,22 +485,41 @@ class _BaseQThreadClient(QThread):
 
         self.log.info(f"Disconnected with {self._endpoint}")
 
-    def get(self):
-        return self._cache.get_nowait()
-
-    def stop(self):
-        self.requestInterruption()
-
-    def updateParams(self, params):
-        self._endpoint = params["endpoint"]
-
-
-class QThreadFoamClient(_BaseQThreadClient):
-    _client_instance_type = FoamZmqClient
-
 
 class QThreadKbClient(_BaseQThreadClient):
     _client_instance_type = KaraboBridgeClient
+
+    def run(self):
+        """Override."""
+        self.reset()
+
+        correlated = None
+        with self._client_instance_type(
+                self._endpoint, timeout=config["BRIDGE_TIMEOUT"]) as client:
+            self.log.info(f"Connected to {self._endpoint}")
+            while not self.isInterruptionRequested():
+
+                try:
+                    data = client.next()
+                except TimeoutError:
+                    continue
+
+                try:
+                    correlated, dropped = self._transformer.correlate(data)
+                except RuntimeError as e:
+                    self.log.error(str(e))
+
+                for tid in dropped:
+                    self.log.error(f"Unable to correlate all data sources "
+                                   f"for train {tid}")
+
+                if correlated is not None:
+                    # keep the latest processed data in the output
+                    self._output.put_pop(correlated)
+                    with self._cv:
+                        self._cv.notify()
+
+        self.log.info(f"Disconnected with {self._endpoint}")
 
 
 def create_special(ctrl_klass, worker_klass, client_klass):
@@ -475,10 +556,11 @@ class _SpecialAnalysisBase(QMainWindow):
 
         self._com_ctrl = _SharedCtrlWidgetS(**kwargs)
 
+        cv = Condition()
+        catalog = SourceCatalog()
         queue = SimpleQueue(maxsize=1)
-        self._cv = Condition()
-        self._client = self._client_instance_type(queue, self._cv)
-        self._worker = self._worker_instance_type(queue, self._cv)
+        self._client = self._client_instance_type(queue, cv, catalog)
+        self._worker = self._worker_instance_type(queue, cv)
         self._worker_thread = QThread()
         self._ctrl_widget = self._ctrl_instance_type(topic)
 
@@ -557,6 +639,7 @@ class _SpecialAnalysisBase(QMainWindow):
     def _onStart(self):
         self._client.updateParams({
             "endpoint": self._com_ctrl.endpoint(),
+            "sources": self._worker.sources()
         })
 
         self._com_ctrl.onStart()
@@ -581,7 +664,8 @@ class _SpecialAnalysisBase(QMainWindow):
     def _onReset(self):
         for widget in self._plot_widgets:
             widget.reset()
-        self._worker.onReset()
+        self._worker.reset()
+        self._client.reset()
 
         self.reset_sgn.emit()
 

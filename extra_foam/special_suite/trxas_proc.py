@@ -133,7 +133,15 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
             self._bin2d = True
 
     def onReset(self):
+        """Override."""
         self._reset = True
+
+    def sources(self):
+        """Override."""
+        return [
+            (self._energy_device, self._energy_ppt),
+            (self._delay_device, self._delay_ppt)
+        ]
 
     @profiler("tr-XAS Processor")
     def process(self, data):
@@ -216,15 +224,15 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
 
         # fetch energy and delay
 
-        delay_src = f"{self._delay_device} {self._delay_ppt}"
-        delay, err = self._fetch_property_data(tid, raw, delay_src)
-        if err:
-            raise ProcessingError(err)
+        if not self._delay_device or not self._delay_ppt:
+            return
+        delay = self._get_property_data(
+            raw, self._delay_device, self._delay_ppt)
 
-        energy_src = f"{self._energy_device} {self._energy_ppt}"
-        energy, err = self._fetch_property_data(tid, raw, energy_src)
-        if err:
-            raise ProcessingError(err)
+        if not self._energy_device or not self._energy_ppt:
+            return
+        energy = self._get_property_data(
+            raw, self._energy_device, self._energy_ppt)
 
         return roi1, roi2, roi3, sum1, sum2, sum3, delay, energy
 
