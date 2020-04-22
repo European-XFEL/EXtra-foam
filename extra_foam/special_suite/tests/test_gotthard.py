@@ -224,6 +224,10 @@ class TestGotthardProcessor(_RawDataMixin):
         np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), proc._dark_mean_ma)
         assert np.mean(adc_gt2) == processed["hist"][2]
 
+        # reset
+        proc.reset()
+        assert proc._dark_ma is None
+
     @pytest.mark.parametrize("subtract_dark", [(True, ), (False,)])
     def testProcessing(self, subtract_dark):
         from extra_foam.special_suite.gotthard_proc import _PIXEL_DTYPE
@@ -255,7 +259,7 @@ class TestGotthardProcessor(_RawDataMixin):
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
-        proc._setMaWindow(3)
+        proc.__class__._raw_ma.window = 3
         processed = proc.process(self._get_data(12346, 2))
         assert 1 == processed["poi_index"]
         np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
@@ -268,6 +272,10 @@ class TestGotthardProcessor(_RawDataMixin):
         proc._hist_over_ma = True
         processed = proc.process(self._get_data(12347, 3))
         assert np.mean(adc_gt2) == processed["hist"][2]
+
+        # reset
+        proc.reset()
+        assert proc._raw_ma is None
 
     def testPulseSlicerChange(self):
         proc = self._proc

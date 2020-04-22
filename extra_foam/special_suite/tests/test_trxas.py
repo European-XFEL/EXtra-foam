@@ -126,11 +126,6 @@ class TestTrxasWindow(unittest.TestCase):
         QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual(999, proc._n_delay_bins)
 
-        # test reset button
-        proc._reset = False
-        win._onResetST()
-        self.assertTrue(proc._reset)
-
     def testAbsorptionPlot(self):
         from extra_foam.special_suite.trxas_w import TrxasAbsorptionPlot
 
@@ -146,8 +141,6 @@ class TestTrXasProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = TrxasProcessor(object(), object())
-        yield
-        self._proc._clear_history()
 
     def test1dBinning(self):
         proc = self._proc
@@ -237,3 +230,11 @@ class TestTrXasProcessor(_TestDataMixin):
                                              processed["delay_bin_centers"])
         np.testing.assert_array_almost_equal([-.5, .5],
                                              processed["energy_bin_centers"])
+
+        # test reset
+        proc.reset()
+        assert len(proc._delays) == 0
+        assert len(proc._energies) == 0
+        assert len(proc._a13) == 0
+        assert len(proc._a23) == 0
+        assert len(proc._a21) == 0

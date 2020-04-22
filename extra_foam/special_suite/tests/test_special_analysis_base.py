@@ -126,11 +126,12 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         com_ctrl_widget = win._com_ctrl_st
         ctrl_widget = win._ctrl_widget_st
         client = win._client_st
+        worker = win._worker_st
 
         self.assertFalse(com_ctrl_widget.stop_btn.isEnabled())
 
         self.assertIsNone(client._endpoint_st)
-        with patch.object(win._client_st, "start") as client_start:
+        with patch.object(client, "start") as client_start:
             with patch.object(win._plot_timer_st, "start") as timer_start:
                 spy = QSignalSpy(win.started_sgn)
                 QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
@@ -148,7 +149,7 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 client_start.assert_called_once()
                 timer_start.assert_called_once()
 
-        with patch.object(win._client_st, "terminateRunST") as client_stop:
+        with patch.object(client, "terminateRunST") as client_stop:
             with patch.object(win._plot_timer_st, "stop") as timer_stop:
                 spy = QSignalSpy(win.stopped_sgn)
                 QTest.mouseClick(com_ctrl_widget.stop_btn, Qt.LeftButton)
@@ -162,8 +163,8 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 client_stop.assert_called_once()
                 timer_stop.assert_called_once()
 
-        with patch.object(win._client_st, "onResetST") as client_reset:
-            with patch.object(win._worker_st, "onResetST") as worker_reset:
+        with patch.object(client, "onResetST") as client_reset:
+            with patch.object(worker, "onResetST") as worker_reset:
                 with patch.object(win._line, "reset") as line_reset:
                     with patch.object(win._view, "reset") as view_reset:
                         QTest.mouseClick(com_ctrl_widget.reset_btn, Qt.LeftButton)
@@ -172,6 +173,39 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                         worker_reset.assert_called_once()
                         line_reset.assert_called_once()
                         view_reset.assert_called_once()
+
+        with patch.object(worker._input_st, "clear") as input_clear:
+            with patch.object(worker._output_st, "clear") as output_clear:
+                worker._reset_st = False
+                worker.onResetST()
+                input_clear.assert_called_once()
+                output_clear.assert_called_once()
+                worker._reset_st = True
+
+        with patch.object(client._transformer_st, "reset") as transformer_reset:
+            with patch.object(client._output_st, "clear") as output_clear:
+                client.onResetST()
+                transformer_reset.assert_called_once()
+                output_clear.assert_called_once()
+
+    def testProcessFlow(self):
+        worker = self._win._worker_st
+        data = object()
+        with patch.object(worker, "preprocess") as mocked_preprocess:
+            with patch.object(worker, "process") as mocked_process:
+                with patch.object(worker, "postprocess") as mocked_postprocess:
+                    with patch.object(worker, "reset") as mocked_reset:
+                        worker._reset_st = False
+                        worker._processImpST(data)
+                        mocked_preprocess.assert_called_once()
+                        mocked_process.assert_called_once_with(data)
+                        mocked_postprocess.assert_called_once()
+                        mocked_reset.assert_not_called()
+
+                        worker._reset_st = True
+                        worker._processImpST(data)
+                        mocked_reset.assert_called_once()
+                        self.assertFalse(worker._reset_st)
 
     def testCommonDarkOperation(self):
         win = self._win

@@ -159,3 +159,11 @@ class TestXasTimProcessor(_RawDataMixin):
 
         ret = proc.process(data)
         assert ret is not None
+
+        # test reset
+        proc.reset()
+        assert len(proc._i0) == 0
+        for i1 in proc._i1:
+            assert len(i1) == 0
+        assert len(proc._energy) == 0
+        assert len(proc._energy_scan) == 0

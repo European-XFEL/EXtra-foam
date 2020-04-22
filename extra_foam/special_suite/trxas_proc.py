@@ -94,8 +94,6 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
         self._bin1d = True
         self._bin2d = True
 
-        self._reset = False
-
     def onDelayDeviceChanged(self, value: str):
         self._delay_device = value
 
@@ -132,10 +130,6 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
             self._energy_range = value
             self._bin2d = True
 
-    def reset(self):
-        """Override."""
-        self._reset = True
-
     def sources(self):
         """Override."""
         return [
@@ -147,10 +141,6 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
     def process(self, data):
         """Override."""
         processed = data["processed"]
-
-        if self._reset:
-            self._clear_history()
-            self._reset = False
 
         if self._bin1d:
             self._new_1d_binning()
@@ -196,7 +186,6 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
         }
 
     def _get_data_point(self, processed, raw):
-        tid = processed.tid
         roi = processed.roi
         masked = processed.image.masked_mean
 
@@ -296,7 +285,8 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
                 (a21 - self._a21_heat[iloc_y, iloc_x]) / \
                 self._a21_heatcount[iloc_y, iloc_x]
 
-    def _clear_history(self):
+    def reset(self):
+        """Override."""
         self._delays.reset()
         self._energies.reset()
         self._a13.reset()

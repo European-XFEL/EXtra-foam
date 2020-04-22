@@ -259,13 +259,15 @@ class QThreadWorker(QObject):
         self._recording_dark_st = False
         self._subtract_dark_st = True
 
+        self._reset_st = True
+
         self.log = _ThreadLogger()
 
     def onResetST(self):
         """Reset the internal state of process worker."""
         self._input_st.clear()
         self._output_st.clear()
-        self.reset()
+        self._reset_st = True
 
     def onRecordDarkToggledST(self, state: bool):
         self._recording_dark_st = state
@@ -290,6 +292,17 @@ class QThreadWorker(QObject):
         """Get data from the output queue."""
         return self._output_st.get_nowait()
 
+    def _processImpST(self, data):
+        """Process data."""
+        if self._reset_st:
+            self.reset()
+            self._reset_st = False
+
+        self.preprocess()
+        processed = self.process(data)
+        self.postprocess()
+        return processed
+
     def runForeverST(self):
         """Run processing in an infinite loop unless interrupted."""
         self._running_st = True
@@ -298,7 +311,7 @@ class QThreadWorker(QObject):
             try:
                 data = self._input_st.get_nowait()
                 try:
-                    processed = self.process(data)
+                    processed = self._processImpST(data)
 
                 except ProcessingError as e:
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -356,7 +369,8 @@ class QThreadWorker(QObject):
         """Interface method.
 
         Concrete child class should re-implement this method to reset
-        any internal state when the 'Reset' button is clicked.
+        any internal state when the 'Reset' button is clicked. This method
+        will be called once before the next call to 'preprocess'.
         """
         pass
 
@@ -369,6 +383,14 @@ class QThreadWorker(QObject):
         receive data from the bridge, transform and correlate them.
         """
         return []
+
+    def preprocess(self):
+        """Preprocess before processing data."""
+        pass
+
+    def postprocess(self):
+        """Postprocess after processing data."""
+        pass
 
     @abc.abstractmethod
     def process(self, data):

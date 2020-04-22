@@ -15,9 +15,6 @@ from extra_foam.special_suite.cam_view_proc import CamViewProcessor
 from extra_foam.special_suite.cam_view_w import (
     CamViewWindow, CameraView
 )
-from extra_foam.special_suite.special_analysis_base import (
-    ProcessingError
-)
 from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
@@ -100,7 +97,7 @@ class TestCamViewProcessor(_RawDataMixin):
                 ("data.3d", np.ones((4, 2, 2)))
         ]})
 
-    def testPreProcessing(self):
+    def testPreprocessImageData(self):
         proc = self._proc
         data = self._get_data(12345)
 
@@ -165,6 +162,10 @@ class TestCamViewProcessor(_RawDataMixin):
         np.testing.assert_array_almost_equal(imgdata_gt2, proc._dark_ma)
         np.testing.assert_array_almost_equal(imgdata_gt2, processed["displayed"])
 
+        # reset
+        proc.reset()
+        assert proc._dark_ma is None
+
     @pytest.mark.parametrize("subtract_dark", [(True, ), (False,)])
     def testProcessing(self, subtract_dark):
         from extra_foam.special_suite.cam_view_proc import _IMAGE_DTYPE
@@ -190,10 +191,14 @@ class TestCamViewProcessor(_RawDataMixin):
         np.testing.assert_array_almost_equal(imgdata_gt, processed["displayed"])
 
         # 2nd train
-        proc._setMaWindow(3)
+        proc.__class__._raw_ma.window = 3
         processed = proc.process(self._get_data(12346, 2))
         np.testing.assert_array_almost_equal(imgdata_gt_avg, processed["displayed"])
 
         # 3nd train
         processed = proc.process(self._get_data(12347, 3))
         np.testing.assert_array_almost_equal(imgdata_gt2, processed["displayed"])
+
+        # reset
+        proc.reset()
+        assert proc._raw_ma is None
