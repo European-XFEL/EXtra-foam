@@ -11,7 +11,6 @@ from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
 )
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
-from extra_foam.config import config
 from extra_foam.logger import logger
 
 app = mkQApp()

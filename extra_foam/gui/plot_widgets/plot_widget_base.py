@@ -42,11 +42,6 @@ class PlotWidgetF(pg.GraphicsView):
                  background='default', show_indicator=False, **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
-        try:
-            parent.registerPlotWidget(self)
-        except AttributeError:
-            # if parent is None or parent has no such a method
-            pass
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
@@ -79,6 +74,9 @@ class PlotWidgetF(pg.GraphicsView):
         self._vb2 = None  # ViewBox for y2 axis
 
         self._plot_item.sigRangeChanged.connect(self.viewRangeChanged)
+
+        if parent is not None and hasattr(parent, 'registerPlotWidget'):
+            parent.registerPlotWidget(self)
 
     def clear(self):
         """Remove all the items in the PlotItem object."""

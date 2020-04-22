@@ -59,11 +59,6 @@ class ImageViewF(QWidget):
         :param bool hide_axis: True for hiding left and bottom axes.
         """
         super().__init__(parent=parent)
-        try:
-            parent.registerPlotWidget(self)
-        except AttributeError:
-            # if parent is None or parent has no such a method
-            pass
 
         self._mediator = Mediator()
 
@@ -108,6 +103,9 @@ class ImageViewF(QWidget):
         self.initUI()
 
         self._mediator.reset_image_level_sgn.connect(self._onAutoLevel)
+
+        if parent is not None and hasattr(parent, 'registerPlotWidget'):
+            parent.registerPlotWidget(self)
 
     def initUI(self):
         layout = QHBoxLayout()
