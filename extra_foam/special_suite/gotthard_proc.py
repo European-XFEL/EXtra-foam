@@ -58,19 +58,16 @@ class GotthardProcessor(QThreadWorker):
         self._n_bins = 10
         self._hist_over_ma = False
 
-        self._setMaWindow(1)
+        self.__class__._raw_ma.window = 1
 
         del self._dark_ma
         self._dark_mean_ma = None
-
-    def _setMaWindow(self, v):
-        self.__class__._raw_ma.window = v
 
     def onOutputChannelChanged(self, ch: str):
         self._output_channel = ch
 
     def onMaWindowChanged(self, value: str):
-        self._setMaWindow(int(value))
+        self.__class__._raw_ma.window = int(value)
 
     def onBinRangeChanged(self, value: tuple):
         self._bin_range = value
@@ -194,3 +191,8 @@ class GotthardProcessor(QThreadWorker):
                 displayed_ma if self._hist_over_ma else displayed,
                 self._bin_range, self._n_bins),
         }
+
+    def reset(self):
+        """Override."""
+        del self._raw_ma
+        del self._dark_ma

@@ -9,7 +9,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .special_analysis_base import ProcessingError, QThreadWorker
+from .special_analysis_base import QThreadWorker
 from ..pipeline.data_model import MovingAverageArray
 from ..utils import profiler
 from ..config import config, _MAX_INT32
@@ -39,12 +39,9 @@ class CamViewProcessor(QThreadWorker):
         self._output_channel = ''
         self._ppt = ''
 
-        self._setMaWindow(1)
+        self.__class__._raw_ma.window = 1
 
         del self._dark_ma
-
-    def _setMaWindow(self, v):
-        self.__class__._raw_ma.window = v
 
     def onOutputChannelChanged(self, value: str):
         self._output_channel = value
@@ -53,7 +50,7 @@ class CamViewProcessor(QThreadWorker):
         self._ppt = value
 
     def onMaWindowChanged(self, value: str):
-        self._setMaWindow(int(value))
+        self.__class__._raw_ma.window = int(value)
 
     def onRemoveDark(self):
         """Override."""
@@ -113,3 +110,8 @@ class CamViewProcessor(QThreadWorker):
         return {
             "displayed": displayed,
         }
+
+    def reset(self):
+        """Override."""
+        del self._raw_ma
+        del self._dark_ma
