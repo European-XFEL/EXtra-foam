@@ -74,7 +74,7 @@ class CameraView(ImageViewF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(has_roi=True, parent=parent)
 
     def updateF(self, data):
         """Override."""

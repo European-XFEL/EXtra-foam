@@ -38,15 +38,14 @@ class ImageViewF(QWidget):
             display the image.
 
     """
-    ROI_X0 = 50
-    ROI_Y0 = 50
-    ROI_SIZE0 = (100, 100)
 
     def __init__(self, *,
                  level_mode='mono',
                  has_roi=False,
                  hide_axis=True,
                  color_map=None,
+                 roi_position=(0, 0),
+                 roi_size=(100, 100),
                  parent=None):
         """Initialization.
 
@@ -57,6 +56,9 @@ class ImageViewF(QWidget):
         :param bool has_roi: True for adding 4 ROIs on top of the other
             PlotItems.
         :param bool hide_axis: True for hiding left and bottom axes.
+        :param tuple roi_position: Initial upper-left corner position (x, y)
+            of the first ROI.
+        :param tuple roi_size: Initial size (w, h) of all ROIs.
         """
         super().__init__(parent=parent)
 
@@ -66,7 +68,7 @@ class ImageViewF(QWidget):
 
         self._rois = []
         if has_roi:
-            self._initializeROIs()
+            self._initializeROIs(roi_position, roi_size)
 
         self._plot_widget = PlotWidgetF()
 
@@ -126,11 +128,11 @@ class ImageViewF(QWidget):
         """
         pass
 
-    def _initializeROIs(self):
-        for i, color in enumerate(config["GUI_ROI_COLORS"], 1):
-            roi = RectROI(i,
-                          pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
-                          size=self.ROI_SIZE0,
+    def _initializeROIs(self, pos, size):
+        for i, color in enumerate(config["GUI_ROI_COLORS"], 0):
+            roi = RectROI(i + 1,
+                          pos=(pos[0] + 10*i, pos[1] + 10*i),
+                          size=size,
                           pen=FColor.mkPen(color, width=2, style=Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)

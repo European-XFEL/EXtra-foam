@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QWidget
 
 from extra_foam.logger import logger_suite as logger
 from extra_foam.gui import mkQApp
-from extra_foam.gui.plot_widgets import ImageAnalysis, PlotWidgetF
+from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 from extra_foam.special_suite.special_analysis_base import (
     _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase, create_special,
     QThreadKbClient, QThreadFoamClient, QThreadWorker
@@ -49,9 +49,17 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 """Override."""
                 self._dark_removed = True
 
-        class DummyImageView(ImageAnalysis):
+        class DummyImageView(ImageViewF):
             def __init__(self, *, parent=None):
                 super().__init__(parent=parent)
+
+            def updateF(self, data):
+                """Override."""
+                pass
+
+        class DummyImageViewWithRoi(ImageViewF):
+            def __init__(self, *, parent=None):
+                super().__init__(has_roi=True, parent=parent)
 
             def updateF(self, data):
                 """Override."""
@@ -76,6 +84,7 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
 
                 self._line = DummyPlotWidget(parent=self)
                 self._view = DummyImageView(parent=self)
+                self._view_with_roi = DummyImageViewWithRoi(parent=self)
 
                 self.initUI()
                 self.initConnections()
@@ -99,11 +108,12 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
     def testPlotWidgets(self):
         win = self._win
 
-        self.assertEqual(2, len(win._plot_widgets_st))
+        self.assertEqual(3, len(win._plot_widgets_st))
         self.assertIn(win._line, win._plot_widgets_st)
         self.assertIn(win._view, win._plot_widgets_st)
-        self.assertEqual(1, len(win._image_views_st))
+        self.assertEqual(2, len(win._image_views_st))
         self.assertIn(win._view, win._image_views_st)
+        self.assertIn(win._view_with_roi, win._image_views_st)
 
         with patch.object(win._view, "updateImageWithAutoLevel") as update_image:
             QTest.mouseClick(win._com_ctrl_st.auto_level_btn, Qt.LeftButton)
@@ -244,6 +254,9 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         widget.dark_subtraction_cb.setChecked(False)
         self.assertFalse(worker.subtractDark())
 
+    def testRoiCtrl(self):
+        pass
+
     def testSqueezeCameraImage(self):
         a1d = np.ones((4, ))
         a2d = np.ones((2, 2))
@@ -265,3 +278,40 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         np.testing.assert_array_equal(a3d.squeeze(axis=-1), ret_3d)
         assert np.float32 == ret_3d.dtype
         assert func(a3d_f) is None
+
+    def testGetRoiData(self):
+        worker = self._win._worker_st
+
+        # test 2D array
+        img = np.ones((4, 6))
+
+        # test ROI geometry not specified
+        worker._roi_geom_st = None
+        roi = worker.getRoiData(img)
+        assert img is roi
+        roi = worker.getRoiData(img, copy=True)
+        assert img is not roi
+        np.testing.assert_array_equal(img, roi)
+
+        # test with intersection
+        worker._roi_geom_st = (1, 2, 2, 3)
+        roi = worker.getRoiData(img)
+        np.testing.assert_array_equal(img[2:5, 1:3], roi)
+
+        # test without intersection
+        worker._roi_geom_st = (-5, -6, 2, 3)
+        roi = worker.getRoiData(img)
+        np.testing.assert_array_equal(np.empty((0, 0)), roi)
+
+        # test 3D array
+        img = np.ones((3, 4, 6))
+
+        # test with intersection
+        worker._roi_geom_st = (1, 2, 2, 3)
+        roi = worker.getRoiData(img)
+        np.testing.assert_array_equal(img[:, 2:5, 1:3], roi)
+
+        # test without intersection
+        worker._roi_geom_st = (-5, -6, 2, 3)
+        roi = worker.getRoiData(img)
+        np.testing.assert_array_equal(np.empty((3, 0, 0)), roi)
