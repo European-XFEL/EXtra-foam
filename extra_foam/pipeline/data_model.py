@@ -254,7 +254,7 @@ class RectRoiGeom(_RoiGeomBase):
     def rect(self, data, copy=False):
         """Overload."""
         x, y, w, h = self._x, self._y, self._w, self._h
-        if x < 0 or y < 0 or w < 0 or h < 0:
+        if w <= 0 or h <= 0:
             return None
         return np.array(data[..., y:y + h, x:x + w], copy=copy)
 

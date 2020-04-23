@@ -188,7 +188,8 @@ class GotthardProcessor(QThreadWorker):
             "mean_ma": mean_ma,
             # (hist, bin_centers, mean, median, std)
             "hist": hist_with_stats(
-                displayed_ma if self._hist_over_ma else displayed,
+                self.getRoiData(displayed_ma) if self._hist_over_ma else
+                self.getRoiData(displayed),
                 self._bin_range, self._n_bins),
         }
 

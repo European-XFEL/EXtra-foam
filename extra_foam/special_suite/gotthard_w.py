@@ -158,7 +158,7 @@ class GotthardImageView(ImageViewF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(has_roi=True, roi_size=(100, 10), parent=parent)
 
         self.setAspectLocked(False)
 

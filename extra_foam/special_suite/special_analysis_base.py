@@ -21,7 +21,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QFileDialog, QFrame, QGridLayout, QLabel, QMainWindow,
-    QPushButton, QSplitter, QWidget
+    QPushButton, QSizePolicy, QSplitter, QWidget
 )
 
 from extra_data import RunDirectory
@@ -38,6 +38,9 @@ from ..pipeline.f_transformer import DataTransformer
 from ..logger import logger_suite as logger
 from ..pipeline.f_zmq import FoamZmqClient
 from ..pipeline.exceptions import ProcessingError
+from extra_foam.algorithms import intersection
+
+from extra_foam.gui.ctrl_widgets.roi_ctrl_widget import _SingleRoiCtrlWidget
 
 
 _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
@@ -49,6 +52,8 @@ class _SharedCtrlWidgetS(QFrame):
     It provides connection setup, start/stop/reset control, dark recording/
     subtraction control as well as other common GUI controls.
     """
+    # forward signal with the same name in _SingleRoiCtrlWidget
+    roi_geometry_change_sgn = pyqtSignal(object)
 
     def __init__(self, parent=None, *, with_dark=True, with_levels=True):
         """Initialization.
@@ -83,6 +88,8 @@ class _SharedCtrlWidgetS(QFrame):
         self.dark_subtraction_cb.setChecked(True)
 
         self.auto_level_btn = QPushButton("Auto level")
+
+        self.roi_ctrl = None
 
         self.initUI()
 
@@ -120,6 +127,26 @@ class _SharedCtrlWidgetS(QFrame):
 
         self.setLayout(layout)
 
+    def addRoiCtrl(self, roi):
+        """Add the ROI ctrl widget.
+
+        :param RectROI roi: Roi item.
+        """
+        if self.roi_ctrl is not None:
+            raise RuntimeError("Only one ImageView with ROI ctrl is allowed!")
+
+        roi.setLocked(False)
+
+        self.roi_ctrl = _SingleRoiCtrlWidget(
+            roi, mediator=self, with_lock=False)
+        self.roi_ctrl.setLabel("ROI")
+        self.roi_ctrl.roi_geometry_change_sgn.connect(
+            self.onRoiGeometryChange)
+        self.roi_ctrl.notifyRoiParams()
+        layout = self.layout()
+        self.roi_ctrl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        layout.addWidget(self.roi_ctrl, layout.rowCount(), 0, 1, 4)
+
     def endpoint(self):
         return f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
 
@@ -139,6 +166,9 @@ class _SharedCtrlWidgetS(QFrame):
         self._hostname_le.setEnabled(True)
         self._port_le.setEnabled(True)
         self.load_dark_run_btn.setEnabled(True)
+
+    def onRoiGeometryChange(self, object):
+        self.roi_geometry_change_sgn.emit(object)
 
 
 class _BaseAnalysisCtrlWidgetS(QFrame):
@@ -245,6 +275,7 @@ class QThreadWorker(QObject):
     Attributes:
         _recording_dark_st (bool): True for recording dark.
         _subtract_dark_st (bool): True for applying dark subtraction.
+        _roi_geom_st (tuple): (x, y, w, h) for ROI.
     """
 
     def __init__(self, queue, condition, *args, **kwargs):
@@ -260,6 +291,8 @@ class QThreadWorker(QObject):
         self._subtract_dark_st = True
 
         self._reset_st = True
+
+        self._roi_geom_st = None
 
         self.log = _ThreadLogger()
 
@@ -287,6 +320,15 @@ class QThreadWorker(QObject):
             return run
         except Exception as e:
             self.log.error(repr(e))
+
+    def onRoiGeometryChange(self, value: tuple):
+        """EXtra-foam interface method."""
+        idx, activated, locked, x, y, w, h = value
+        if activated:
+            self._roi_geom_st = (x, y, w, h)
+        else:
+            # distinguish None from no intersection
+            self._roi_geom_st = None
 
     def getOutputDataST(self):
         """Get data from the output queue."""
@@ -459,6 +501,27 @@ class QThreadWorker(QObject):
             img = img.astype(_IMAGE_DTYPE)
 
         return img
+
+    def getRoiData(self, img, copy=False):
+        """Get the ROI(s) of an image or arrays of images.
+
+        :param numpy.ndarray img: image data. Shape = (..., y, x)
+        :param bool copy: True for copying the ROI data.
+        """
+        if self._roi_geom_st is None:
+            roi = img
+        else:
+            img_shape = img.shape[-2:]
+            x, y, w, h = intersection(self._roi_geom_st,
+                                      (0, 0, img_shape[1], img_shape[0]))
+
+            if w <= 0 or h <= 0:
+                w, h = 0, 0
+            roi = img[..., y:y+h, x:x+w]
+
+        if copy:
+            return roi.copy()
+        return roi
 
     ###################################################################
     # Interface end
@@ -676,6 +739,10 @@ class _SpecialAnalysisBase(QMainWindow):
         self._com_ctrl_st.auto_level_btn.clicked.connect(
             self._onAutoLevelST)
 
+        # ROI ctrl
+        self._com_ctrl_st.roi_geometry_change_sgn.connect(
+            self._worker_st.onRoiGeometryChange)
+
     ###################################################################
     # Interface start
     ###################################################################
@@ -782,6 +849,8 @@ class _SpecialAnalysisBase(QMainWindow):
         self._plot_widgets_st[instance] = 1
         if isinstance(instance, ImageViewF):
             self._image_views_st[instance] = 1
+            if instance.rois:
+                self._com_ctrl_st.addRoiCtrl(instance.rois[0])
 
     def unregisterPlotWidget(self, instance):
         """EXtra-foam interface method."""
