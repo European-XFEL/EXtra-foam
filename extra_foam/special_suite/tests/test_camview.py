@@ -11,11 +11,12 @@ from PyQt5.QtTest import QSignalSpy, QTest
 
 from extra_foam.logger import logger_suite as logger
 from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
 from extra_foam.special_suite.cam_view_proc import CamViewProcessor
 from extra_foam.special_suite.cam_view_w import (
-    CamViewWindow, CameraView
+    CamViewWindow, CameraView, CameraViewRoiHist
 )
-from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 
@@ -36,18 +37,20 @@ class TestCamView(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(1, len(win._plot_widgets_st))
+        self.assertEqual(2, len(win._plot_widgets_st))
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[CameraView])
+        self.assertEqual(1, counter[CameraViewRoiHist])
 
         win.updateWidgetsST()
 
     def testCtrl(self):
         from extra_foam.special_suite.cam_view_w import (
-            _DEFAULT_OUTPUT_CHANNEL, _DEFAULT_PROPERTY
+            _DEFAULT_OUTPUT_CHANNEL, _DEFAULT_PROPERTY, _DEFAULT_N_BINS,
+            _DEFAULT_BIN_RANGE
         )
 
         win = self._win
@@ -58,6 +61,9 @@ class TestCamView(unittest.TestCase):
         self.assertEqual(_DEFAULT_OUTPUT_CHANNEL, proc._output_channel)
         self.assertEqual(_DEFAULT_PROPERTY, proc._ppt)
         self.assertEqual(1, proc.__class__._raw_ma.window)
+        self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
+                              proc._bin_range)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
 
         # test set new values
         widget = ctrl_widget.output_ch_le
@@ -77,6 +83,22 @@ class TestCamView(unittest.TestCase):
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual(9, proc.__class__._raw_ma.window)
+
+        widget = ctrl_widget.bin_range_le
+        widget.clear()
+        QTest.keyClicks(widget, "-1.0, 1.0")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertTupleEqual((-1.0, 1.0), proc._bin_range)
+
+        widget = ctrl_widget.n_bins_le
+        widget.clear()
+        QTest.keyClicks(widget, "1000")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(100, proc._n_bins)  # maximum is 999 and one can not put the 3rd 0 in
+        widget.clear()
+        QTest.keyClicks(widget, "999")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(999, proc._n_bins)
 
 
 class TestCamViewProcessor(_RawDataMixin):

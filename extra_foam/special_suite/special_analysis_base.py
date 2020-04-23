@@ -27,21 +27,18 @@ from PyQt5.QtWidgets import (
 from extra_data import RunDirectory
 from karabo_bridge import Client as KaraboBridgeClient
 
-from .. import __version__
-from ..config import config
-from ..database import SourceCatalog
-from ..gui.ctrl_widgets.smart_widgets import SmartLineEdit
-from ..gui.plot_widgets import ImageViewF
-from ..gui.misc_widgets import GuiLogger, set_button_color
-from ..pipeline.f_queue import SimpleQueue
-from ..pipeline.f_transformer import DataTransformer
-from ..logger import logger_suite as logger
-from ..pipeline.f_zmq import FoamZmqClient
-from ..pipeline.exceptions import ProcessingError
+from extra_foam import __version__
 from extra_foam.algorithms import intersection
-
-from extra_foam.gui.ctrl_widgets.roi_ctrl_widget import _SingleRoiCtrlWidget
-
+from extra_foam.config import config
+from extra_foam.database import SourceCatalog
+from extra_foam.gui.ctrl_widgets import _SingleRoiCtrlWidget, SmartLineEdit
+from extra_foam.gui.plot_widgets import ImageViewF
+from extra_foam.gui.misc_widgets import GuiLogger, set_button_color
+from extra_foam.logger import logger_suite as logger
+from extra_foam.pipeline.f_queue import SimpleQueue
+from extra_foam.pipeline.f_transformer import DataTransformer
+from extra_foam.pipeline.f_zmq import FoamZmqClient
+from extra_foam.pipeline.exceptions import ProcessingError
 
 _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
@@ -406,6 +403,14 @@ class QThreadWorker(QObject):
     def onRemoveDark(self):
         """Remove the recorded dark data."""
         raise NotImplementedError
+
+    def str2range(self, s, *, handler=float):
+        """Concert a string to a tuple with lower and upper boundary.
+
+        For example: str2range("-inf, inf") = (-math.inf, math.inf)
+        """
+        splitted = s.split(",")
+        return handler(splitted[0]), handler(splitted[1])
 
     def reset(self):
         """Interface method.

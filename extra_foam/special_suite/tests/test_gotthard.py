@@ -55,8 +55,6 @@ class TestGotthard(unittest.TestCase):
     def testCtrl(self):
         from extra_foam.special_suite.gotthard_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
 
-        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
-
         win = self._win
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
@@ -66,7 +64,8 @@ class TestGotthard(unittest.TestCase):
         self.assertEqual(slice(None, None), proc._pulse_slicer)
         self.assertEqual(0, proc._poi_index)
         self.assertEqual(1, proc.__class__._raw_ma.window)
-        self.assertTupleEqual(default_bin_range, proc._bin_range)
+        self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
+                              proc._bin_range)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
         self.assertFalse(proc._hist_over_ma)
 

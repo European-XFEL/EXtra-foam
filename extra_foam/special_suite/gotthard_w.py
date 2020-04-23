@@ -13,23 +13,23 @@ from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QCheckBox, QGridLayout, QSplitter
 
-from .gotthard_proc import GotthardProcessor
-from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
-    _SpecialAnalysisBase
-)
-from ..gui.plot_widgets import (
+from extra_foam.gui.plot_widgets import (
     HistMixin, ImageViewF, PlotWidgetF
 )
-from ..gui.misc_widgets import FColor
-from ..gui.ctrl_widgets.smart_widgets import (
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit,
     SmartStringLineEdit
 )
 
+from .gotthard_proc import (
+    GotthardProcessor, _DEFAULT_BIN_RANGE, _DEFAULT_N_BINS
+)
+from .special_analysis_base import (
+    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    _SpecialAnalysisBase
+)
 
-_DEFAULT_N_BINS = "10"
-_DEFAULT_BIN_RANGE = "-inf, inf"
 _MAX_N_BINS = 999
 _MAX_N_PULSES = 120
 
@@ -57,7 +57,7 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.poi_index_le.setValidator(QIntValidator(1, _MAX_N_PULSES))
 
         self.bin_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
-        self.n_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
+        self.n_bins_le = SmartLineEdit(str(_DEFAULT_N_BINS))
         self.n_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
         self.hist_over_ma_cb = QCheckBox("Histogram over M.A. train")
 

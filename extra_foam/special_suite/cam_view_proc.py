@@ -9,11 +9,15 @@ All rights reserved.
 """
 import numpy as np
 
-from .special_analysis_base import QThreadWorker
-from ..pipeline.data_model import MovingAverageArray
-from ..utils import profiler
-from ..config import config, _MAX_INT32
+from extra_foam.algorithms import hist_with_stats
+from extra_foam.pipeline.data_model import MovingAverageArray
+from extra_foam.utils import profiler
+from extra_foam.config import config, _MAX_INT32
 
+from .special_analysis_base import QThreadWorker
+
+_DEFAULT_N_BINS = 10
+_DEFAULT_BIN_RANGE = "-inf, inf"
 
 _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
@@ -28,6 +32,8 @@ class CamViewProcessor(QThreadWorker):
             Shape=(y, x)
         _dark_ma (numpy.ndarray): moving average of the dark data.
             Shape=(pulses, pixels)
+        _bin_range (tuple): range of the ROI histogram.
+        _n_bins (int): number of bins of the ROI histogram.
     """
 
     _raw_ma = MovingAverageArray()
@@ -40,6 +46,9 @@ class CamViewProcessor(QThreadWorker):
         self._ppt = ''
 
         self.__class__._raw_ma.window = 1
+
+        self._bin_range = self.str2range(_DEFAULT_BIN_RANGE)
+        self._n_bins = _DEFAULT_N_BINS
 
         del self._dark_ma
 
@@ -55,6 +64,12 @@ class CamViewProcessor(QThreadWorker):
     def onRemoveDark(self):
         """Override."""
         del self._dark_ma
+
+    def onBinRangeChanged(self, value: tuple):
+        self._bin_range = value
+
+    def onNoBinsChanged(self, value: str):
+        self._n_bins = int(value)
 
     def onLoadDarkRun(self, dirpath):
         """Override."""
@@ -109,6 +124,8 @@ class CamViewProcessor(QThreadWorker):
 
         return {
             "displayed": displayed,
+            "roi_hist": hist_with_stats(self.getRoiData(displayed),
+                                        self._bin_range, self._n_bins),
         }
 
     def reset(self):
