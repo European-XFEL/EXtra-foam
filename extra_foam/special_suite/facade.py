@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
 from .cam_view_w import CamViewWindow
 from .multicam_view_w import MultiCamViewWindow
 from .gotthard_w import GotthardWindow
+from .gotthard_pump_probe_w import GotthardPumpProbeWindow
 from .trxas_w import TrxasWindow
 from .xas_tim_w import XasTimWindow
 from .module_scan_w import ModuleScanWindow
@@ -42,9 +43,9 @@ class SpecialSuiteController:
 
 class _SpecialSuiteFacadeBase(QMainWindow):
     """Base class for special analysis suite."""
-    _ICON_WIDTH = 140
-    _ROW_HEIGHT = 200
-    _WIDTH = 640
+    _ICON_WIDTH = 160
+    _ROW_HEIGHT = 220
+    _WIDTH = 720
 
     open_analysis_sgn = pyqtSignal(object, str)
 
@@ -102,6 +103,7 @@ class SpbSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("SPB")
 
         self.addSpecial("Gotthard.png", GotthardWindow)
+        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()
@@ -124,6 +126,7 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
 
         self.addSpecial("xas_tim.png", XasTimWindow)
         self.addSpecial("tr_xas.png", TrxasWindow)
+        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
         self.addSpecial("Gotthard.png", GotthardWindow)
         self.addCommonSpecials()
 
@@ -136,6 +139,7 @@ class MidSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("MID")
 
         self.addSpecial("Gotthard.png", GotthardWindow)
+        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()

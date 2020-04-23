@@ -13,35 +13,12 @@ from .histogram_ctrl_widget import HistogramCtrlWidget
 from .filter_ctrl_widget import FomFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .extension_ctrl_widget import ExtensionCtrlWidget
-from .smart_widgets import SmartLineEdit, SmartStringLineEdit
+from .smart_widgets import (
+    SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit,
+    SmartStringLineEdit
+)
 from .roi_ctrl_widget import _SingleRoiCtrlWidget, RoiCtrlWidget
 from .roi_fom_ctrl_widget import RoiFomCtrlWidget
 from .roi_hist_ctrl_widget import RoiHistCtrlWidget
 from .roi_norm_ctrl_widget import RoiNormCtrlWidget
 from .roi_proj_ctrl_widget import RoiProjCtrlWidget
-
-
-# add control widgets
-__all__ = [
-    "_AbstractCtrlWidget",
-    "AzimuthalIntegCtrlWidget",
-    "AnalysisCtrlWidget",
-    "BinCtrlWidget",
-    "CalibrationCtrlWidget",
-    "CorrelationCtrlWidget",
-    "RefImageCtrlWidget",
-    "DataSourceWidget",
-    "GeometryCtrlWidget",
-    "ImageCtrlWidget",
-    "ExtensionCtrlWidget",
-    "FomFilterCtrlWidget",
-    "PumpProbeCtrlWidget",
-    "RoiCtrlWidget",
-    "RoiFomCtrlWidget",
-    "RoiHistCtrlWidget",
-    "RoiNormCtrlWidget",
-    "RoiProjCtrlWidget",
-    "SmartLineEdit",
-    "SmartStringLineEdit",
-    "HistogramCtrlWidget",
-]
