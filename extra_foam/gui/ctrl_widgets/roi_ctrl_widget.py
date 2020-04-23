@@ -33,12 +33,19 @@ class _SingleRoiCtrlWidget(QWidget):
     _pos_validator = QIntValidator(-10000, 10000)
     _size_validator = QIntValidator(1, 10000)
 
-    def __init__(self, roi: RectROI, *, parent=None):
+    def __init__(self, roi: RectROI, *, with_lock=True, parent=None):
         super().__init__(parent=parent)
 
         self._roi = roi
 
-        self._activate_cb = QCheckBox("On")
+        idx = self._roi.index
+        self._activate_cb = QCheckBox(f"ROI{idx}")
+        palette = self._activate_cb.palette()
+        palette.setColor(palette.WindowText,
+                         FColor.mkColor(config['GUI_ROI_COLORS'][idx-1]))
+        self._activate_cb.setPalette(palette)
+
+        self._with_lock = with_lock
         self._lock_cb = QCheckBox("Lock")
 
         self._width_le = SmartLineEdit()
@@ -60,17 +67,10 @@ class _SingleRoiCtrlWidget(QWidget):
 
     def initUI(self):
         layout = QHBoxLayout()
-        idx = self._roi.index
-
-        label = QLabel(f"ROI{idx}: ")
-        palette = label.palette()
-        palette.setColor(palette.WindowText,
-                         FColor.mkColor(config['GUI_ROI_COLORS'][idx-1]))
-        label.setPalette(palette)
-        layout.addWidget(label)
 
         layout.addWidget(self._activate_cb)
-        layout.addWidget(self._lock_cb)
+        if self._with_lock:
+            layout.addWidget(self._lock_cb)
         layout.addWidget(QLabel("w: "))
         layout.addWidget(self._width_le)
         layout.addWidget(QLabel("h: "))
@@ -96,6 +96,9 @@ class _SingleRoiCtrlWidget(QWidget):
         self._activate_cb.stateChanged.connect(self.onToggleRoiActivation)
         self._activate_cb.stateChanged.emit(self._activate_cb.checkState())
         self._lock_cb.stateChanged.connect(self.onLock)
+
+    def setLabel(self, text):
+        self._activate_cb.setText(text)
 
     @pyqtSlot(int)
     def onToggleRoiActivation(self, state):
