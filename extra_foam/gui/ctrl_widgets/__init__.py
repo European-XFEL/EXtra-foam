@@ -14,7 +14,7 @@ from .filter_ctrl_widget import FomFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .extension_ctrl_widget import ExtensionCtrlWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
-from .roi_ctrl_widget import RoiCtrlWidget
+from .roi_ctrl_widget import _SingleRoiCtrlWidget, RoiCtrlWidget
 from .roi_fom_ctrl_widget import RoiFomCtrlWidget
 from .roi_hist_ctrl_widget import RoiHistCtrlWidget
 from .roi_norm_ctrl_widget import RoiNormCtrlWidget

@@ -7,16 +7,17 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import math
-
 import numpy as np
 
-from .special_analysis_base import ProcessingError, QThreadWorker
-from ..algorithms import hist_with_stats
-from ..pipeline.data_model import MovingAverageArray
-from ..utils import profiler
-from ..config import _MAX_INT32
+from extra_foam.algorithms import hist_with_stats
+from extra_foam.pipeline.data_model import MovingAverageArray
+from extra_foam.utils import profiler
+from extra_foam.config import _MAX_INT32
 
+from .special_analysis_base import ProcessingError, QThreadWorker
+
+_DEFAULT_N_BINS = 10
+_DEFAULT_BIN_RANGE = "-inf, inf"
 
 _PIXEL_DTYPE = np.float32
 
@@ -54,8 +55,8 @@ class GotthardProcessor(QThreadWorker):
         self._pulse_slicer = slice(None, None)
         self._poi_index = 0
 
-        self._bin_range = (-math.inf, math.inf)
-        self._n_bins = 10
+        self._bin_range = self.str2range(_DEFAULT_BIN_RANGE)
+        self._n_bins = _DEFAULT_N_BINS
         self._hist_over_ma = False
 
         self.__class__._raw_ma.window = 1
