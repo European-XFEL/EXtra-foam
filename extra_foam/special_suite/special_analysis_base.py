@@ -818,7 +818,13 @@ class _SpecialAnalysisBase(QMainWindow):
             return
 
         for widget in self._plot_widgets_st:
-            widget.updateF(self._data_st)
+            try:
+                widget.updateF(self._data_st)
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logger.debug(repr(traceback.format_tb(exc_traceback))
+                             + repr(e))
+                logger.error(f"[Update plots] {repr(e)}")
 
     @pyqtSlot()
     def _onAutoLevelST(self):
