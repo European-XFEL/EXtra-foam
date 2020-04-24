@@ -97,6 +97,17 @@ class _SpecialSuiteFacadeBase(QMainWindow):
         self.addSpecial("multi_cam_view.png", MultiCamViewWindow)
 
 
+class SpbSpecialSuiteFacade(_SpecialSuiteFacadeBase):
+    def __init__(self):
+        super().__init__("SPB")
+
+        self.addSpecial("Gotthard.png", GotthardWindow)
+        self.addCommonSpecials()
+
+        self.initUI()
+        self.show()
+
+
 class FxeSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("FXE")
@@ -143,6 +154,9 @@ class DetSpecialSuiteFacade(_SpecialSuiteFacadeBase):
 
 
 def create_special_suite(topic):
+    if topic == "SPB":
+        return SpbSpecialSuiteFacade()
+
     if topic == "FXE":
         return FxeSpecialSuiteFacade()
 
