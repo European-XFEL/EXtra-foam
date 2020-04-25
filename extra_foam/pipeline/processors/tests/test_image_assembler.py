@@ -740,6 +740,43 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         catalog.add_item(SourceItem('JungFrauPR', src_name, [], key_name, None, None))
         return src, catalog
 
+    def testAssembleFileCal(self):
+        # 16 is the number of memory cells
+        self._runAssembleFileTest((16, 512, 1024), _IMAGE_DTYPE)
+
+    def testAssembleFileRaw(self):
+        self._runAssembleFileTest((16, 512, 1024), _RAW_IMAGE_DTYPE)
+
+    def _runAssembleFileTest(self, shape, dtype):
+        key_name = 'data.adc'
+        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data['raw'][src] = np.ones((16, 100, 100))
+            self._assembler.process(data)
+
+        data['raw'][src] = np.ones((16, 512, 1024))
+        self._assembler.process(data)
+        assembled = data['assembled']['data']
+        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
+        assert _IMAGE_DTYPE == assembled.dtype
+
     def testAssembleBridge(self):
         key_name = 'data.adc'
         src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:display', key_name)
@@ -763,28 +800,21 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (1, 512, 1024))
 
-        # test multi-frame (16 here), single module JungFrau received
-        # in the old array shape.
+        # test single-module JungFrau
         data['raw'][src] = np.ones((512, 1024, 16))
-
-        temp = self._assembler._get_modules_bridge(data['raw'], src)
-        self.assertTupleEqual(temp.shape, (16, 1, 512, 1024))
 
         self._assembler.process(data)
         assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
-        # test multi-frame (16 here), two-modules JungFrau in new array shape
+        # test two-module JungFrau
         data['raw'][src] = np.ones((2, 512, 1024, 16))
-
-        temp = self._assembler._get_modules_bridge(data['raw'], src)
-        self.assertTupleEqual(temp.shape, (16, 2, 512, 1024))
 
         self._assembler.process(data)
         assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 1024, 1024))
 
-        # test multi-frame, three-modules JungFrau
+        # test multi-frame, three-module JungFrau
         with self.assertRaisesRegex(AssemblingError, 'Expected 1 or 2 module'):
             data['raw'][src] = np.ones((3, 512, 1024, 16))
             self._assembler.process(data)
@@ -792,9 +822,6 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data['raw'][src] = np.ones((100, 100, 1))
             self._assembler.process(data)
-
-    def testAssembleFile(self):
-        pass
 
 
 class TestFastccdAssembler(unittest.TestCase):

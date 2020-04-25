@@ -9,6 +9,25 @@ SOURCE:
                 SPB_DET_AGIPD1M-1/DET/*CH0:xtdf:
                     - image.data
 
+        JungFrauPR:
+            PIPELINE:
+                SPB_IRDA_JNGFR/DET/MODULE_1:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_2:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_3:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_4:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_5:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_6:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_7:daqOutput:
+                    - data.adc
+                SPB_IRDA_JNGFR/DET/MODULE_8:daqOutput:
+                    - data.adc
+
 DETECTOR:
     AGIPD:
         # AGIPD uses the CFEL geometry format

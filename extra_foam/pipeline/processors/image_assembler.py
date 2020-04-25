@@ -170,8 +170,12 @@ class ImageAssemblerFactory(ABC):
             # temporary workaround for Pulse resolved JungFrau without geometry
             if config["DETECTOR"] == "JungFrauPR":
                 shape = modules.shape
+
                 # Stacking modules vertically along y axis.
-                return modules.reshape(shape[0], -1, shape[-1])
+                reshaped = modules.reshape(shape[0], -1, shape[-1])
+                if reshaped.dtype == image_dtype:
+                    return reshaped
+                return reshaped.astype(image_dtype)
 
             # For train-resolved detector, assembled is a reference
             # to the array data received from the pyzmq. This array data
@@ -204,34 +208,29 @@ class ImageAssemblerFactory(ABC):
 
             shape = modules_data.shape
             ndim = len(shape)
-            try:
-                n_modules = config["NUMBER_OF_MODULES"]
-                module_shape = config["MODULE_SHAPE"]
+            n_modules = config["NUMBER_OF_MODULES"]
+            module_shape = config["MODULE_SHAPE"]
 
-                # check module shape
-                # (BaslerCamera has module shape (-1, -1))
-                if module_shape[0] > 0 and shape[-2:] != module_shape:
-                    raise ValueError(f"Expected module shape {module_shape}, "
-                                     f"but get {shape[-2:]} instead!")
+            # check module shape (BaslerCamera has module shape (-1, -1))
+            if module_shape[0] > 0 and shape[-2:] != module_shape:
+                raise AssemblingError(f"Expected module shape {module_shape}, "
+                                      f"but get {shape[-2:]} instead!")
 
-                # check number of modules
-                if ndim >= 3 and shape[-3] != n_modules:
-                    n_modules_actual = shape[-3]
-                    if config["DETECTOR"] != "JungFrauPR":
-                        # allow single module operation
-                        if n_modules_actual != 1:
-                            raise ValueError(f"Expected {n_modules} modules, but get "
-                                             f"{n_modules_actual} instead!")
-                    elif n_modules_actual > 2:
-                        raise ValueError(f"Expected 1 or 2 modules, but get "
-                                         f"{n_modules_actual} instead!")
+            # check number of modules
+            if ndim >= 3 and shape[-3] != n_modules:
+                n_modules_actual = shape[-3]
+                if config["DETECTOR"] != "JungFrauPR":
+                    # allow single module operation
+                    if n_modules_actual != 1:
+                        raise AssemblingError(f"Expected {n_modules} modules, but get "
+                                              f"{n_modules_actual} instead!")
+                elif n_modules_actual > 2:
+                    raise AssemblingError(f"Expected 1 or 2 modules, but get "
+                                          f"{n_modules_actual} instead!")
 
-                # check number of memory cells
-                if ndim == 4 and not shape[0]:
-                    raise ValueError("Number of memory cells is zero!")
-
-            except ValueError as e:
-                raise AssemblingError(e)
+            # check number of memory cells
+            if ndim == 4 and not shape[0]:
+                raise AssemblingError("Number of memory cells is zero!")
 
             data['assembled'] = {
                 'data': self._assemble(modules_data),
@@ -390,15 +389,21 @@ class ImageAssemblerFactory(ABC):
 
             Calibrated data only.
 
-            - calibrated, "data.adc", TODO
+            Single module:
+            - calibrated, "data.adc", (y, x, memory cells)
             - raw, "data.adc", TODO
+
+            Stacked module:
+            - calibrated, "data.adc", (modules, y, x, memory cells)
+            - raw, "data.adc", TODO
+
             -> (memory cells, modules, y, x)
             """
             modules_data = data[src]
             shape = modules_data.shape
             ndim = len(shape)
             if ndim == 3:
-                # (y, x, memory cells) -> (memory cells, 1 module, y, x)
+                # (y, x, memory cells) -> (memory cells, 1, y, x)
                 return np.moveaxis(modules_data, -1, 0)[:, np.newaxis, ...]
             # (modules, y, x, memory cells) -> (memory cells, modules, y, x)
             return np.moveaxis(modules_data, -1, 0)
@@ -406,17 +411,22 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src):
             """Override.
 
+            Single module:
+            - calibrated, "data.adc", (modules, y, x)
+            Note: no extra axis like AGIPD, LPD, etc.
+            - raw, "data.adc", (modules, y, x)
+
             -> (memory cells, modules, y, x)
             """
-            # modules_data = data[src_name]["data.adc"]
-            # shape = modules_data.shape
-            # ndim = len(shape)
-            # if ndim == 3:
-            #     # (pusles, y, x) -> (pulses, 1 module, y, x)
-            #     return modules_data[:, np.newaxis, :]
-            # # (pulses, modules, y, x,) -> (pulses, modules, y, x)
-            # return modules_data
-            raise NotImplementedError
+            modules_data = data[src]
+            shape = modules_data.shape
+            ndim = len(shape)
+            if ndim == 3:
+                # single module
+                # (memory cells, y, x) -> (memory cells, 1, y, x)
+                return modules_data[:, np.newaxis, :]
+            # (memory cells, modules, y, x,)
+            return modules_data
 
     class EPix100ImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):
