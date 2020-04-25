@@ -84,13 +84,13 @@ class TestGotthard(unittest.TestCase):
 
         widget = ctrl_widget.poi_index_le
         widget.clear()
-        QTest.keyClicks(widget, "121")
-        QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0, proc._poi_index)  # maximum is 120 and one can still type "121"
-        widget.clear()
         QTest.keyClicks(widget, "120")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(120, proc._poi_index)
+        self.assertEqual(0, proc._poi_index)  # maximum is 119 and one can still type "120"
+        widget.clear()
+        QTest.keyClicks(widget, "119")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(119, proc._poi_index)
 
         widget = ctrl_widget.ma_window_le
         widget.clear()
@@ -199,10 +199,10 @@ class TestGotthardProcessor(_RawDataMixin):
         np.testing.assert_array_almost_equal(adc_gt, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
@@ -210,10 +210,10 @@ class TestGotthardProcessor(_RawDataMixin):
         np.testing.assert_array_almost_equal(adc_gt_avg, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt_avg, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt2, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt_avg, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt2) == processed["hist"][2]
 
         # 3nd train
@@ -251,20 +251,20 @@ class TestGotthardProcessor(_RawDataMixin):
         # 1st train
         processed = proc.process(self._get_data(12345))
         assert 1 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
         proc.__class__._raw_ma.window = 3
         processed = proc.process(self._get_data(12346, 2))
         assert 1 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt_avg, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt2, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt_avg, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt2) == processed["hist"][2]
 
         # 3nd train

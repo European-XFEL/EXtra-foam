@@ -15,16 +15,18 @@ class TestFacade(unittest.TestCase):
         window_isntance_types = []
         for i in range(n_analysis):
             if n_analysis == 2:
-                window_isntance_types.append(type(f"DummyWindow{i}", (), {"_title": "title"}))
+                window_isntance_types.append(
+                    type(f"DummyWindow{i}", (), {"icon": "Gotthard.png", "_title": "title"}))
             else:
-                window_isntance_types.append(type(f"DummyWindow{i}", (), {"_title": str(i)}))
+                window_isntance_types.append(
+                    type(f"DummyWindow{i}", (), {"icon": "Gotthard.png", "_title": str(i)}))
 
         class SampleFacade(_SpecialSuiteFacadeBase):
             def __init__(self):
                 super().__init__("DET")
 
                 for i in range(n_analysis):
-                    self.addSpecial("Gotthard.png", window_isntance_types[i])
+                    self.addSpecial(window_isntance_types[i])
 
                 self.initUI()
 

@@ -85,6 +85,7 @@ class CameraView(ImageViewF):
 class MultiCamViewWindow(_SpecialAnalysisBase):
     """Main GUI for multi-camera view."""
 
+    icon = "multi_cam_view.png"
     _title = "Multi-camera view"
     _long_title = "Multi-camera view"
 

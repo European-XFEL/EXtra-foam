@@ -15,11 +15,10 @@ from extra_foam.utils import profiler
 from extra_foam.config import _MAX_INT32
 
 from .special_analysis_base import ProcessingError, QThreadWorker
+from .config import _PIXEL_DTYPE
 
 _DEFAULT_N_BINS = 10
 _DEFAULT_BIN_RANGE = "-inf, inf"
-
-_PIXEL_DTYPE = np.float32
 
 
 class GotthardProcessor(QThreadWorker):
@@ -27,7 +26,7 @@ class GotthardProcessor(QThreadWorker):
 
     Attributes:
         _output_channel (str): output channel name.
-        _pulse_slicer (slice): a slice used to slice pulses in a train.
+        _pulse_slicer (slice): a slicer used to slice pulses in a train.
         _poi_index (int): index of the pulse of interest after slicing.
         _bin_range (tuple): range of the ADU histogram.
         _n_bins (int): number of bins of the ADU histogram.
@@ -59,7 +58,7 @@ class GotthardProcessor(QThreadWorker):
         self._n_bins = _DEFAULT_N_BINS
         self._hist_over_ma = False
 
-        self.__class__._raw_ma.window = 1
+        del self._raw_ma
 
         del self._dark_ma
         self._dark_mean_ma = None
@@ -158,39 +157,39 @@ class GotthardProcessor(QThreadWorker):
 
             # During dark recording, no offset correcttion is applied and
             # only dark data and its statistics are displayed.
-            displayed = raw[self._pulse_slicer]
-            displayed_ma = self._dark_ma[self._pulse_slicer]
+            spectrum = raw[self._pulse_slicer]
+            spectrum_ma = self._dark_ma[self._pulse_slicer]
         else:
             # update the moving average of raw data
             self._raw_ma = raw
 
             if self.subtractDark() and self._dark_mean_ma is not None:
-                displayed = raw[self._pulse_slicer] - self._dark_mean_ma
-                displayed_ma = self._raw_ma[self._pulse_slicer] - self._dark_mean_ma
+                spectrum = raw[self._pulse_slicer] - self._dark_mean_ma
+                spectrum_ma = self._raw_ma[self._pulse_slicer] - self._dark_mean_ma
             else:
-                displayed = raw[self._pulse_slicer]
-                displayed_ma = self._raw_ma[self._pulse_slicer]
+                spectrum = raw[self._pulse_slicer]
+                spectrum_ma = self._raw_ma[self._pulse_slicer]
 
-        mean = np.mean(displayed, axis=0)
-        mean_ma = np.mean(displayed_ma, axis=0)
+        spectrum_mean = np.mean(spectrum, axis=0)
+        spectrum_ma_mean = np.mean(spectrum_ma, axis=0)
 
         self.log.info(f"Train {tid} processed")
 
         return {
+            # spectrum for the current train
+            "spectrum": spectrum,
+            # moving average of spectrum
+            "spectrum_ma": spectrum_ma,
+            # average of the spectrum for the current train over pulses
+            "spectrum_mean": spectrum_mean,
+            # moving average of spectrum_mean
+            "spectrum_ma_mean": spectrum_ma_mean,
             # index of pulse of interest
             "poi_index": self._poi_index,
-            # 2D data for the current train
-            "displayed": displayed,
-            # 2D data for the moving averaged train
-            "displayed_ma": displayed_ma,
-            # average of the displayed data for the current train over pulse
-            "mean": mean,
-            # average of the moving averaged displayed train data over pulse
-            "mean_ma": mean_ma,
             # (hist, bin_centers, mean, median, std)
             "hist": hist_with_stats(
-                self.getRoiData(displayed_ma) if self._hist_over_ma else
-                self.getRoiData(displayed),
+                self.getRoiData(spectrum_ma) if self._hist_over_ma else
+                self.getRoiData(spectrum),
                 self._bin_range, self._n_bins),
         }
 

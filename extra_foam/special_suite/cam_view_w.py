@@ -123,6 +123,7 @@ class CameraViewRoiHist(HistMixin, PlotWidgetF):
 class CamViewWindow(_SpecialAnalysisBase):
     """Main GUI for camera view."""
 
+    icon = "cam_view.png"
     _title = "Camera view"
     _long_title = "Camera view"
 
