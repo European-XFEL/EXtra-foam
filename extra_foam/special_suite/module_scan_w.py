@@ -74,6 +74,7 @@ class ModuleScanRoiFomPlot(PlotWidgetF):
 class ModuleScanWindow(_SpecialAnalysisBase):
     """Main GUI for module scan."""
 
+    icon = "module_scan.png"
     _title = "Module scan"
     _long_title = "Area detector module scan analysis"
 

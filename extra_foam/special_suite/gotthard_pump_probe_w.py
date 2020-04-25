@@ -161,6 +161,7 @@ class GotthardPumpProbeImageView(ImageViewF):
 class GotthardPumpProbeWindow(_SpecialAnalysisBase):
     """Main GUI for Gotthard pump-probe analysis."""
 
+    icon = "Gotthard_pump_probe.png"
     _title = "Gotthard (pump-probe)"
     _long_title = "Gotthard pump-probe analysis"
 

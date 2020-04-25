@@ -266,6 +266,7 @@ class XasTimXgmSpectrumPlot(TimedPlotWidgetF):
 class XasTimWindow(_SpecialAnalysisBase):
     """Main GUI for XAS-TIM analysis."""
 
+    icon = "xas_tim.png"
     _title = "XAS-TIM"
     _long_title = "X-ray Absorption Spectroscopy with transmission " \
                   "intensity monitor"

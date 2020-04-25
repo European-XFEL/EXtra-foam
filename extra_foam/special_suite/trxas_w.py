@@ -228,6 +228,7 @@ class TrxasHeatmap(TimedImageViewF):
 class TrxasWindow(_SpecialAnalysisBase):
     """Main GUI for tr-XAS analysis."""
 
+    icon = "tr_xas.png"
     _title = "tr-XAS"
     _long_title = "Time-resolved X-ray Absorption Spectroscopy"
 

@@ -82,9 +82,9 @@ class _SpecialSuiteFacadeBase(QMainWindow):
         self.setFixedSize(
             self._WIDTH, (len(self._buttons) // 4 + 1) * self._ROW_HEIGHT)
 
-    def addSpecial(self, filename, instance_type):
+    def addSpecial(self, instance_type):
         """Add a button for the given analysis."""
-        btn = create_icon_button(filename, self._ICON_WIDTH)
+        btn = create_icon_button(instance_type.icon, self._ICON_WIDTH)
         btn.clicked.connect(lambda: self.open_analysis_sgn.emit(
             instance_type, self._topic))
 
@@ -94,16 +94,16 @@ class _SpecialSuiteFacadeBase(QMainWindow):
         self._buttons[title] = btn
 
     def addCommonSpecials(self):
-        self.addSpecial("cam_view.png", CamViewWindow)
-        self.addSpecial("multi_cam_view.png", MultiCamViewWindow)
+        self.addSpecial(CamViewWindow)
+        self.addSpecial(MultiCamViewWindow)
 
 
 class SpbSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("SPB")
 
-        self.addSpecial("Gotthard.png", GotthardWindow)
-        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
+        self.addSpecial(GotthardWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()
@@ -124,10 +124,10 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("SCS")
 
-        self.addSpecial("xas_tim.png", XasTimWindow)
-        self.addSpecial("tr_xas.png", TrxasWindow)
-        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
-        self.addSpecial("Gotthard.png", GotthardWindow)
+        self.addSpecial(XasTimWindow)
+        self.addSpecial(TrxasWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
+        self.addSpecial(GotthardWindow)
         self.addCommonSpecials()
 
         self.initUI()
@@ -138,8 +138,8 @@ class MidSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("MID")
 
-        self.addSpecial("Gotthard.png", GotthardWindow)
-        self.addSpecial("Gotthard_pump_probe.png", GotthardPumpProbeWindow)
+        self.addSpecial(GotthardWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()
@@ -150,7 +150,7 @@ class DetSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("DET")
 
-        self.addSpecial("module_scan.png", ModuleScanWindow)
+        self.addSpecial(ModuleScanWindow)
         self.addCommonSpecials()
 
         self.initUI()

@@ -196,6 +196,7 @@ class GotthardHist(HistMixin, PlotWidgetF):
 class GotthardWindow(_SpecialAnalysisBase):
     """Main GUI for Gotthard analysis."""
 
+    icon = "Gotthard.png"
     _title = "Gotthard"
     _long_title = "Gotthard analysis"
 
