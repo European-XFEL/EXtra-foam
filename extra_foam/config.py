@@ -193,13 +193,13 @@ class _Config(dict):
         "MODULE_SHAPE": (-1, -1),
         # detector pixel size, in meter
         "PIXEL_SIZE": 1.e-3,
-        # Default TCP address of the online ZMQ bridge
+        # Default TCP address when data source is BRIDGE
         "BRIDGE_ADDR": "127.0.0.1",
-        # Default TCP port of the online ZMQ bridge
-        "BRIDGE_PORT": 45454,
-        # Default TCP address of the file streamer
+        # Default TCP port when data source is BRIDGE
+        "BRIDGE_PORT": 4501,
+        # Default TCP address when data source is FILE
         "LOCAL_ADDR": "127.0.0.1",
-        # Default TCP port of the file streamer
+        # Default TCP port when data source is FILE
         "LOCAL_PORT": 45454,
         # distance from sample to detector plan (orthogonal distance,
         # not along the beam), in meter

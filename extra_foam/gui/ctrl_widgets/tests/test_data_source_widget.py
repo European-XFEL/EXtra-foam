@@ -101,7 +101,6 @@ class TestDataSourceWidget(unittest.TestCase):
             StreamerEndpointItem("s2", 1, "127.0.0.2", 12346),
         ]
         widget = DataSourceWidget(parent=self._dummy)
-        view = widget._con_view
         model = widget._con_model
 
         self.assertEqual([False, 's1', model._getSourceTypeString(1), '127.0.0.1', '12345'],
@@ -131,7 +130,8 @@ class TestDataSourceWidget(unittest.TestCase):
         model._connections[2][2] = model._getSourceTypeString(1)
         self.assertTrue(widget.updateMetaData())
         cons = MetaProxy().hget_all(Metadata.CONNECTION)
-        for addr, tp in zip(['tcp://127.0.0.1:45454', 'tcp://127.0.0.1:12345', 'tcp://127.0.0.2:12346'],
+        # FIXME: the port '4501' depends on the source type
+        for addr, tp in zip(['tcp://127.0.0.1:4501', 'tcp://127.0.0.1:12345', 'tcp://127.0.0.2:12346'],
                             ['1', '1', '1']):
             self.assertIn(addr, cons)
             self.assertEqual(tp, cons[addr])
@@ -141,7 +141,8 @@ class TestDataSourceWidget(unittest.TestCase):
         model._connections[2][2:] = [model._getSourceTypeString(1), '127.0.0.3', '12356']
         self.assertTrue(widget.updateMetaData())
         cons = MetaProxy().hget_all(Metadata.CONNECTION)
-        for addr, tp in zip(['tcp://127.0.0.1:45454', 'tcp://127.0.0.3:12356'], ['1', '1']):
+        # FIXME: the port '4501' depends on the source type
+        for addr, tp in zip(['tcp://127.0.0.1:4501', 'tcp://127.0.0.3:12356'], ['1', '1']):
             self.assertIn(addr, cons)
             self.assertEqual(tp, cons[addr])
 
