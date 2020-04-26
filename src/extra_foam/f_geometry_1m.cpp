@@ -15,7 +15,7 @@
 #include "tbb/blocked_range2d.h"
 #endif
 
-#include "f_geometry.hpp"
+#include "f_geometry_1m.hpp"
 #include "f_pyconfig.hpp"
 
 namespace py = pybind11;
@@ -104,11 +104,11 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
 
 }
 
-PYBIND11_MODULE(geometry, m)
+PYBIND11_MODULE(geometry_1m, m)
 {
   xt::import_numpy();
 
-  m.doc() = "Detector geometry.";
+  m.doc() = "1M detector geometry.";
 
   declare_1MGeometry<foam::AGIPD_1MGeometry>(m, "AGIPD");
 

@@ -7,8 +7,8 @@
  * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
  * All rights reserved.
  */
-#ifndef EXTRA_FOAM_GEOMETRY_H
-#define EXTRA_FOAM_GEOMETRY_H
+#ifndef EXTRA_FOAM_GEOMETRY_1M_H
+#define EXTRA_FOAM_GEOMETRY_1M_H
 
 #include <cassert>
 #include <cmath>
@@ -1084,4 +1084,4 @@ void DSSC_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
 }; //foam
 
 
-#endif //EXTRA_FOAM_DETECTOR_GEOMETRY_H
+#endif //EXTRA_FOAM_GEOMETRY_1M_H
