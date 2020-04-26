@@ -21,7 +21,7 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 
 class _Test1MGeometryMixin:
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
-    def testAssemblingSinglePulse(self, dtype):
+    def testAssemblingNoPulse(self, dtype):
         modules = np.ones((self.n_modules, *self.module_shape), dtype=dtype)
 
         out_stack = self.geom_stack.output_array_for_position_fast(dtype=_IMAGE_DTYPE)
@@ -45,7 +45,7 @@ class _Test1MGeometryMixin:
         np.testing.assert_array_equal(modules, dismantled_out)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
-    def testAssemblingBridge(self, dtype):
+    def testAssemblingArray(self, dtype):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
 
         out_stack = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
@@ -69,7 +69,7 @@ class _Test1MGeometryMixin:
         np.testing.assert_array_equal(modules, dismantled_out)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
-    def testAssemblingFile(self, dtype):
+    def testAssemblingVector(self, dtype):
         modules = StackView(
             {i: np.ones((self.n_pulses, *self.module_shape), dtype=dtype) for i in range(self.n_modules)},
             self.n_modules,
@@ -92,17 +92,18 @@ class _Test1MGeometryMixin:
         np.testing.assert_equal(out_fast, out_gt)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
-    def testAssemblingBridgeWithTileEdgeIgnored(self, dtype):
+    def testAssemblingArrayWithTileEdgeIgnored(self, dtype):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
 
         out_stack = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
         # TODO: test ignore_tile_edge = False
         self.geom_stack.position_all_modules(modules, out_stack, ignore_tile_edge=True)
 
-        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, 0::self.tile_shape[1]]))
-        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, 0::self.tile_shape[1]]))
-        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, 0::self.tile_shape[0], :]))
-        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, 0::self.tile_shape[0], :]))
+        th, tw = self.tile_shape[0], self.tile_shape[1]
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, 0::tw]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, tw - 1::tw]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, 0::th, :]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, th - 1::th, :]))
 
 
 class TestDSSC_1MGeometryFast(_Test1MGeometryMixin):

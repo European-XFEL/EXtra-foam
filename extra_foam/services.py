@@ -318,22 +318,29 @@ def application():
                         choices=[det.upper() for det in config.detectors],
                         type=lambda s: s.upper())
     parser.add_argument("topic",
-                        help="Name of the instrument",
+                        help="name of the instrument",
                         choices=config.topics,
                         type=lambda s: s.upper())
+    parser.add_argument("--n_modules",
+                        help="Number of detector modules. It is only "
+                             "available for using single-module detectors "
+                             "like JungFrau in a combined way. Not all "
+                             "single-module detectors are supported.",
+                        default=None,
+                        type=int)
     parser.add_argument('--debug',
                         action='store_true',
-                        help="Run in debug mode")
+                        help="run in debug mode")
     parser.add_argument("--pipeline_slow_policy",
                         help="Pipeline policy when the processing rate is "
                              "slower than the arrival rate (0 for always "
                              "process the latest data and 1 for wait until "
-                             "processing of the current data finishes)",
+                             "processing of the current data finishes).",
                         choices=[0, 1],
                         default=1,
                         type=int)
     parser.add_argument("--redis_address",
-                        help="Address of the Redis server",
+                        help="address of the Redis server",
                         default="127.0.0.1",
                         type=lambda s: s.lower())
 
@@ -359,8 +366,19 @@ def application():
     )
 
     # update global configuration
-    config.load(detector, topic,
-                PIPELINE_SLOW_POLICY=PipelineSlowPolicy(args.pipeline_slow_policy))
+    if detector in ("JungFrauPR", "ePix100"):
+        n_modules = args.n_modules
+        config.load(detector, topic,
+                    NUMBER_OF_MODULES=n_modules,
+                    REQUIRE_GEOMETRY=n_modules > 1,
+                    PIPELINE_SLOW_POLICY=PipelineSlowPolicy(args.pipeline_slow_policy))
+    else:
+        # TODO: consider moving the following check into "config.load"
+        if args.n_modules is not None:
+            raise ValueError(f"Number of modules of {detector} is not "
+                             f"configurable!")
+        config.load(detector, topic,
+                    PIPELINE_SLOW_POLICY=PipelineSlowPolicy(args.pipeline_slow_policy))
 
     foam = Foam(redis_address=redis_address).init()
 

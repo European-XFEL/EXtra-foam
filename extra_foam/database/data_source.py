@@ -72,6 +72,9 @@ class SourceCatalog(abc.Collection):
     def get_category(self, src):
         return self._items[src].category
 
+    def get_modules(self, src):
+        return self._items[src].modules
+
     def get_slicer(self, src):
         return self._items[src].slicer
 

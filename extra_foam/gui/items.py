@@ -30,13 +30,14 @@ class GeometryItem(QObject):
         super().__init__(*args, **kwargs)
 
         self._detector = config["DETECTOR"]
+        self._n_modules = config["NUMBER_OF_MODULES"]
 
         self._geom = None
         self._update = True
 
         self._filepath = ""
         self._assembler = GeomAssembler.OWN
-        self._quad_positions = None
+        self._coordinates = None
         self._stack_only = False
 
     def setFilepath(self, v):
@@ -49,9 +50,9 @@ class GeometryItem(QObject):
             self._assembler = v
             self._update = True
 
-    def setQuadPositions(self, v):
-        if v != self._quad_positions:
-            self._quad_positions = v
+    def setCoordinates(self, v):
+        if v != self._coordinates:
+            self._coordinates = v
             self._update = True
 
     def setStackOnly(self, v):
@@ -62,10 +63,12 @@ class GeometryItem(QObject):
     @property
     def geometry(self):
         if self._update:
-            self._geom = load_geometry(self._detector, self._filepath,
-                                       assembler=self._assembler,
-                                       quad_positions=self._quad_positions,
-                                       stack_only=self._stack_only)
+            self._geom = load_geometry(self._detector,
+                                       stack_only=self._stack_only,
+                                       filepath=self._filepath,
+                                       coordinates=self._coordinates,
+                                       n_modules=self._n_modules,
+                                       assembler=self._assembler)
 
             self._update = False
         return self._geom

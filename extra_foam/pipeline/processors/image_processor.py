@@ -113,9 +113,11 @@ class ImageProcessor(_BaseProcessor):
         geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
         global_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
 
-        if self._require_geom:
-            self._assembler.update(
-                geom_cfg, mask_tile=cfg["mask_tile"] == 'True')
+        self._assembler.update(
+            geom_cfg,
+            mask_tile=cfg["mask_tile"] == 'True',
+            mask_asic=cfg["mask_asic"] == 'True',
+        )
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'

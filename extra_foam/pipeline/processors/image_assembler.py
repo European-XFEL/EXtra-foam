@@ -13,6 +13,7 @@ import json
 import numpy as np
 
 from extra_data import stack_detector_data
+from extra_data.stacking import StackView
 
 from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
@@ -27,6 +28,68 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 _TRAIN_ID = SourceCatalog.TRAIN_ID
 
 
+def _stack_detector_modules(data, src, modules):
+    """Stack detector modules.
+
+    It should be used for detectors like, JungFrau, ePix100, etc. For
+    AGIPD, LPD and DSSC, stack_detector_data should be used.
+
+    :param dict data: raw data.
+    :param str src: source name.
+    :param list modules: a list of module indices. The module indices do
+        not need to be continuous or be monotonically increasing.
+    """
+    if isinstance(data, np.ndarray):
+        # This happens when the source name if one of the modules. if the
+        # source name neither contains "*" nor is one of the modules,
+        # KeyError would have been raised.
+        raise ValueError("Not found multi-module data when stacking "
+                         "detector modules")
+
+    if not data:
+        raise ValueError("No data")
+
+    base_name, ppt = src.split(" ")
+    prefix, suffix = base_name.split("*")
+
+    dtypes, shapes = set(), set()
+    modno_arrays = {}
+    for i, modno in enumerate(modules):
+        try:
+            array = data[f"{prefix}{modno}{suffix}"][ppt]
+        except KeyError:
+            continue
+        dtypes.add(array.dtype)
+        shapes.add(array.shape)
+        modno_arrays[i] = array
+
+    if len(dtypes) > 1:
+        raise ValueError("Arrays have mismatched dtypes: {}".format(dtypes))
+
+    dtype = dtypes.pop()
+    shape = shapes.pop()
+    stack = StackView(
+        modno_arrays, len(modules), shape, dtype,
+        fillvalue=np.nan, stack_axis=-3
+    )
+    return stack
+
+
+def _maybe_squeeze_to_image(arr):
+    """Try to squeeze an array to a 2D image."""
+    if arr.ndim == 2:
+        return arr
+
+    try:
+        return np.squeeze(arr, axis=0)
+    except ValueError:
+        try:
+            return np.squeeze(arr, axis=-1)
+        except ValueError:
+            raise ValueError(f"Array with shape {arr.shape} cannot be "
+                             f"squeezed to a 2D image")
+
+
 class ImageAssemblerFactory(ABC):
 
     class BaseAssembler(_RedisParserMixin):
@@ -35,13 +98,17 @@ class ImageAssemblerFactory(ABC):
         Attributes:
             _stack_only (bool): whether simply stack all modules seamlessly
                 together.
-            _mask_tile (bool): whether to mask the tile of each module
-                if applicable.
+            _mask_tile (bool): whether to mask the edges of tiles of each
+                module if applicable.
+            _mask_asic (bool): whether to mask the edges of asics of each
+                module if applicable.
             _assembler_type (GeomAssembler): Type of geometry assembler,
                 which can be EXtra-foam or EXtra-geom.
             _geom_file (str): full path of the geometry file.
-            _quad_position (list): (x, y) coordinates for the corners of 4
-                quadrants.
+            _coordinates (list): (x, y) coordinates for the corners of 4
+                quadrants for detectors like AGIPD, LPD and DSSC; (x, y)
+                coordinates for the corners of all modules for detectors like
+                JungFrauPR.
             _geom: geometry instance in use.
             _out_array (numpy.ndarray): buffer to store the assembled modules.
         """
@@ -49,11 +116,17 @@ class ImageAssemblerFactory(ABC):
             """Initialization."""
             super().__init__()
 
+            self._detector = config["DETECTOR"]
+            self._n_modules = config["NUMBER_OF_MODULES"]
+            self._module_shape = config["MODULE_SHAPE"]
+            self._require_geom = config['REQUIRE_GEOMETRY']
+
             self._stack_only = False
             self._mask_tile = False
+            self._mask_asic = False
             self._assembler_type = None
             self._geom_file = None
-            self._quad_position = None
+            self._coordinates = None
             self._geom = None
             self._out_array = None
 
@@ -61,12 +134,7 @@ class ImageAssemblerFactory(ABC):
         def geometry(self):
             return self._geom
 
-        def update(self, cfg, *, mask_tile=False):
-            assembler_type = GeomAssembler(int(cfg["assembler"]))
-            stack_only = cfg["stack_only"] == 'True'
-            geom_file = cfg["geometry_file"]
-            quad_positions = json.loads(cfg["quad_positions"], encoding='utf8')
-
+        def update(self, cfg, *, mask_tile=False, mask_asic=False):
             if mask_tile != self._mask_tile:
                 self._mask_tile = mask_tile
                 if mask_tile:
@@ -77,46 +145,63 @@ class ImageAssemblerFactory(ABC):
                     # "ignore_tile_edge" in the corresponding function.
                     self._out_array = None
 
+            if mask_asic != self._mask_asic:
+                self._mask_asic = mask_asic
+                if mask_asic:
+                    # similar as the reason in "mask_tile"
+                    self._out_array = None
+
+            if not self._require_geom:
+                return
+
+            assembler_type = GeomAssembler(int(cfg["assembler"]))
+            stack_only = cfg["stack_only"] == 'True'
+            geom_file = cfg["geometry_file"]
+            coordinates = json.loads(cfg["coordinates"], encoding='utf8')
+
             # reload geometry if any of the following 4 fields changed
             if stack_only != self._stack_only or \
-                    assembler_type != self._assembler_type or \
                     geom_file != self._geom_file or \
-                    quad_positions != self._quad_position:
-
-                self._geom = None  # reset first
+                    coordinates != self._coordinates or \
+                    assembler_type != self._assembler_type:
                 self._load_geometry(
-                    geom_file, quad_positions, assembler_type, stack_only)
+                    stack_only, geom_file, coordinates, assembler_type)
 
                 if not stack_only:
                     logger.info(f"Loaded geometry from {geom_file} with "
-                                f"quadrant positions {quad_positions}")
+                                f"quadrant/module positions {coordinates}")
+                else:
+                    logger.info(f"Loaded stack-only geometry with "
+                                f"{self._n_modules} modules")
 
         @abstractmethod
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Get modules data from bridge."""
             pass
 
         @abstractmethod
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Get modules data from file."""
             pass
 
-        def _load_geometry(self, filepath, quad_positions, assembler_type, stack_only):
+        def _load_geometry(self, stack_only, filepath, coordinates, assembler_type):
             """Load geometry from file.
 
             Required for modular detectors which must be assembled with
             a geometry.
             """
             try:
-                self._geom = load_geometry(config["DETECTOR"], filepath,
-                                           quad_positions=quad_positions,
-                                           assembler=assembler_type,
-                                           stack_only=stack_only)
+                self._geom = load_geometry(config["DETECTOR"],
+                                           stack_only=stack_only,
+                                           filepath=filepath,
+                                           coordinates=coordinates,
+                                           n_modules=self._n_modules,
+                                           assembler=assembler_type)
 
-                self._geom_file = filepath
-                self._quad_position = quad_positions
-                self._assembler_type = assembler_type
                 self._stack_only = stack_only
+                self._geom_file = filepath
+                self._coordinates = coordinates
+                self._assembler_type = assembler_type
 
             except Exception as e:
                 raise AssemblingError(f"[Geometry] {e}")
@@ -125,59 +210,52 @@ class ImageAssemblerFactory(ABC):
             """Assemble modules data into assembled image data.
 
             :param array-like modules: modules data. shape = (memory cells,
-                modules, y, x) for pulse-resolved detectors and (y, x) for
+                modules, y, x) for pulse-resolved detectors or (y, x) for
                 train-resolved detectors.
 
             :return numpy.ndarray assembled: assembled detector image(s).
                 shape = (memory cells, y, x) for pulse-resolved detectors
                 and (y, x) for train resolved detectors.
             """
-            image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
-            if self._geom is not None:
-                n_modules = modules.shape[1]
-                if n_modules == 1:
-                    # single module operation
-                    return modules.astype(image_dtype).squeeze(axis=1)
+            if modules.ndim == 4:
+                # single module operation (for all 1M detectors and JungFrauPR)
+                if modules.shape[1] == 1:
+                    return modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
 
                 n_pulses = modules.shape[0]
                 if self._out_array is None or self._out_array.shape[0] != n_pulses:
                     self._out_array = self._geom.output_array_for_position_fast(
-                        extra_shape=(n_pulses, ), dtype=image_dtype)
-                try:
-                    self._geom.position_all_modules(modules,
-                                                    out=self._out_array,
-                                                    ignore_tile_edge=self._mask_tile)
-                # EXtra-foam raises ValueError while EXtra-geom raises
-                # AssertionError if the shape of the output array does not
-                # match the expected one, e.g. after a change of quadrant
-                # positions during runtime.
-                except (ValueError, AssertionError):
-                    # recreate the output array
+                        extra_shape=(n_pulses, ), dtype=_IMAGE_DTYPE)
+            else:  # modules.ndim == 3
+                if self._out_array is None:
                     self._out_array = self._geom.output_array_for_position_fast(
-                        extra_shape=(n_pulses, ), dtype=image_dtype)
-                    self._geom.position_all_modules(modules,
-                                                    out=self._out_array,
-                                                    ignore_tile_edge=self._mask_tile)
+                        dtype=_IMAGE_DTYPE)
 
-                return self._out_array
+            try:
+                self._geom.position_all_modules(modules,
+                                                out=self._out_array,
+                                                ignore_tile_edge=self._mask_tile,
+                                                ignore_asic_edge=self._mask_asic)
+            # EXtra-foam raises ValueError while EXtra-geom raises
+            # AssertionError if the shape of the output array does not
+            # match the expected one, e.g. after a change of quadrant
+            # positions during runtime.
+            except (ValueError, AssertionError):
+                # recreate the output array
+                if modules.ndim == 4:
+                    n_pulses = modules.shape[0]
+                    self._out_array = self._geom.output_array_for_position_fast(
+                            extra_shape=(n_pulses, ), dtype=_IMAGE_DTYPE)
+                else: # modules.ndim == 3
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        dtype=_IMAGE_DTYPE)
 
-            # temporary workaround for Pulse resolved JungFrau without geometry
-            if config["DETECTOR"] == "JungFrauPR":
-                shape = modules.shape
+                self._geom.position_all_modules(modules,
+                                                out=self._out_array,
+                                                ignore_tile_edge=self._mask_tile,
+                                                ignore_asic_edge=self._mask_asic)
 
-                # Stacking modules vertically along y axis.
-                reshaped = modules.reshape(shape[0], -1, shape[-1])
-                if reshaped.dtype == image_dtype:
-                    return reshaped
-                return reshaped.astype(image_dtype)
-
-            # For train-resolved detector, assembled is a reference
-            # to the array data received from the pyzmq. This array data
-            # is only readable since the data is owned by a pointer in
-            # the zmq message (it is not copied). However, other data
-            # like data['metadata'] is writeable.
-            # FIXME: why once a while this takes a few ms???
-            return modules.astype(image_dtype)
+            return self._out_array
 
         def process(self, data):
             """Override."""
@@ -186,24 +264,25 @@ class ImageAssemblerFactory(ABC):
             catalog = data["catalog"]
 
             src = catalog.main_detector
+            modules = catalog.get_modules(src)
             src_type = meta[src]['source_type']
             try:
                 if src_type == DataSource.FILE:
-                    modules_data = self._get_modules_file(raw, src)
+                    modules_data = self._get_modules_file(raw, src, modules)
                 else:
-                    modules_data = self._get_modules_bridge(raw, src)
+                    modules_data = self._get_modules_bridge(raw, src, modules)
 
                 # Remove raw detector data since we do not want to serialize
                 # it and send around.
                 raw[src] = None
 
             except (ValueError, IndexError, KeyError) as e:
-                raise AssemblingError(repr(e))
+                raise AssemblingError(str(e))
 
             shape = modules_data.shape
             ndim = len(shape)
-            n_modules = config["NUMBER_OF_MODULES"]
-            module_shape = config["MODULE_SHAPE"]
+            n_modules = self._n_modules
+            module_shape = self._module_shape
 
             # check module shape (BaslerCamera has module shape (-1, -1))
             if module_shape[0] > 0 and shape[-2:] != module_shape:
@@ -213,28 +292,32 @@ class ImageAssemblerFactory(ABC):
             # check number of modules
             if ndim >= 3 and shape[-3] != n_modules:
                 n_modules_actual = shape[-3]
-                if config["DETECTOR"] != "JungFrauPR":
-                    # allow single module operation
-                    if n_modules_actual != 1:
-                        raise AssemblingError(f"Expected {n_modules} modules, but get "
-                                              f"{n_modules_actual} instead!")
-                elif n_modules_actual > 2:
-                    raise AssemblingError(f"Expected 1 or 2 modules, but get "
+                # allow single module operation
+                if n_modules_actual != 1:
+                    raise AssemblingError(f"Expected {n_modules} modules, but get "
                                           f"{n_modules_actual} instead!")
 
             # check number of memory cells
-            if ndim == 4 and not shape[0]:
-                raise AssemblingError("Number of memory cells is zero!")
+            if not shape[0]:
+                # only happens when ndim == 4
+                raise AssemblingError(f"Number of memory cells is zero!")
 
-            data['assembled'] = {
-                'data': self._assemble(modules_data),
-            }
+            if ndim == 2:
+                # For train-resolved detector, assembled is a reference
+                # to the array data received from the pyzmq. This array data
+                # is only readable since the data is owned by a pointer in
+                # the zmq message (it is not copied). However, other data
+                # like data['metadata'] is writeable.
+                data['assembled'] = {'data': modules_data.astype(_IMAGE_DTYPE)}
+            else:
+                data['assembled'] = {'data': self._assemble(modules_data)}
+
             # Assign the global train ID once the main detector was
             # successfully assembled.
             raw[_TRAIN_ID] = meta[src]["train_id"]
 
     class AgipdImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             Should work for both raw and calibrated data, according to DSSC.
@@ -244,7 +327,7 @@ class ImageAssemblerFactory(ABC):
             -> (memory cells, modules, y, x)
             """
             modules_data = data[src]
-            if modules_data.shape[1] == config["MODULE_SHAPE"][1]:
+            if modules_data.shape[1] == self._module_shape[1]:
                 # Reshaping could have already been done upstream (e.g.
                 # at the PipeToZeroMQ device), if not:
                 #   (modules, fs, ss, pulses) -> (pulses, modules, ss, fs)
@@ -253,7 +336,7 @@ class ImageAssemblerFactory(ABC):
             # (memory cells, modules, y, x)
             return modules_data
 
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             In the file, the data is separated into arrays of different
@@ -280,7 +363,7 @@ class ImageAssemblerFactory(ABC):
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
     class LpdImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             Should work for both raw and calibrated data, according to DSSC.
@@ -291,7 +374,7 @@ class ImageAssemblerFactory(ABC):
             """
             return np.moveaxis(np.moveaxis(data[src], 3, 0), 3, 2)
 
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             In the file, the data is separated into arrays of different
@@ -316,7 +399,7 @@ class ImageAssemblerFactory(ABC):
 
     class DsscImageAssembler(BaseAssembler):
 
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             In the file, the data is separated into arrays of different
@@ -330,7 +413,7 @@ class ImageAssemblerFactory(ABC):
             """
             return np.moveaxis(np.moveaxis(data[src], 3, 0), 3, 2)
 
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             - calibrated, "image.data", (memory cells, modules, y, x)
@@ -349,7 +432,7 @@ class ImageAssemblerFactory(ABC):
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
     class JungFrauImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             Calibrated data only.
@@ -358,13 +441,13 @@ class ImageAssemblerFactory(ABC):
             - raw, "data.adc", TODO
             -> (y, x)
             """
-            modules_data = data[src]
-            if modules_data.shape[-1] == 1:
-                return modules_data.squeeze(axis=-1)
-            else:
-                raise NotImplementedError("Number of modules > 1")
+            try:
+                return _maybe_squeeze_to_image(data[src])
+            except ValueError:
+                raise NotImplementedError(
+                    "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
 
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             - calibrated, "data.adc", (modules, y, x)
@@ -374,11 +457,12 @@ class ImageAssemblerFactory(ABC):
             modules_data = data[src]
             if modules_data.shape[0] == 1:
                 return modules_data.squeeze(axis=0)
-            else:
-                raise NotImplementedError("Number of modules > 1")
+
+            raise NotImplementedError(
+                "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
 
     class JungFrauPulseResolvedImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             Calibrated data only.
@@ -393,84 +477,67 @@ class ImageAssemblerFactory(ABC):
 
             -> (memory cells, modules, y, x)
             """
+            # TODO: deal with modules received separately
             modules_data = data[src]
-            shape = modules_data.shape
-            ndim = len(shape)
-            if ndim == 3:
-                # (y, x, memory cells) -> (memory cells, 1, y, x)
-                return np.moveaxis(modules_data, -1, 0)[:, np.newaxis, ...]
-            # (modules, y, x, memory cells) -> (memory cells, modules, y, x)
-            return np.moveaxis(modules_data, -1, 0)
 
-        def _get_modules_file(self, data, src):
+            if modules_data.shape[-2] == self._module_shape[1]:
+                # Reshaping could have already been done upstream (e.g.
+                # at the PipeToZeroMQ device), if not:
+                #   (y, x, memory cells) -> (memory cells, y, x)
+                #   (modules, y, x, memory cells) -> (memory cells, modules, y, x)
+                modules_data = np.moveaxis(modules_data, -1, 0)
+
+            if self._n_modules == 1:
+                return np.expand_dims(modules_data, axis=1)
+            return modules_data
+
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             Single module:
-            - calibrated, "data.adc", (modules, y, x)
+            - calibrated, "data.adc", (memory cells, y, x)
             Note: no extra axis like AGIPD, LPD, etc.
-            - raw, "data.adc", (modules, y, x)
+            - raw, "data.adc", (memory cells, y, x)
 
             -> (memory cells, modules, y, x)
             """
-            modules_data = data[src]
-            shape = modules_data.shape
-            ndim = len(shape)
-            if ndim == 3:
-                # single module
-                # (memory cells, y, x) -> (memory cells, 1, y, x)
-                return modules_data[:, np.newaxis, :]
-            # (memory cells, modules, y, x,)
-            return modules_data
+            if self._n_modules == 1:
+                # (memory cells, y, x) -> (memory cells, modules, y, x)
+                return np.expand_dims(data[src], axis=1)
+            return _stack_detector_modules(data[src], src, modules)
 
     class EPix100ImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             - calibrated, "data.image", (y, x, 1)
             - raw, "data.image.data", (1, y, x)
             -> (y, x)
             """
-            img_data = data[src]
-            dtype = img_data.dtype
+            return _maybe_squeeze_to_image(data[src])
 
-            if dtype == _IMAGE_DTYPE:
-                return img_data.squeeze(axis=-1)
-
-            # raw data of ePix100 has an unexpected dtype int16
-            if dtype == np.int16:
-                return img_data.squeeze(axis=0)
-
-            raise AssemblingError(f"Unknown detector data type: {dtype}!")
-
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             - calibrated, "data.image.pixels", (y, x)
             - raw, "data.image.pixels", (y, x)
             -> (y, x)
             """
-            return data[src]
+            if self._n_modules == 1:
+                return data[src]
+            return _stack_detector_modules(data[src], src, modules)
 
     class FastCCDImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             - calibrated, "data.image", (y, x, 1)
             - raw, "data.image.data", (y, x)
             -> (y, x)
             """
-            img_data = data[src]
-            dtype = img_data.dtype
+            return _maybe_squeeze_to_image(data[src])
 
-            if dtype == _IMAGE_DTYPE:
-                return img_data.squeeze(axis=-1)
-
-            if dtype == _RAW_IMAGE_DTYPE:
-                return img_data
-
-            raise AssemblingError(f"Unknown detector data type: {dtype}!")
-
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             - calibrated, "data.image.pixels", (y, x)
@@ -482,7 +549,7 @@ class ImageAssemblerFactory(ABC):
     class BaslerCameraImageAssembler(BaseAssembler):
         # TODO: remove BaslerCamera from detector
         #       make a category for BaslerCamera.
-        def _get_modules_bridge(self, data, src):
+        def _get_modules_bridge(self, data, src, modules):
             """Override.
 
             - raw, "data.image.data", (y, x)
@@ -491,7 +558,7 @@ class ImageAssemblerFactory(ABC):
             # (y, x)
             return data[src]
 
-        def _get_modules_file(self, data, src):
+        def _get_modules_file(self, data, src, modules):
             """Override.
 
             -> (y, x)

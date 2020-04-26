@@ -40,6 +40,11 @@ More info on command line arguments can be obtained as
     optional arguments:
       -h, --help            show this help message and exit
       -V, --version         show program's version number and exit
+      --n_modules N_MODULES
+                            Number of detector modules. It is only available for
+                            using single-module detectors like JungFrau in a
+                            combined way. Not all single-module detectors are
+                            supported.
       --debug               Run in debug mode
       --pipeline_slow_policy {0,1}
                             Pipeline policy when the processing rate is slower

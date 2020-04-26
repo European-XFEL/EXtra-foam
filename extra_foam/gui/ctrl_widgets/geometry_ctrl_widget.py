@@ -14,8 +14,8 @@ import json
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHeaderView, QHBoxLayout,
-    QLabel, QPushButton, QTableWidget, QVBoxLayout
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHeaderView,
+    QLabel, QPushButton, QTableWidget
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
@@ -23,6 +23,7 @@ from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from ..gui_helpers import invert_dict
 from ...config import config, GeomAssembler
 from ...database import Metadata as mt
+from ...geometries import module_indices
 from ..items import GeometryItem
 
 
@@ -46,22 +47,28 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._detector = config["DETECTOR"]
+
         self._geom = GeometryItem()
 
         self._assembler_cb = QComboBox()
         for item in self._assemblers:
             self._assembler_cb.addItem(item)
 
-        self._stack_only_cb = QCheckBox("Stack only")
-        self._stack_only_cb.setChecked(False)
+        self._coordinates_tb = QTableWidget()
 
-        self._quad_positions_tb = QTableWidget()
-        if config["DETECTOR"] == "AGIPD":
-            self._quad_positions_tb.setEnabled(False)
+        if self._detector in ("JungFrauPR", "ePix100"):
+            self._coordinates_tb.setEnabled(False)
+            self._assembler_cb.removeItem(1)  # no EXtra-geom
+        elif self._detector == "AGIPD":
+            self._coordinates_tb.setEnabled(False)
 
-        self._geom_file_le = SmartStringLineEdit(config["GEOMETRY_FILE"])
+        self._geom_file_le = SmartLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
-        self._geom_file_open_btn.clicked.connect(self._setGeometryFile)
+
+        self._stack_only_cb = QCheckBox("Stack without geometry file")
+        if not config["GEOMETRY_FILE"]:
+            self._stack_only_cb.setChecked(True)
 
         self._non_reconfigurable_widgets = [
             self
@@ -73,27 +80,26 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        self.initQuadTable()
         AR = Qt.AlignRight
 
-        layout1 = QVBoxLayout()
-        sub_layout1 = QHBoxLayout()
-        sub_layout1.addWidget(self._geom_file_open_btn)
-        sub_layout1.addWidget(self._geom_file_le)
-        sub_layout2 = QHBoxLayout()
-        sub_layout2.addWidget(QLabel("Quadrant positions:"))
-        sub_layout2.addWidget(self._quad_positions_tb)
-        layout1.addLayout(sub_layout1)
-        layout1.addLayout(sub_layout2)
+        layout = QGridLayout()
 
-        layout2 = QGridLayout()
-        layout2.addWidget(QLabel("Assembler: "), 0, 0, AR)
-        layout2.addWidget(self._assembler_cb, 0, 1)
-        layout2.addWidget(self._stack_only_cb, 1, 0, 1, 2, AR)
+        i_row = 0
+        layout.addWidget(QLabel("Assembler: "), i_row, 0, AR)
+        layout.addWidget(self._assembler_cb, i_row, 1)
+        layout.addWidget(self._geom_file_open_btn, i_row, 2)
+        layout.addWidget(self._geom_file_le, i_row, 3, 1, 5)
+        layout.addWidget(self._stack_only_cb, i_row, 8, AR)
 
-        layout = QHBoxLayout()
-        layout.addLayout(layout1)
-        layout.addLayout(layout2)
+        i_row += 1
+        self.initCoordinatesTable()
+        if self._detector in ("JungFrauPR", "ePix100"):
+            label = QLabel("Module positions:")
+        else:
+            label = QLabel("Quadrant positions:")
+        layout.addWidget(label, i_row, 0, AR)
+        layout.addWidget(self._coordinates_tb, i_row, 1, 1, 8)
+
         self.setLayout(layout)
 
     def initConnections(self):
@@ -113,27 +119,36 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._geom_file_le.value_changed_sgn.connect(
             self._onGeometryFileChange)
 
-    def initQuadTable(self):
-        n_row = 2
-        n_col = 4
+    def initCoordinatesTable(self):
+        n_modules = config["NUMBER_OF_MODULES"]
+        if self._detector in ("JungFrauPR", "ePix100"):
+            coordinates = config["MODULE_POSITIONS"][:n_modules]
+        else:
+            coordinates = config["QUAD_POSITIONS"]
 
-        table = self._quad_positions_tb
+        n_row = len(coordinates[0])
+        n_col = len(coordinates)
+
+        table = self._coordinates_tb
         table.setRowCount(n_row)
         table.setColumnCount(n_col)
 
         for i in range(n_row):
             for j in range(n_col):
-                if config["DETECTOR"] in ["LPD", "DSSC"]:
-                    widget = SmartLineEdit(str(config["QUAD_POSITIONS"][j][i]))
+                if self._detector in ("LPD", "DSSC"):
+                    widget = SmartLineEdit(str(coordinates[j][i]))
                 else:
                     widget = SmartLineEdit('0')
                 widget.setValidator(QDoubleValidator(-999, 999, 6))
-                widget.value_changed_sgn.connect(self._onQuadPositionsChange)
+                widget.value_changed_sgn.connect(self._onCoordinatesChange)
                 table.setCellWidget(i, j, widget)
 
         table.move(0, 0)
         table.setVerticalHeaderLabels(['x', 'y'])
-        table.setHorizontalHeaderLabels(['1', '2', '3', '4'])
+        if self._detector == "JungFrauPR":
+            table.setHorizontalHeaderLabels(
+                [str(i) for i in module_indices(n_modules,
+                                                detector=self._detector)])
 
         header = table.horizontalHeader()
 
@@ -161,10 +176,10 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._mediator.onGeomStackOnlyChange(state)
         self._geom.setStackOnly(state)
 
-    def _onQuadPositionsChange(self):
-        v = _parse_table_widget(self._quad_positions_tb)
-        self._mediator.onGeomQuadPositionsChange(v)
-        self._geom.setQuadPositions(v)
+    def _onCoordinatesChange(self):
+        v = _parse_table_widget(self._coordinates_tb)
+        self._mediator.onGeomCoordinatesChange(v)
+        self._geom.setCoordinates(v)
 
     def _onAssemblerChange(self, assembler):
         if assembler == GeomAssembler.EXTRA_GEOM:
@@ -187,7 +202,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         self._geom_file_le.returnPressed.emit()
 
-        self._onQuadPositionsChange()
+        self._onCoordinatesChange()
 
         return True
 
@@ -203,10 +218,11 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._stack_only_cb.setChecked(cfg["stack_only"] == 'True')
         self._geom_file_le.setText(cfg["geometry_file"])
 
-        quad_positions = json.loads(cfg["quad_positions"], encoding='utf8')
-        table = self._quad_positions_tb
+        # TODO: check number of modules for JungFrauPR
+        coordinates = json.loads(cfg["coordinates"], encoding='utf8')
+        table = self._coordinates_tb
         n_rows = table.rowCount()
         n_cols = table.columnCount()
         for j in range(n_cols):
             for i in range(n_rows):
-                table.cellWidget(i, j).setText(str(quad_positions[j][i]))
+                table.cellWidget(i, j).setText(str(coordinates[j][i]))
