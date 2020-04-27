@@ -28,11 +28,11 @@ More info on command line arguments can be obtained as
    [user@exflonc12 ~]$ extra-foam --help
 
     usage: extra-foam [-h] [-V] [--debug] [--redis_address REDIS_ADDRESS]
-                      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,BASLERCAMERA}
+                      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,EPIX100,BASLERCAMERA}
                       {SPB,FXE,SCS,SQS,MID,HED}
 
     positional arguments:
-      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,BASLERCAMERA}
+      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,EPIX100,BASLERCAMERA}
                             detector name (case insensitive)
       {SPB,FXE,SCS,SQS,MID,HED}
                             Name of the instrument
@@ -51,7 +51,7 @@ More info on command line arguments can be obtained as
 
 
 .. note::
-    It sometime takes a few minutes to start **EXtra-foam** for the first time! This
+    It sometime takes more than a minute to start **EXtra-foam** for the first time! This
     is actually an issue related to the infrastructure and not because
     **EXtra-foam** is slow.
 
@@ -62,10 +62,8 @@ More info on command line arguments can be obtained as
 .. note::
     In order to have a better experience with **EXtra-foam** on the `Maxwell` cluster,
     you should need FastX2_ at max-display_. There is also a link for downloading
-    the desktop client on the bottom-right corner when you opened max-display_. For
-    more details, please refer to the official website for FastX2_ at DESY. Nevertheless,
-    it is not recommended to run **EXtra-foam** on the `Maxwell` cluster since streaming
-    data from files there is extremely slow.
+    the desktop client on the bottom-right corner when you opened max-display_ and logged in.
+    For more details, please refer to the official website for FastX2_ at DESY.
 
 .. _FastX2: https://confluence.desy.de/display/IS/FastX2
 .. _max-display: https://max-display.desy.de:3443/
