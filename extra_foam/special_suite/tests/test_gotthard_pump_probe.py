@@ -10,14 +10,12 @@ from PyQt5.QtTest import QSignalSpy, QTest
 
 from extra_foam.logger import logger_suite as logger
 from extra_foam.gui import mkQApp
-from extra_foam.special_suite.gotthard_pump_probe_proc import GotthardPumpProbeProcessor
+from extra_foam.special_suite.gotthard_pump_probe_proc import GotthardPpProcessor
 from extra_foam.special_suite.gotthard_pump_probe_w import (
-    GotthardPumpProbeWindow, GotthardPumpProbeImageView, GotthardPumpProbeAvgPlot,
-    GotthardPumpProbePulsePlot,
+    GotthardPumpProbeWindow, GotthardPpImageView, GotthardPpFomMeanPlot,
+    GotthardPpFomPulsePlot, GotthardPpRawPulsePlot, GotthardPpDarkPulsePlot
 )
-from extra_foam.special_suite.special_analysis_base import (
-    ProcessingError
-)
+from extra_foam.special_suite.special_analysis_base import ProcessingError
 from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
@@ -39,14 +37,16 @@ class TestGotthardPumpProbe(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(3, len(win._plot_widgets_st))
+        self.assertEqual(5, len(win._plot_widgets_st))
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[GotthardPumpProbeImageView])
-        self.assertEqual(1, counter[GotthardPumpProbeAvgPlot])
-        self.assertEqual(1, counter[GotthardPumpProbePulsePlot])
+        self.assertEqual(1, counter[GotthardPpImageView])
+        self.assertEqual(1, counter[GotthardPpFomMeanPlot])
+        self.assertEqual(1, counter[GotthardPpFomPulsePlot])
+        self.assertEqual(1, counter[GotthardPpRawPulsePlot])
+        self.assertEqual(1, counter[GotthardPpDarkPulsePlot])
 
         win.updateWidgetsST()
 
@@ -58,6 +58,7 @@ class TestGotthardPumpProbe(unittest.TestCase):
         # test default values
         self.assertTrue(proc._output_channel)
         self.assertEqual(0, proc._poi_index)
+        self.assertEqual(0, proc._dark_poi_index)
         self.assertEqual(1, proc.__class__._vfom_ma.window)
 
         # test set new values
@@ -79,15 +80,16 @@ class TestGotthardPumpProbe(unittest.TestCase):
         QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual(slice(1, 20, 2), proc._off_slicer)
 
-        widget = ctrl_widget.poi_index_le
-        widget.clear()
-        QTest.keyClicks(widget, "121")
-        QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0, proc._poi_index)  # maximum is 119 and one can still type "121"
-        widget.clear()
-        QTest.keyClicks(widget, "119")
-        QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(119, proc._poi_index)
+        for widget, target in zip((ctrl_widget.poi_index_le, ctrl_widget.dark_poi_index_le),
+                                  ("_poi_index", "_dark_poi_index")):
+            widget.clear()
+            QTest.keyClicks(widget, "121")
+            QTest.keyPress(widget, Qt.Key_Enter)
+            self.assertEqual(0, getattr(proc, target))  # maximum is 119 and one can still type "121"
+            widget.clear()
+            QTest.keyClicks(widget, "119")
+            QTest.keyPress(widget, Qt.Key_Enter)
+            self.assertEqual(119, getattr(proc, target))
 
         widget = ctrl_widget.dark_slicer_le
         widget.clear()
@@ -102,10 +104,10 @@ class TestGotthardPumpProbe(unittest.TestCase):
         self.assertEqual(9, proc.__class__._vfom_ma.window)
 
 
-class TestGotthardPumpProbeProcessor(_RawDataMixin):
+class TestGotthardPpProcessor(_RawDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self._proc = GotthardPumpProbeProcessor(object(), object())
+        self._proc = GotthardPpProcessor(object(), object())
 
         self._proc._output_channel = "gotthard:output"
         self._adc = np.random.randint(0, 100, size=(10, 4), dtype=np.uint16)
@@ -127,7 +129,7 @@ class TestGotthardPumpProbeProcessor(_RawDataMixin):
         data = self._get_data(12345)
 
         with pytest.raises(ProcessingError, match="actual 3D"):
-            with patch.object(GotthardPumpProbeProcessor, "_ppt",
+            with patch.object(GotthardPpProcessor, "_ppt",
                               new_callable=PropertyMock, create=True, return_value="data.3d"):
                 proc.process(data)
 
@@ -153,4 +155,8 @@ class TestGotthardPumpProbeProcessor(_RawDataMixin):
 
         processed = proc.process(self._get_data(12345))
 
-        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["raw"])
+        corrected_gt = adc_gt - np.mean(adc_gt[proc._dark_slicer], axis=0)
+        np.testing.assert_array_almost_equal(corrected_gt, processed["corrected"])
+        vfom_gt = corrected_gt[proc._on_slicer] - corrected_gt[proc._off_slicer]
+        np.testing.assert_array_almost_equal(vfom_gt, processed["vfom"])
