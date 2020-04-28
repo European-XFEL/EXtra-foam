@@ -87,7 +87,7 @@ class GotthardPpFomMeanPlot(PlotWidgetF):
     def __init__(self, *, parent=None):
         super().__init__(parent=parent, show_indicator=True)
 
-        self.setTitle("Average FOM over train")
+        self.setTitle("Averaged FOM over train")
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
         self.addLegend(offset=(10, 5))

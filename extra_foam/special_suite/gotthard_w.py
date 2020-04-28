@@ -10,8 +10,8 @@ All rights reserved.
 from string import Template
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QCheckBox, QGridLayout, QSplitter
+from PyQt5.QtGui import QDoubleValidator, QIntValidator
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QGridLayout, QSplitter
 
 from extra_foam.gui.plot_widgets import (
     HistMixin, ImageViewF, PlotWidgetF
@@ -59,6 +59,13 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.n_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
         self.hist_over_ma_cb = QCheckBox("Histogram over M.A. train")
 
+        self.scale_le = SmartLineEdit("0")
+        validator = QDoubleValidator()
+        validator.setBottom(0)
+        self.scale_le.setValidator(validator)
+        self.offset_le = SmartLineEdit("0")
+        self.offset_le.setValidator(QDoubleValidator())
+
         self._non_reconfigurable_widgets = [
             self.output_ch_le
         ]
@@ -77,6 +84,8 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
             ("P.O.I. (sliced)", self.poi_index_le),
             ("Bin range", self.bin_range_le),
             ("# of bins", self.n_bins_le),
+            ("Scale (eV/pixel)", self.scale_le),
+            ("Offset (eV)", self.offset_le),
             ("", self.hist_over_ma_cb),
         ])
 
@@ -98,16 +107,24 @@ class GotthardAvgPlot(PlotWidgetF):
 
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
-        self.addLegend(offset=(-40, 20))
+        self.addLegend(offset=(5, 10))
 
-        self._mean = self.plotCurve(name="mean", pen=FColor.mkPen("p"))
-        self._mean_ma = self.plotCurve(
-            name="mean (moving average)", pen=FColor.mkPen("g"))
+        self.setTitle("Averaged spectra over pulses")
+        self._mean = self.plotCurve(name="Current", pen=FColor.mkPen("p"))
+        self._mean_ma = self.plotCurve(name="Moving average",
+                                       pen=FColor.mkPen("g"))
 
     def updateF(self, data):
         """Override."""
-        self._mean.setData(data['spectrum_mean'])
-        self._mean_ma.setData(data['spectrum_ma_mean'])
+        x = data["x"]
+        if x is None:
+            self._mean.setData(data['spectrum_mean'])
+            self._mean_ma.setData(data['spectrum_ma_mean'])
+            self.setLabel('bottom', "Pixel")
+        else:
+            self._mean.setData(x, data['spectrum_mean'])
+            self._mean_ma.setData(x, data['spectrum_ma_mean'])
+            self.setLabel('bottom', "eV")
 
 
 class GotthardPulsePlot(PlotWidgetF):
@@ -118,33 +135,36 @@ class GotthardPulsePlot(PlotWidgetF):
     def __init__(self, *, parent=None):
         super().__init__(parent=parent, show_indicator=True)
 
-        self.setLabel('left', "ADU")
-        self.setLabel('bottom', "Pixel")
-        self.addLegend(offset=(-40, 20))
-
         self._idx = 0
 
-        self._poi = None
-        self._poi_ma = None
-        self._initPlots()
+        self._updateTitle()
+        self.setLabel('left', "ADU")
+        self.setLabel('bottom', "Pixel")
+        self.addLegend(offset=(5, 10))
 
-    def _initPlots(self):
-        self._poi = self.plotCurve(
-            name=f"Pulse {self._idx}", pen=FColor.mkPen("p"))
-        self._poi_ma = self.plotCurve(
-            name=f"Pulse {self._idx} (moving average)", pen=FColor.mkPen("g"))
+        self._poi = self.plotCurve(name="Current", pen=FColor.mkPen("p"))
+        self._poi_ma = self.plotCurve(name="Moving average",
+                                      pen=FColor.mkPen("g"))
+
+    def _updateTitle(self):
+        self.setTitle(f"Pulse of interest: {self._idx}")
 
     def updateF(self, data):
         """Override."""
         idx = data['poi_index']
         if idx != self._idx:
             self._idx = idx
-            # I don't known an easy way to change the legend
-            self.clear()
-            self._initPlots()
+            self._updateTitle()
 
-        self._poi.setData(data['spectrum'][idx])
-        self._poi_ma.setData(data['spectrum_ma'][idx])
+        x = data["x"]
+        if x is None:
+            self._poi.setData(data['spectrum'][idx])
+            self._poi_ma.setData(data['spectrum_ma'][idx])
+            self.setLabel('bottom', "Pixel")
+        else:
+            self._poi.setData(x, data['spectrum'][idx])
+            self._poi_ma.setData(x, data['spectrum_ma'][idx])
+            self.setLabel('bottom', "eV")
 
 
 class GotthardImageView(ImageViewF):
@@ -247,6 +267,14 @@ class GotthardWindow(_SpecialAnalysisBase):
         self._ctrl_widget_st.ma_window_le.value_changed_sgn.connect(
             self._worker_st.onMaWindowChanged)
         self._ctrl_widget_st.ma_window_le.returnPressed.emit()
+
+        self._ctrl_widget_st.scale_le.value_changed_sgn.connect(
+            self._worker_st.onScaleChanged)
+        self._ctrl_widget_st.scale_le.returnPressed.emit()
+
+        self._ctrl_widget_st.offset_le.value_changed_sgn.connect(
+            self._worker_st.onOffsetChanged)
+        self._ctrl_widget_st.offset_le.returnPressed.emit()
 
         self._ctrl_widget_st.bin_range_le.value_changed_sgn.connect(
             self._worker_st.onBinRangeChanged)
