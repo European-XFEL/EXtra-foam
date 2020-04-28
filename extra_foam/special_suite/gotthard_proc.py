@@ -28,6 +28,12 @@ class GotthardProcessor(QThreadWorker):
         _output_channel (str): output channel name.
         _pulse_slicer (slice): a slicer used to slice pulses in a train.
         _poi_index (int): index of the pulse of interest after slicing.
+        _scale (float): scale of the x axis. If 0, it means no scale will
+            be applied and the unit of x-axis is pixel. While a positive
+            value means converting pixel to eV by multiplying this value
+            for the x axis.
+        _offset (float): offset of the x axis when the value of scale is
+            not zero.
         _bin_range (tuple): range of the ADU histogram.
         _n_bins (int): number of bins of the ADU histogram.
         _hist_over_ma (bool): True for calculating the histogram over the
@@ -54,6 +60,9 @@ class GotthardProcessor(QThreadWorker):
         self._pulse_slicer = slice(None, None)
         self._poi_index = 0
 
+        self._scale = 0
+        self._offset = 0
+
         self._bin_range = self.str2range(_DEFAULT_BIN_RANGE)
         self._n_bins = _DEFAULT_N_BINS
         self._hist_over_ma = False
@@ -68,6 +77,12 @@ class GotthardProcessor(QThreadWorker):
 
     def onMaWindowChanged(self, value: str):
         self.__class__._raw_ma.window = int(value)
+
+    def onScaleChanged(self, value: str):
+        self._scale = float(value)
+
+    def onOffsetChanged(self, value: str):
+        self._offset = float(value)
 
     def onBinRangeChanged(self, value: tuple):
         self._bin_range = value
@@ -173,9 +188,16 @@ class GotthardProcessor(QThreadWorker):
         spectrum_mean = np.mean(spectrum, axis=0)
         spectrum_ma_mean = np.mean(spectrum_ma, axis=0)
 
+        if self._scale == 0:
+            x = None
+        else:
+            x = np.arange(len(spectrum_mean)) * self._scale - self._offset
+
         self.log.info(f"Train {tid} processed")
 
         return {
+            # x axis of the spectrum
+            "x": x,
             # spectrum for the current train
             "spectrum": spectrum,
             # moving average of spectrum
@@ -186,11 +208,11 @@ class GotthardProcessor(QThreadWorker):
             "spectrum_ma_mean": spectrum_ma_mean,
             # index of pulse of interest
             "poi_index": self._poi_index,
-            # (hist, bin_centers, mean, median, std)
+            # hist, bin_centers, mean, median, std
             "hist": hist_with_stats(
                 self.getRoiData(spectrum_ma) if self._hist_over_ma else
                 self.getRoiData(spectrum),
-                self._bin_range, self._n_bins),
+                self._bin_range, self._n_bins)
         }
 
     def reset(self):

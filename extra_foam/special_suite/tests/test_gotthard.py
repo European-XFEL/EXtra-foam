@@ -64,6 +64,8 @@ class TestGotthard(unittest.TestCase):
         self.assertEqual(slice(None, None), proc._pulse_slicer)
         self.assertEqual(0, proc._poi_index)
         self.assertEqual(1, proc.__class__._raw_ma.window)
+        self.assertEqual(0, proc._scale)
+        self.assertEqual(0, proc._offset)
         self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
                               proc._bin_range)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
@@ -97,6 +99,22 @@ class TestGotthard(unittest.TestCase):
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual(9, proc.__class__._raw_ma.window)
+
+        widget = ctrl_widget.scale_le
+        widget.clear()
+        QTest.keyClicks(widget, "0.002")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(0.002, proc._scale)
+        widget.clear()
+        QTest.keyClicks(widget, "-1")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(1, proc._scale)  # cannot enter '-'
+
+        widget = ctrl_widget.offset_le
+        widget.clear()
+        QTest.keyClicks(widget, "-0.18")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(-0.18, proc._offset)
 
         widget = ctrl_widget.bin_range_le
         widget.clear()
@@ -234,6 +252,8 @@ class TestGotthardProcessor(_RawDataMixin):
         proc = self._proc
         proc._recording_dark = False
         proc._poi_index = 1
+        proc._scale = 0.1
+        proc._offset = 0.2
 
         proc._subtract_dark = subtract_dark
         offset = np.ones(self._adc.shape[1]).astype(np.float32)
@@ -275,6 +295,17 @@ class TestGotthardProcessor(_RawDataMixin):
         # reset
         proc.reset()
         assert proc._raw_ma is None
+
+    def testCalibration(self):
+        proc = self._proc
+
+        processed = proc.process(self._get_data(12345))
+        assert processed["x"] is None
+
+        proc._scale = 0.1
+        proc._offset = 0.2
+        processed = proc.process(self._get_data(12345))
+        np.testing.assert_array_almost_equal(np.arange(len(self._adc)) * 0.1 - 0.2, processed['x'])
 
     def testPulseSlicerChange(self):
         proc = self._proc
