@@ -16,22 +16,20 @@ from .special_analysis_base import ProcessingError, QThreadWorker
 from .config import _PIXEL_DTYPE
 
 
-class GotthardPumpProbeProcessor(QThreadWorker):
+class GotthardPpProcessor(QThreadWorker):
     """Gotthard pump-probe analysis processor.
 
     Attributes:
         _output_channel (str): output channel name.
-        _poi_index (int): index of the pulse of interest.
         _on_slicer (slice): a slicer used to slice on-pulses in a train.
         _off_slicer (slice): a slicer used to slice off-pulses in a train.
+        _poi_index (int): index of the pulse of interest for pump-probe.
         _dark_slicer (slice): a slicer used to slice dark pulses in a train.
-        _raw_ma (numpy.ndarray): moving average of the raw data.
-            Shape=(pulses, pixels)
+        _dark_poi_index (int): index of the pulse of interest for dark.
         _vfom_ma (numpy.ndarray): moving average of the vector figure-of-merit
             data. Shape=(pulses, pixels)
     """
 
-    _raw_ma = MovingAverageArray()
     _vfom_ma = MovingAverageArray()
 
     def __init__(self, *args, **kwargs):
@@ -40,20 +38,19 @@ class GotthardPumpProbeProcessor(QThreadWorker):
         self._output_channel = ""
         self._ppt = "data.adc"
 
-        self._poi_index = 0
-
         self._on_slicer = slice(None, None)
         self._off_slicer = slice(None, None)
-        self._dark_slicer = slice(None, None)
+        self._poi_index = 0
 
-        del self._raw_ma
+        self._dark_slicer = slice(None, None)
+        self._dark_poi_index = 0
+
         del self._vfom_ma
 
     def onOutputChannelChanged(self, ch: str):
         self._output_channel = ch
 
     def onMaWindowChanged(self, value: str):
-        self.__class__._raw_ma.window = int(value)
         self.__class__._vfom_ma.window = int(value)
 
     def onOnSlicerChanged(self, value: list):
@@ -67,6 +64,9 @@ class GotthardPumpProbeProcessor(QThreadWorker):
 
     def onDarkSlicerChanged(self, value: list):
         self._dark_slicer = slice(*value)
+
+    def onDarkPoiIndexChanged(self, value: int):
+        self._dark_poi_index = value
 
     def sources(self):
         """Override."""
@@ -97,15 +97,17 @@ class GotthardPumpProbeProcessor(QThreadWorker):
 
         # Note: we do not check whether on/off/dark share a same pulse index
 
-        # update the moving average of raw data
-        self._raw_ma = raw
-
-        # calculate the dark for the current train
-        dark_mean = np.mean(raw[self._dark_slicer], axis=0)
+        # update the moving average of corrected data
+        dark = raw[self._dark_slicer]
+        # check dark POI index
+        if self._dark_poi_index >= len(dark):
+            raise ProcessingError(f"Dark POI index {self._dark_poi_index} out "
+                                  f"of boundary [{0} - {len(dark) - 1}]")
+        dark_mean = np.mean(dark, axis=0)
+        corrected = raw - dark_mean
 
         # calculate figure-of-merit for the current train
-        on = raw[self._on_slicer] - dark_mean
-        off = raw[self._off_slicer] - dark_mean
+        on, off = corrected[self._on_slicer], corrected[self._off_slicer]
 
         if len(on) != len(off):
             raise ProcessingError(f"Number of on and off pulses are different: "
@@ -127,21 +129,26 @@ class GotthardPumpProbeProcessor(QThreadWorker):
         self.log.info(f"Train {tid} processed")
 
         return {
-            # raw spectrum
-            "spectrum": raw,
-            # index of pulse of interest
+            # raw and corrected spectra
+            "raw": raw,
+            "corrected": corrected,
+            # slicers
+            "on_slicer": self._on_slicer,
+            "off_slicer": self._off_slicer,
+            "dark_slicer": self._dark_slicer,
+            # pulses of interest
             "poi_index": self._poi_index,
+            "dark_poi_index": self._dark_poi_index,
             # VFOM for the current train
             "vfom": vfom,
             # Moving averaged of vfom
             "vfom_ma": vfom_ma,
-            # averaged VFOM over pulses for the current train
+            # average of vfom over pulses
             "vfom_mean": vfom_mean,
-            # moving average of vfom_mean
+            # average of vfom_ma over pulses
             "vfom_ma_mean": vfom_ma_mean,
         }
 
     def reset(self):
         """Override."""
-        del self._raw_ma
         del self._vfom_ma

@@ -686,7 +686,7 @@ class TestImageRoiTrain(_TestDataMixin):
             # test abs_difference == False
             processed.pp.abs_difference = False
             proc.process(data)
-            assert (y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-4)
+            assert (y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-3)
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
             with patch.object(proc, "_process_proj"):
