@@ -143,17 +143,29 @@ class DataTransformer:
 
                 while True:
                     # delete old data
-                    key, _ = self._cached.popitem(last=False)
+                    key, item = self._cached.popitem(last=False)
                     if key == tid:
                         break
                     else:
-                        dropped.append(key)
+                        dropped.append((key, self._not_found_message(
+                            key, item['meta'].keys(), catalog.keys())))
 
             if len(self._cached) > self._cache_size:
-                key, _ = self._cached.popitem(last=False)
-                dropped.append(key)
+                key, item = self._cached.popitem(last=False)
+                dropped.append((key, self._not_found_message(
+                    key, item['meta'].keys(), catalog.keys())))
 
         return correlated, dropped
+
+    def _not_found_message(self, tid, found, required):
+        missing = []
+        for src in required:
+            if src not in found:
+                missing.append(src)
+
+        msg = f"Train {tid} dropped! Found {len(found)} out of " \
+              f"{len(required)} sources. Not found: {missing[0]} ..."
+        return msg
 
     def reset(self):
         """Override."""

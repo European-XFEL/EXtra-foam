@@ -209,10 +209,8 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                         try:
                             correlated, dropped = self._transformer.correlate(
                                 data, source_type=src_type)
-
-                            for tid in dropped:
-                                logger.error(f"Unable to correlate all data sources "
-                                             f"for train {tid}")
+                            for tid, err in dropped:
+                                logger.error(err)
 
                         except RuntimeError as e:
                             logger.error(str(e))
