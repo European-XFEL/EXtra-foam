@@ -628,9 +628,8 @@ class QThreadKbClient(_BaseQThreadClient):
                     continue
 
                 correlated, dropped = self._transformer_st.correlate(data)
-                for tid in dropped:
-                    self.log.error(f"Unable to correlate all data sources "
-                                   f"for train {tid}")
+                for tid, err in dropped:
+                    self.log.error(err)
 
                 if correlated is not None:
                     # keep the latest processed data in the output

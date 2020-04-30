@@ -108,7 +108,9 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
             {'abc ppt': {'train_id': 1004, 'source_type': DataSource.UNKNOWN}}, correlated['meta'])
         self.assertDictEqual({'abc ppt': 2}, correlated['raw'])
         self.assertEqual(1004, correlated['processed'].tid)
-        self.assertListEqual([1002, 1003], dropped)
+        self.assertListEqual([(1002, 'Train 1002 dropped! Found 0 out of 1 sources. Not found: abc ppt ...'),
+                              (1003, 'Train 1003 dropped! Found 0 out of 1 sources. Not found: abc ppt ...')],
+                             dropped)
 
     def testCorrelationMultiple(self):
         catalog = self._create_catalog({"ABC": [("abc", "ppt")], "EFG": [("efg", "ppt")]})
@@ -126,7 +128,8 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
              'efg ppt': {'train_id': 1002, 'source_type': DataSource.UNKNOWN}}, correlated['meta'])
         self.assertDictEqual({'abc ppt': 1, 'efg ppt': 1}, correlated['raw'])
         self.assertEqual(1002, correlated['processed'].tid)
-        self.assertListEqual([1001], dropped)
+        self.assertListEqual([(1001, 'Train 1001 dropped! Found 1 out of 2 sources. Not found: efg ppt ...')],
+                             dropped)
         self.assertListEqual([1003], list(trans._cached.keys()))
 
     def testCacheIsFull(self):
@@ -138,7 +141,7 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
             correlated, dropped = trans.correlate(self._gen_kb_data(1000 + i, {"abc": [("ppt", 2)]}))
             self.assertIsNone(correlated)
             if i + 1 > cache_size:
-                self.assertListEqual([1000 + i - cache_size], dropped)
+                self.assertListEqual([1000 + i - cache_size], [item[0] for item in dropped])
                 self.assertEqual(cache_size, len(trans._cached))
             else:
                 self.assertListEqual([], dropped)
