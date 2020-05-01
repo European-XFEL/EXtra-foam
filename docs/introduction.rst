@@ -98,6 +98,9 @@ Galleries
 .. image:: images/binning_window.png
    :width: 800
 
+.. image:: images/special_suite_tr_xas.png
+   :width: 800
+
 .. image:: images/special_suite_xas_tim.png
    :width: 800
 

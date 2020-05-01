@@ -18,7 +18,7 @@ from .cam_view_w import CamViewWindow
 from .multicam_view_w import MultiCamViewWindow
 from .gotthard_w import GotthardWindow
 from .gotthard_pump_probe_w import GotthardPumpProbeWindow
-from .trxas_w import TrxasWindow
+from .trxas_w import TrXasWindow
 from .xas_tim_w import XasTimWindow
 from .xas_tim_xmcd_w import XasTimXmcdWindow
 from .module_scan_w import ModuleScanWindow
@@ -127,7 +127,7 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
 
         self.addSpecial(XasTimWindow)
         self.addSpecial(XasTimXmcdWindow)
-        self.addSpecial(TrxasWindow)
+        self.addSpecial(TrXasWindow)
         self.addSpecial(GotthardWindow)
         self.addSpecial(GotthardPumpProbeWindow)
         self.addCommonSpecials()
