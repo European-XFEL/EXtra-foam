@@ -24,11 +24,11 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._correct_gain_cb = QCheckBox()
-        self._correct_offset_cb = QCheckBox()
+        self._correct_gain_cb = QCheckBox("Apply gain correction")
+        self._correct_offset_cb = QCheckBox("Apply offset correction")
 
-        self.load_gain_btn = QPushButton("Load gain")
-        self.load_offset_btn = QPushButton("Load offset")
+        self.load_gain_btn = QPushButton("Load gain constants")
+        self.load_offset_btn = QPushButton("Load offset constants")
 
         self.gain_fp_le = QLineEdit()
         self.gain_fp_le.setEnabled(False)
@@ -36,9 +36,9 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self.offset_fp_le.setEnabled(False)
 
         self.remove_gain_btn = create_icon_button(
-            'remove.png', 20, description="Remove gain")
+            'remove.png', 20, description="Remove gain constants")
         self.remove_offset_btn = create_icon_button(
-            'remove.png', 20, description="Remove offset")
+            'remove.png', 20, description="Remove offset constants")
 
         self._gain_cells_le = SmartSliceLineEdit(":")
         self._offset_cells_le = SmartSliceLineEdit(":")
@@ -48,6 +48,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._dark_as_offset_cb = QCheckBox("Use dark as offset")
         self._dark_as_offset_cb.setChecked(True)
+        self.load_dark_btn = QPushButton("Load dark run")
         self.record_dark_btn = create_icon_button(
             'record.png', 20, description="Record dark")
         self.record_dark_btn.setCheckable(True)
@@ -57,6 +58,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._non_reconfigurable_widgets = [
             self.load_gain_btn,
             self.load_offset_btn,
+            self.load_dark_btn,
         ]
 
         self.initUI()
@@ -70,24 +72,23 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         AR = Qt.AlignRight
 
         layout.addWidget(self._correct_gain_cb, 0, 0)
-        layout.addWidget(QLabel("Gain correction"), 0, 1, AR)
-        layout.addWidget(self.load_gain_btn, 0, 2)
-        layout.addWidget(self.gain_fp_le, 0, 3)
+        layout.addWidget(self.load_gain_btn, 0, 1)
+        layout.addWidget(self.gain_fp_le, 0, 2)
         layout.addWidget(self.remove_gain_btn, 0, 5)
         layout.addWidget(QLabel("Memory cells: "), 0, 6, AR)
         layout.addWidget(self._gain_cells_le, 0, 7)
         self._gain_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._correct_offset_cb, 1, 0)
-        layout.addWidget(QLabel("Offset correction"), 1, 1, AR)
-        layout.addWidget(self.load_offset_btn, 1, 2)
-        layout.addWidget(self.offset_fp_le, 1, 3)
+        layout.addWidget(self.load_offset_btn, 1, 1)
+        layout.addWidget(self.offset_fp_le, 1, 2)
         layout.addWidget(self.remove_offset_btn, 1, 5)
         layout.addWidget(QLabel("Memory cells: "), 1, 6, AR)
         layout.addWidget(self._offset_cells_le, 1, 7)
         self._offset_cells_le.setFixedWidth(100)
 
-        layout.addWidget(self._dark_as_offset_cb, 2, 2)
+        layout.addWidget(self._dark_as_offset_cb, 2, 0)
+        layout.addWidget(self.load_dark_btn, 2, 1)
         layout.addWidget(self.record_dark_btn, 2, 4)
         layout.addWidget(self._remove_dark_btn, 2, 5)
 

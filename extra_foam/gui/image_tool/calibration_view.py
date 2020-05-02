@@ -31,11 +31,11 @@ class CalibrationView(_AbstractImageToolView):
         self._corrected = ImageViewF(hide_axis=False)
         self._corrected.setTitle("Corrected")
         self._dark = ImageViewF(hide_axis=False)
-        self._dark.setTitle("Dark")
+        self._dark.setTitle("Dark (averaged)")
         self._gain = ImageViewF(hide_axis=False)
-        self._gain.setTitle("Gain")
+        self._gain.setTitle("Gain constants (averaged)")
         self._offset = ImageViewF(hide_axis=False)
-        self._offset.setTitle("Offset")
+        self._offset.setTitle("Offset constants (averaged)")
 
         self._pub = CalConstantsPub()
 
