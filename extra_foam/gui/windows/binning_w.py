@@ -32,7 +32,7 @@ class Bin1dHist(TimedPlotWidgetF):
         self._default_y2_label = "Count"
 
         self._count_plot = self.plotBar(
-            y2=True, brush=FColor.mkBrush('w', alpha=50))
+            y2=True, brush=FColor.mkBrush('i', alpha=70))
         self._fom_plot = self.plotStatisticsBar(line=True)
 
         self._source = ""

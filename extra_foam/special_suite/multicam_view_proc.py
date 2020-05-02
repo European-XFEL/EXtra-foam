@@ -7,8 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .special_analysis_base import QThreadWorker
-from ..utils import profiler
+from .special_analysis_base import profiler, QThreadWorker
 
 
 class MultiCamViewProcessor(QThreadWorker):

@@ -26,11 +26,10 @@ logger.setLevel('CRITICAL')
 class TestCamView(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with patch("extra_foam.special_suite.special_analysis_base._SpecialAnalysisBase.startWorker"):
-            cls._win = CamViewWindow('SCS')
+        cls._win = CamViewWindow('SCS')
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
 

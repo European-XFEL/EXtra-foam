@@ -11,11 +11,9 @@ import numpy as np
 
 from extra_foam.algorithms import hist_with_stats
 from extra_foam.pipeline.data_model import MovingAverageArray
-from extra_foam.utils import profiler
-from extra_foam.config import _MAX_INT32
 
-from .special_analysis_base import ProcessingError, QThreadWorker
-from .config import _PIXEL_DTYPE
+from .special_analysis_base import ProcessingError, profiler, QThreadWorker
+from .config import _MAX_INT32, _PIXEL_DTYPE
 
 _DEFAULT_N_BINS = 10
 _DEFAULT_BIN_RANGE = "-inf, inf"
@@ -142,8 +140,6 @@ class GotthardProcessor(QThreadWorker):
         data, meta = data["raw"], data["meta"]
         tid = self.getTrainId(meta)
 
-        if not self._output_channel or not self._ppt:
-            return
         raw = self.getPropertyData(data, self._output_channel, self._ppt)
 
         # check data shape

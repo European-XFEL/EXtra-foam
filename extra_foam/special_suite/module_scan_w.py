@@ -41,9 +41,7 @@ class ModuleScanCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
-
-        self.setLayout(layout)
+        pass
 
     def initConnections(self):
         """Override."""

@@ -48,16 +48,11 @@ class MultiCamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
-
-        rows = []
-        for i, (ch, ppt) in enumerate(zip(self.output_channels, self.properties)):
-            rows.append((f"Output channel {i+1}", ch))
-            rows.append((f"Property {i+1}", ppt))
-
-        self.addRows(layout, rows)
-
-        self.setLayout(layout)
+        layout = self.layout()
+        for i, (ch, ppt) in enumerate(zip(self.output_channels,
+                                          self.properties)):
+            layout.addRow(f"Output channel {i+1}: ", ch)
+            layout.addRow(f"Property {i+1}: ", ppt)
 
     def initConnections(self):
         """Override."""

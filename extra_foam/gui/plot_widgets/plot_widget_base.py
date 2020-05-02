@@ -93,6 +93,13 @@ class PlotWidgetF(pg.GraphicsView):
                 # FIXME: better solution
                 pass
 
+        if self._vb2 is not None:
+            for item in self._vb2.addedItems:
+                try:
+                    item.setData([], [])
+                except TypeError:
+                    pass
+
     @abc.abstractmethod
     def updateF(self, data):
         """This method is called by the parent window."""
@@ -115,10 +122,17 @@ class PlotWidgetF(pg.GraphicsView):
     def removeItem(self, *args, **kwargs):
         self._plot_item.removeItem(*args, **kwargs)
 
-    def plotCurve(self, *args, **kwargs):
+    def plotCurve(self, *args, y2=False, **kwargs):
         """Add and return a new curve plot."""
         item = pg.PlotCurveItem(*args, **kwargs)
-        self._plot_item.addItem(item)
+
+        if y2:
+            if self._vb2 is None:
+                self.createY2()
+            self._vb2.addItem(item)
+        else:
+            self._plot_item.addItem(item)
+
         return item
 
     def plotScatter(self, *args, **kwargs):

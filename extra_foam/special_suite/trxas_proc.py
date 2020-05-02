@@ -10,12 +10,12 @@ All rights reserved.
 import numpy as np
 from scipy import stats
 
-from .special_analysis_base import QThreadWorker
-from ..algorithms import compute_spectrum_1d, nansum
-from ..pipeline.processors.base_processor import SimpleSequence
-from ..pipeline.processors.binning import _BinMixin
-from ..pipeline.exceptions import ProcessingError
-from ..utils import profiler
+from extra_foam.algorithms import compute_spectrum_1d, nansum
+from extra_foam.pipeline.processors.base_processor import SimpleSequence
+from extra_foam.pipeline.processors.binning import _BinMixin
+from extra_foam.pipeline.exceptions import ProcessingError
+
+from .special_analysis_base import profiler, QThreadWorker
 
 
 class TrxasProcessor(QThreadWorker, _BinMixin):
@@ -212,33 +212,43 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
             raise ProcessingError("ROI3 sum <= 0!")
 
         # fetch energy and delay
-
-        if not self._delay_device or not self._delay_ppt:
-            return
         delay = self.getPropertyData(
             raw, self._delay_device, self._delay_ppt)
 
-        if not self._energy_device or not self._energy_ppt:
-            return
         energy = self.getPropertyData(
             raw, self._energy_device, self._energy_ppt)
 
         return roi1, roi2, roi3, sum1, sum2, sum3, delay, energy
 
     def _new_1d_binning(self):
-        stats_list, self._delay_bin_edges, counts_list = compute_spectrum_1d(
+        self._a13_stats, _, _ = compute_spectrum_1d(
             self._delays.data(),
-            [self._a13.data(), self._a23.data(), self._a21.data()],
+            self._a13.data(),
             n_bins=self._n_delay_bins,
-            bin_range =self._delay_range,
+            bin_range=self._delay_range,
             edge2center=False,
+            nan_to_num=True
         )
 
-        for item in stats_list:
-            np.nan_to_num(item, copy=False)
-        self._a13_stats, self._a23_stats, self._a21_stats = stats_list
-        self._delay_bin_counts = counts_list[0]
-        np.nan_to_num(self._delay_bin_counts, copy=False)
+        self._a23_stats, _, _ = compute_spectrum_1d(
+            self._delays.data(),
+            self._a23.data(),
+            n_bins=self._n_delay_bins,
+            bin_range=self._delay_range,
+            edge2center=False,
+            nan_to_num=True
+        )
+
+        self._a21_stats, edges, counts = compute_spectrum_1d(
+            self._delays.data(),
+            self._a21.data(),
+            n_bins=self._n_delay_bins,
+            bin_range=self._delay_range,
+            edge2center=False,
+            nan_to_num=True
+        )
+        self._delay_bin_edges = edges
+        self._delay_bin_counts = counts
 
         self._bin1d = False
 

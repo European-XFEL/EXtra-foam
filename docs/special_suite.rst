@@ -74,7 +74,7 @@ Bragg diffraction peak, XES
 
 - SCS
 
-Gotthard, Gotthard (pump-probe), XAS-TIM, XAS-TIM-XMCD, tr-XAS
+Gotthard, Gotthard (pump-probe), :ref:`XAS-TIM`, :ref:`XAS-TIM-XMCD`, tr-XAS
 
 - MID
 
@@ -89,3 +89,21 @@ Multi-module scan
 - XPD
 
 Gotthard
+
+
+.. _XAS-TIM:
+
+XAS-TIM
+"""""""
+
+.. image:: images/special_suite_xas_tim.png
+   :width: 800
+
+
+.. _XAS-TIM-XMCD:
+
+XAS-TIM-XMCD
+""""""""""""
+
+.. image:: images/special_suite_xas_tim_xmcd.png
+   :width: 800
