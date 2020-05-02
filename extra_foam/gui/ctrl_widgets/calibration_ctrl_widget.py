@@ -35,8 +35,10 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self.offset_fp_le = QLineEdit()
         self.offset_fp_le.setEnabled(False)
 
-        self.remove_gain_btn = create_icon_button('remove.png', 20)
-        self.remove_offset_btn = create_icon_button('remove.png', 20)
+        self.remove_gain_btn = create_icon_button(
+            'remove.png', 20, description="Remove gain")
+        self.remove_offset_btn = create_icon_button(
+            'remove.png', 20, description="Remove offset")
 
         self._gain_cells_le = SmartSliceLineEdit(":")
         self._offset_cells_le = SmartSliceLineEdit(":")
@@ -46,9 +48,11 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._dark_as_offset_cb = QCheckBox("Use dark as offset")
         self._dark_as_offset_cb.setChecked(True)
-        self.record_dark_btn = create_icon_button('record.png', 20)
+        self.record_dark_btn = create_icon_button(
+            'record.png', 20, description="Record dark")
         self.record_dark_btn.setCheckable(True)
-        self._remove_dark_btn = create_icon_button('remove.png', 20)
+        self._remove_dark_btn = create_icon_button(
+            'remove.png', 20, description="Remove dark")
 
         self._non_reconfigurable_widgets = [
             self.load_gain_btn,
