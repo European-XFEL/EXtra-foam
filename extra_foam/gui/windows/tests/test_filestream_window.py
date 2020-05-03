@@ -51,7 +51,7 @@ class TestFileStreamWindow(unittest.TestCase):
         with self.assertRaises(ValueError):
             FileStreamWindow(port=454522)
 
-        win = FileStreamWindow(port=45452)
+        win = FileStreamWindow(port=45449)
         widget = win._ctrl_widget
         self.assertEqual('45452', widget.port_le.text())
         self.assertIsNone(win._mediator)

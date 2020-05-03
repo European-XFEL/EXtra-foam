@@ -211,8 +211,9 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                                 data, source_type=src_type)
                             for tid, err in dropped:
                                 logger.error(err)
-
-                        except RuntimeError as e:
+                        except Exception as e:
+                            # To be on the safe side since any Exception here
+                            # will stop the thread
                             logger.error(str(e))
                     except TimeoutError:
                         pass

@@ -224,6 +224,9 @@ class _Config(dict):
         "BRIDGE_TIMEOUT": 0.1,
         # default extension port
         "EXTENSION_PORT": 5555,
+        # size of cache when correlating data arriving at different time
+        # with train ID
+        "TRANSFORMER_CACHE_SIZE": 20,
         # -------------------------------------------------------------
         # Source of data
         # -------------------------------------------------------------

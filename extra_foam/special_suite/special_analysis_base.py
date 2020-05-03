@@ -631,6 +631,7 @@ class QThreadKbClient(_BaseQThreadClient):
         with self._client_instance_type(
                 self._endpoint_st, timeout=_CLIENT_TIME_OUT) as client:
             self.log.info(f"Connected to {self._endpoint_st}")
+            correlated = None
             while not self.isInterruptionRequested():
 
                 try:
@@ -638,9 +639,14 @@ class QThreadKbClient(_BaseQThreadClient):
                 except TimeoutError:
                     continue
 
-                correlated, dropped = self._transformer_st.correlate(data)
-                for tid, err in dropped:
-                    self.log.error(err)
+                try:
+                    correlated, dropped = self._transformer_st.correlate(data)
+                    for tid, err in dropped:
+                        self.log.error(err)
+                except Exception as e:
+                    # To be on the safe side since any Exception here
+                    # will stop the thread
+                    logger.error(str(e))
 
                 if correlated is not None:
                     # keep the latest processed data in the output
