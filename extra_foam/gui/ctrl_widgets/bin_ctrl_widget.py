@@ -25,7 +25,7 @@ from ...database import SourceCatalog
 
 
 _N_PARAMS = 2
-_DEFAULT_N_BINS = 10
+_DEFAULT_N_BINS = 20
 _DEFAULT_BIN_RANGE = "-inf, inf"
 _MAX_N_BINS = 999
 

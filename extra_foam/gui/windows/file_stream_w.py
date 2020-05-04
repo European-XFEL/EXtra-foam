@@ -57,12 +57,12 @@ class _FileStreamCtrlWidget(QWidget):
 
         self.data_folder_le = SmartLineEdit()
 
-        self.serve_start_btn = create_icon_button("start.png", 18)
-        self.serve_start_btn.setToolTip("Stream once")
-        self.repeat_serve_start_btn = create_icon_button("repeat.png", 18)
-        self.repeat_serve_start_btn.setToolTip("Stream repeatedly")
-        self.serve_terminate_btn = create_icon_button("stop.png", 18)
-        self.serve_terminate_btn.setToolTip("Stop stream")
+        self.serve_start_btn = create_icon_button(
+            "start.png", 18, description="Stream once")
+        self.repeat_serve_start_btn = create_icon_button(
+            "repeat.png", 18, description="Stream repeatedly")
+        self.serve_terminate_btn = create_icon_button(
+            "stop.png", 18, description="Stop stream")
         self.serve_terminate_btn.setEnabled(False)
 
         self.mode_cb = QComboBox()

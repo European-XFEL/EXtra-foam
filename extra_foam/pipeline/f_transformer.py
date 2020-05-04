@@ -10,7 +10,7 @@ All rights reserved.
 from collections import OrderedDict
 
 from ..pipeline.data_model import ProcessedData
-from ..config import DataSource
+from ..config import config, DataSource
 
 
 class DataTransformer:
@@ -20,7 +20,7 @@ class DataTransformer:
     by train ID.
     """
 
-    def __init__(self, catalog, *, cache_size=20):
+    def __init__(self, catalog, *, cache_size=None):
         """Initialization.
 
         :param SourceCatalog catalog: data source catalog. The contained
@@ -31,7 +31,8 @@ class DataTransformer:
         self._catalog = catalog
 
         self._cached = OrderedDict()
-        self._cache_size = cache_size
+        self._cache_size = config["TRANSFORMER_CACHE_SIZE"] \
+            if cache_size is None else cache_size
 
         # keep the latest correlated train ID
         self._correlated_tid = -1
@@ -102,9 +103,8 @@ class DataTransformer:
 
         return new_raw, new_meta, tid
 
-    @staticmethod
-    def _found_all(catalog, meta):
-        for k in catalog:
+    def _found_all(self, meta):
+        for k in self._catalog:
             if k not in meta:
                 return False
         return True
@@ -132,7 +132,7 @@ class DataTransformer:
             cached['meta'].update(meta)
             cached['raw'].update(raw)
 
-            if self._found_all(catalog, cached['meta']):
+            if self._found_all(cached['meta']):
                 correlated = {
                     'catalog': catalog.__copy__(),
                     'meta': cached['meta'],
@@ -140,31 +140,40 @@ class DataTransformer:
                     'processed': ProcessedData(tid)
                 }
                 self._correlated_tid = tid
-
                 while True:
                     # delete old data
                     key, item = self._cached.popitem(last=False)
                     if key == tid:
                         break
-                    else:
-                        dropped.append((key, self._not_found_message(
-                            key, item['meta'].keys(), catalog.keys())))
+
+                    dropped.append((key, self._not_found_message(
+                        key, item['meta'].keys())))
 
             if len(self._cached) > self._cache_size:
                 key, item = self._cached.popitem(last=False)
                 dropped.append((key, self._not_found_message(
-                    key, item['meta'].keys(), catalog.keys())))
+                    key, item['meta'].keys())))
 
         return correlated, dropped
 
-    def _not_found_message(self, tid, found, required):
-        missing = []
-        for src in required:
+    def _not_found_message(self, tid, found):
+        not_found = []
+        for src in self._catalog.keys():
             if src not in found:
-                missing.append(src)
+                not_found.append(src)
 
-        msg = f"Train {tid} dropped! Found {len(found)} out of " \
-              f"{len(required)} sources. Not found: {missing[0]} ..."
+        msg = f"Train {tid} dropped! "
+        # TODO: in case of reducing requested sources on the
+        #       fly, the old uncorrelated data may become
+        #       correlated data. Here, we do not declare them
+        #       correlated data since it will produce a peak
+        #       load on the pipeline. On the other hand, it
+        #       is impossible to have a detailed error message
+        #       since we do not know which data are requested
+        #       in the old time.
+        if not_found:
+            msg += f"Found {len(found)} out of {len(self._catalog)} sources. " \
+                   f"Not found: {not_found[0]} ..."
         return msg
 
     def reset(self):
