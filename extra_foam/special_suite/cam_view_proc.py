@@ -25,6 +25,8 @@ class CamViewProcessor(QThreadWorker):
     Attributes:
         _output_channel (str): output channel name.
         _ppt (str): property name.
+        _pulse_idx (int): pulse index for pulse-resolved images.
+        _memory_cell_last (bool):
         _raw_ma (numpy.ndarray): moving average of the raw image data.
             Shape=(y, x)
         _dark_ma (numpy.ndarray): moving average of the dark data.
@@ -42,6 +44,9 @@ class CamViewProcessor(QThreadWorker):
         self._output_channel = ''
         self._ppt = ''
 
+        self._pulse_idx = 0
+        self._memory_cell_last = False
+
         self.__class__._raw_ma.window = 1
 
         self._bin_range = self.str2range(_DEFAULT_BIN_RANGE)
@@ -54,6 +59,12 @@ class CamViewProcessor(QThreadWorker):
 
     def onPropertyChanged(self, value: str):
         self._ppt = value
+
+    def onPulseIndexChanged(self, value: str):
+        self._pulse_idx = int(value)
+
+    def onMemoryCellLastToggled(self, value: bool):
+        self._memory_cell_last = value
 
     def onMaWindowChanged(self, value: str):
         self.__class__._raw_ma.window = int(value)
@@ -101,7 +112,10 @@ class CamViewProcessor(QThreadWorker):
         tid = self.getTrainId(meta)
 
         img = self.squeezeToImage(
-            tid, self.getPropertyData(data, self._output_channel, self._ppt))
+            tid, self.getPropertyData(data, self._output_channel, self._ppt),
+            index=self._pulse_idx,
+            memory_cell_last=self._memory_cell_last
+        )
         if img is None:
             return
 

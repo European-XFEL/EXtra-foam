@@ -412,9 +412,9 @@ class ImageAssemblerFactory(ABC):
             """Override.
 
             Single module:
-            - calibrated, "data.adc", (modules, y, x)
+            - calibrated, "data.adc", (memory cells, y, x)
             Note: no extra axis like AGIPD, LPD, etc.
-            - raw, "data.adc", (modules, y, x)
+            - raw, "data.adc", (memory cells, y, x)
 
             -> (memory cells, modules, y, x)
             """

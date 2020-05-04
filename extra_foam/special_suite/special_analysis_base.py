@@ -484,32 +484,37 @@ class QThreadWorker(QObject):
         """
         return data[f"{name} {ppt}"]
 
-    def squeezeToImage(self, tid, arr):
+    def squeezeToImage(self, tid, arr, *, index=0, memory_cell_last=False):
         """Try to squeeze an array to get a 2D image data.
 
         It attempts to squeeze the input array if its dimension is 3D.
 
         :param int tid: train ID.
         :param numpy.ndarray arr: image data.
+        :param int index: pulse index of the pulse-resolved image data
+        :param bool memory_cell_last: True if
         """
         if arr is None:
             return
 
-        if arr.ndim not in (2, 3):
-            self.log.error(f"[{tid}] Array dimension must be either 2 or 3! "
-                           f"actual {arr.ndim}!")
+        if arr.ndim not in (2, 3, 4):
+            self.log.error(f"[{tid}] Array dimension must be either "
+                           f"2, 3 or 4! actual {arr.ndim}")
             return
 
-        if arr.ndim == 3:
+        if arr.ndim == 4:
             try:
-                img = np.squeeze(arr, axis=0)
+                arr = np.squeeze(arr, axis=1)
             except ValueError:
-                try:
-                    img = np.squeeze(arr, axis=-1)
-                except ValueError:
-                    self.log.error(
-                        "f[{tid}] Failed to squeeze a 3D array to 2D!")
-                    return
+                self.log.error(
+                    f"[{tid}] Failed to squeeze the module dimension of a "
+                    f"4D array to 3D! actual shape {arr.shape}")
+
+        if arr.ndim == 3:
+            if memory_cell_last:
+                img = arr[..., index]
+            else:
+                img = arr[index]
         else:
             img = arr
 

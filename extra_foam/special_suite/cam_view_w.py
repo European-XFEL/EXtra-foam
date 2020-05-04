@@ -11,13 +11,14 @@ from string import Template
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtWidgets import QCheckBox, QSplitter
 
 from extra_foam.gui.plot_widgets import HistMixin, ImageViewF, PlotWidgetF
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
 )
 
+from .config import _MAX_N_PULSES_PER_TRAIN
 from .cam_view_proc import (
     CamViewProcessor, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
 )
@@ -43,6 +44,11 @@ class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.output_ch_le = SmartStringLineEdit(_DEFAULT_OUTPUT_CHANNEL)
         self.property_le = SmartStringLineEdit(_DEFAULT_PROPERTY)
 
+        self.pulse_index_le = SmartLineEdit("0")
+        self.pulse_index_le.setValidator(
+            QIntValidator(0, _MAX_N_PULSES_PER_TRAIN - 1))
+        self.memory_cell_last_cb = QCheckBox("Memory cell last")
+
         self.ma_window_le = SmartLineEdit("1")
         validator = QIntValidator()
         validator.setBottom(1)
@@ -66,6 +72,8 @@ class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         layout.addRow("Output channel: ", self.output_ch_le)
         layout.addRow("Property: ", self.property_le)
+        layout.addRow("Pulse index: ", self.pulse_index_le)
+        layout.addRow("", self.memory_cell_last_cb)
         layout.addRow("M.A. window: ", self.ma_window_le)
         layout.addRow("Bin range: ", self.bin_range_le)
         layout.addRow("# of bins: ", self.n_bins_le)
@@ -155,6 +163,15 @@ class CamViewWindow(_SpecialAnalysisBase):
         self._ctrl_widget_st.property_le.value_changed_sgn.connect(
             self._worker_st.onPropertyChanged)
         self._ctrl_widget_st.property_le.returnPressed.emit()
+
+        self._ctrl_widget_st.pulse_index_le.value_changed_sgn.connect(
+            self._worker_st.onPulseIndexChanged)
+        self._ctrl_widget_st.pulse_index_le.returnPressed.emit()
+
+        self._ctrl_widget_st.memory_cell_last_cb.toggled.connect(
+            self._worker_st.onMemoryCellLastToggled)
+        self._ctrl_widget_st.memory_cell_last_cb.toggled.emit(
+            self._ctrl_widget_st.memory_cell_last_cb.isChecked())
 
         self._ctrl_widget_st.ma_window_le.value_changed_sgn.connect(
             self._worker_st.onMaWindowChanged)
