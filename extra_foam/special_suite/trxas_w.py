@@ -129,7 +129,7 @@ class TrXasSpectraPlot(TimedPlotWidgetF):
     """
     def __init__(self, diff=False, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, show_indicator=True)
 
         self._diff = diff
 

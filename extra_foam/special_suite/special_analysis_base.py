@@ -646,7 +646,7 @@ class QThreadKbClient(_BaseQThreadClient):
                 except Exception as e:
                     # To be on the safe side since any Exception here
                     # will stop the thread
-                    logger.error(str(e))
+                    self.log.error(str(e))
 
                 if correlated is not None:
                     # keep the latest processed data in the output

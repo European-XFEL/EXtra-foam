@@ -53,7 +53,7 @@ class TestFileStreamWindow(unittest.TestCase):
 
         win = FileStreamWindow(port=45449)
         widget = win._ctrl_widget
-        self.assertEqual('45452', widget.port_le.text())
+        self.assertEqual('45449', widget.port_le.text())
         self.assertIsNone(win._mediator)
 
         with patch("extra_foam.gui.windows.file_stream_w.Process.start") as mocked_start:
