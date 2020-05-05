@@ -509,7 +509,7 @@ class ImageData:
             if poi_indices is None:
                 poi_indices = [0, 0]
             for i in poi_indices:
-                instance.images[i] = arr[i]
+                instance.images[i] = arr[i].copy()
 
             instance.mean = nanmean_image_data(arr)
 
