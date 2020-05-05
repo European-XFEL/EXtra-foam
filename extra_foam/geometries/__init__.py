@@ -16,9 +16,9 @@ from extra_geom import AGIPD_1MGeometry as _geom_AGIPD_1MGeometry
 from extra_geom import LPD_1MGeometry as _geom_LPD_1MGeometry
 from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
 
-from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
-from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
-from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
+from ..algorithms.geometry_1m import AGIPD_1MGeometry as _AGIPD_1MGeometry
+from ..algorithms.geometry_1m import LPD_1MGeometry as _LPD_1MGeometry
+from ..algorithms.geometry_1m import DSSC_1MGeometry as _DSSC_1MGeometry
 from ..config import config, GeomAssembler
 
 

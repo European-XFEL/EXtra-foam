@@ -14,7 +14,7 @@
 
 #include "xtensor/xio.hpp"
 
-#include "f_geometry.hpp"
+#include "f_geometry_1m.hpp"
 
 namespace foam
 {

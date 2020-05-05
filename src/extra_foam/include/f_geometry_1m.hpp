@@ -7,8 +7,8 @@
  * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
  * All rights reserved.
  */
-#ifndef EXTRA_FOAM_GEOMETRY_H
-#define EXTRA_FOAM_GEOMETRY_H
+#ifndef EXTRA_FOAM_GEOMETRY_1M_H
+#define EXTRA_FOAM_GEOMETRY_1M_H
 
 #include <cassert>
 #include <cmath>
@@ -478,7 +478,7 @@ public:
 
   static const shapeType module_shape;
   static const shapeType tile_shape;
-  static const int n_tiles_per_module = 8; // number of tiles per module
+  static constexpr int n_tiles_per_module = 8; // number of tiles per module
   static const quadOrientType quad_orientations;
 private:
 
@@ -522,25 +522,28 @@ const AGIPD_1MGeometry::quadOrientType AGIPD_1MGeometry::quad_orientations {
 
 AGIPD_1MGeometry::AGIPD_1MGeometry()
 {
+  auto w = static_cast<double>(module_shape[0]);
+  auto h = static_cast<double>(module_shape[1]);
+
   // first pixel position of each module
   // (upper-right for Q1 and Q2, lower-left for Q3 and Q4) positions
   xt::xtensor_fixed<double, xt::xshape<n_modules, 3>> m_pos {
-    { -512,  512, 0},
-    { -512,  384, 0},
-    { -512,  256, 0},
-    { -512,  128, 0},
-    { -512,    0, 0},
-    { -512, -128, 0},
-    { -512, -256, 0},
-    { -512, -384, 0},
-    {  512, -128, 0},
-    {  512, -256, 0},
-    {  512, -384, 0},
-    {  512, -512, 0},
-    {  512,  384, 0},
-    {  512,  256, 0},
-    {  512,  128, 0},
-    {  512,    0, 0}
+    { -w,  4 * h, 0},
+    { -w,  3 * h, 0},
+    { -w,  2 * h, 0},
+    { -w,  1 * h, 0},
+    { -w,  0 * h, 0},
+    { -w, -1 * h, 0},
+    { -w, -2 * h, 0},
+    { -w, -3 * h, 0},
+    {  w, -1 * h, 0},
+    {  w, -2 * h, 0},
+    {  w, -3 * h, 0},
+    {  w, -4 * h, 0},
+    {  w,  3 * h, 0},
+    {  w,  2 * h, 0},
+    {  w,  1 * h, 0},
+    {  w,  0 * h, 0}
   };
 
   xt::xtensor_fixed<double, xt::xshape<n_modules, n_tiles_per_module, 3>> positions;
@@ -695,7 +698,7 @@ public:
 
   static const shapeType module_shape;
   static const shapeType tile_shape;
-  static const int n_tiles_per_module = 16; // number of tiles per module
+  static constexpr int n_tiles_per_module = 16; // number of tiles per module
   static const quadOrientType quad_orientations;
 private:
 
@@ -739,24 +742,27 @@ const LPD_1MGeometry::quadOrientType LPD_1MGeometry::quad_orientations {
 
 LPD_1MGeometry::LPD_1MGeometry()
 {
+  auto w = static_cast<double>(module_shape[1]);
+  auto h = static_cast<double>(module_shape[0]);
+
   // last pixel position (upper-left corner) of each module
   xt::xtensor_fixed<double, xt::xshape<n_modules, 3>> m_pos {
-    { -256,  512, 0},
-    { -256,  256, 0},
-    {    0,  256, 0},
-    {    0,  512, 0},
-    { -256,    0, 0},
-    { -256, -256, 0},
-    {    0, -256, 0},
-    {    0,    0, 0},
-    {  256,    0, 0},
-    {  256, -256, 0},
-    {  512, -256, 0},
-    {  512,    0, 0},
-    {  256,  512, 0},
-    {  256,  256, 0},
-    {  512,  256, 0},
-    {  512,  512, 0}
+    { -1 * w,  2 * h, 0},
+    { -1 * w,  1 * h, 0},
+    {  0 * w,  1 * h, 0},
+    {  0 * w,  2 * h, 0},
+    { -1 * w,  0 * h, 0},
+    { -1 * w, -1 * h, 0},
+    {  0 * w, -1 * h, 0},
+    {  0 * w,  0 * h, 0},
+    {  1 * w,  0 * h, 0},
+    {  1 * w, -1 * h, 0},
+    {  2 * w, -1 * h, 0},
+    {  2 * w,  0 * h, 0},
+    {  1 * w,  2 * h, 0},
+    {  1 * w,  1 * h, 0},
+    {  2 * w,  1 * h, 0},
+    {  2 * w,  2 * h, 0}
   };
 
   xt::xtensor_fixed<double, xt::xshape<n_modules, n_tiles_per_module, 3>> positions;
@@ -901,7 +907,7 @@ public:
 
   static const shapeType module_shape;
   static const shapeType tile_shape;
-  static const int n_tiles_per_module = 2; // number of tiles per module
+  static constexpr int n_tiles_per_module = 2; // number of tiles per module
   static const quadOrientType quad_orientations;
 
 private:
@@ -953,25 +959,28 @@ const DSSC_1MGeometry::quadOrientType DSSC_1MGeometry::quad_orientations {
 
 DSSC_1MGeometry::DSSC_1MGeometry()
 {
+  auto w = static_cast<double>(tile_shape[1]);
+  auto h = static_cast<double>(tile_shape[0]);
+
   // first pixel position of each module
   // (lower-left for Q1 and Q2, upper-right for Q3 and Q4) positions
   xt::xtensor_fixed<double, xt::xshape<n_modules, n_tiles_per_module, 3>> positions {
-    {{   0,    0, 0}, {-256,    0, 0}},
-    {{   0,  128, 0}, {-256,  128, 0}},
-    {{   0,  256, 0}, {-256,  256, 0}},
-    {{   0,  384, 0}, {-256,  384, 0}},
-    {{   0, -512, 0}, {-256, -512, 0}},
-    {{   0, -384, 0}, {-256, -384, 0}},
-    {{   0, -256, 0}, {-256, -256, 0}},
-    {{   0, -128, 0}, {-256, -128, 0}},
-    {{   0,    0, 0}, { 256,    0, 0}},
-    {{   0, -128, 0}, { 256, -128, 0}},
-    {{   0, -256, 0}, { 256, -256, 0}},
-    {{   0, -384, 0}, { 256, -384, 0}},
-    {{   0,  512, 0}, { 256,  512, 0}},
-    {{   0,  384, 0}, { 256,  384, 0}},
-    {{   0,  256, 0}, { 256,  256, 0}},
-    {{   0,  128, 0}, { 256,  128, 0}},
+    {{   0,  0 * h, 0}, { -w,  0 * h, 0}},
+    {{   0,  1 * h, 0}, { -w,  1 * h, 0}},
+    {{   0,  2 * h, 0}, { -w,  2 * h, 0}},
+    {{   0,  3 * h, 0}, { -w,  3 * h, 0}},
+    {{   0, -4 * h, 0}, { -w, -4 * h, 0}},
+    {{   0, -3 * h, 0}, { -w, -3 * h, 0}},
+    {{   0, -2 * h, 0}, { -w, -2 * h, 0}},
+    {{   0, -1 * h, 0}, { -w, -1 * h, 0}},
+    {{   0,  0 * h, 0}, {  w,  0 * h, 0}},
+    {{   0, -1 * h, 0}, {  w, -1 * h, 0}},
+    {{   0, -2 * h, 0}, {  w, -2 * h, 0}},
+    {{   0, -3 * h, 0}, {  w, -3 * h, 0}},
+    {{   0,  4 * h, 0}, {  w,  4 * h, 0}},
+    {{   0,  3 * h, 0}, {  w,  3 * h, 0}},
+    {{   0,  2 * h, 0}, {  w,  2 * h, 0}},
+    {{   0,  1 * h, 0}, {  w,  1 * h, 0}},
   };
   positions *= pixelSize();
 
@@ -1084,4 +1093,4 @@ void DSSC_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
 }; //foam
 
 
-#endif //EXTRA_FOAM_DETECTOR_GEOMETRY_H
+#endif //EXTRA_FOAM_GEOMETRY_1M_H
