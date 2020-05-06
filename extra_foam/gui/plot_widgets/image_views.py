@@ -47,8 +47,6 @@ class ImageAnalysis(ImageViewF):
             roi.setLocked(False)
             self._plot_widget.addItem(roi)
 
-        self.invertY(True)
-        self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
         self._require_geometry = config["REQUIRE_GEOMETRY"]
