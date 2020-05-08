@@ -361,7 +361,7 @@ class _Config(dict):
             REQUIRE_GEOMETRY=False,
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(708, 768),
-            PIXEL_SIZE=0.110e-3),
+            PIXEL_SIZE=0.050e-3),
         "BaslerCamera": _AreaDetectorConfig(
             REDIS_PORT=6389,
             PULSE_RESOLVED=False,
