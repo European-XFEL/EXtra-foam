@@ -22,7 +22,7 @@ namespace py = pybind11;
 
 
 template<typename Geometry>
-void declare_1MGeometry(py::module &m, std::string&& detector)
+void declareGeometry1M(py::module &m, std::string&& detector)
 {
   using GeometryBase = foam::Detector1MGeometryBase<Geometry>;
   const std::string py_base_class_name = detector + std::string("_Detector1MGeometryBase");
@@ -110,9 +110,9 @@ PYBIND11_MODULE(geometry_1m, m)
 
   m.doc() = "1M detector geometry.";
 
-  declare_1MGeometry<foam::AGIPD_1MGeometry>(m, "AGIPD");
+  declareGeometry1M<foam::AGIPD_1MGeometry>(m, "AGIPD");
 
-  declare_1MGeometry<foam::LPD_1MGeometry>(m, "LPD");
+  declareGeometry1M<foam::LPD_1MGeometry>(m, "LPD");
 
-  declare_1MGeometry<foam::DSSC_1MGeometry>(m, "DSSC");
+  declareGeometry1M<foam::DSSC_1MGeometry>(m, "DSSC");
 }

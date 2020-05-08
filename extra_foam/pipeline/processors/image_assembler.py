@@ -83,16 +83,9 @@ class ImageAssemblerFactory(ABC):
                     geom_file != self._geom_file or \
                     quad_positions != self._quad_position:
 
-                self._stack_only = stack_only
-                self._assembler_type = assembler_type
-                self._quad_position = quad_positions
-
                 self._geom = None  # reset first
-                self._load_geometry(geom_file, quad_positions)
-                # caveat: if _load_geometry raises, _geom_file will not
-                #         be set. Therefore, _load_geometry will raise
-                #         AssemblingError in the next train.
-                self._geom_file = geom_file
+                self._load_geometry(
+                    geom_file, quad_positions, assembler_type, stack_only)
 
                 if not stack_only:
                     logger.info(f"Loaded geometry from {geom_file} with "
@@ -108,22 +101,23 @@ class ImageAssemblerFactory(ABC):
             """Get modules data from file."""
             pass
 
-        def _load_geometry(self, filepath, quad_positions):
+        def _load_geometry(self, filepath, quad_positions, assembler_type, stack_only):
             """Load geometry from file.
 
             Required for modular detectors which must be assembled with
             a geometry.
-
-            If the assembler type is not defined, it uses EXtra-geom by default.
-
-            :param str filepath: path of the geometry file.
-            :param tuple quad_positions: quadrant coordinates.
             """
             try:
                 self._geom = load_geometry(config["DETECTOR"], filepath,
-                                           assembler=self._assembler_type,
                                            quad_positions=quad_positions,
-                                           stack_only=self._stack_only)
+                                           assembler=assembler_type,
+                                           stack_only=stack_only)
+
+                self._geom_file = filepath
+                self._quad_position = quad_positions
+                self._assembler_type = assembler_type
+                self._stack_only = stack_only
+
             except Exception as e:
                 raise AssemblingError(f"[Geometry] {e}")
 

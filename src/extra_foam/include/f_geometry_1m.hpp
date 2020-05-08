@@ -33,6 +33,12 @@
 namespace foam
 {
 
+/**
+ * Base class for geometry of 1M detectors, i.e. AGIPD-1M, LPD-1M and DSSC-1M.
+ * These kind of detectors consist of four quadrants, with each quadrant consisting
+ * of four modules. Each module is further combined by multiple tiles. However, the
+ * number of tiles and number of tiles depends on the detector type.
+ */
 template<typename G>
 class Detector1MGeometryBase
 {
@@ -51,13 +57,13 @@ public:
   ~Detector1MGeometryBase() = default;
 
   /**
- * Position all the modules at the correct area of the given assembled image.
- *
- * @param src: data in modules. shape=(modules, y, x)
- * @param dst: assembled image. shape=(y, x)
- * @param ignore_tile_edge: true for ignoring the pixels at the edges of tiles. If dst
- *    is pre-filled with nan, it it equivalent to masking the tile edges.
- */
+   * Position all the modules at the correct area of the given assembled image.
+   *
+   * @param src: data in modules. shape=(modules, y, x)
+   * @param dst: assembled image. shape=(y, x)
+   * @param ignore_tile_edge: true for ignoring the pixels at the edges of tiles. If dst
+   *    is pre-filled with nan, it it equivalent to masking the tile edges.
+   */
   template<typename M, typename E,
     EnableIf<std::decay_t<M>, IsImageArray> = false, EnableIf<E, IsImage> = false>
   void positionAllModules(M&& src, E& dst, bool ignore_tile_edge=false) const;
@@ -109,19 +115,24 @@ public:
   /**
    * Return the shape (y, x) of the assembled image.
    */
-  shapeType assembledShape() const
-  {
-    return assembledDim().first;
-  }
+  const shapeType& assembledShape() const;
+
+  /**
+   * Return the center (x, y) of the assembled image.
+   */
+  const shapeType& assembledCenter() const;
 
 protected:
+
+  shapeType a_shape_;
+  shapeType a_center_;
 
   Detector1MGeometryBase() = default;
 
   /**
-   * Return the size (y, x) and center (x, y) of the assembled image.
+   * Compute the size (y, x) and center (x, y) of the assembled image.
    */
-  std::pair<shapeType, shapeType> assembledDim() const;
+  void computeAssembledDim();
 
   /**
    * Check the src and dst shapes used for assembling..
@@ -143,7 +154,7 @@ protected:
   void positionModule(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const;
 
   /**
-   * Check the src and dst shapes used for dismantling..
+   * Check the src and dst shapes used for dismantling.
    *
    * @param ss: src data shape (memory cells, y, x).
    * @param ds: dst data shape (memory cells, modules, y, x)
@@ -336,9 +347,7 @@ void Detector1MGeometryBase<G>::dismantleAllModules(M&& src, E& dst) const
 }
 
 template<typename G>
-std::pair<typename Detector1MGeometryBase<G>::shapeType,
-          typename Detector1MGeometryBase<G>::shapeType>
-Detector1MGeometryBase<G>::assembledDim() const
+void Detector1MGeometryBase<G>::computeAssembledDim()
 {
   auto min_xyz = xt::amin(static_cast<const G*>(this)->corner_pos_, {0, 1, 2}) /
     static_cast<const G*>(this)->pixelSize();
@@ -355,7 +364,20 @@ Detector1MGeometryBase<G>::assembledDim() const
   int max_x = static_cast<int>(std::round(max_xyz[0]));
   int max_y = static_cast<int>(std::round(max_xyz[1]));
 
-  return {shapeType {max_y - min_y, max_x - min_x}, shapeType {-min_x, -min_y}};
+  a_shape_ = {max_y - min_y, max_x - min_x};
+  a_center_ = {-min_x, -min_y};
+}
+
+template<typename G>
+const typename Detector1MGeometryBase<G>::shapeType& Detector1MGeometryBase<G>::assembledShape() const
+{
+  return a_shape_;
+}
+
+template<typename G>
+const typename Detector1MGeometryBase<G>::shapeType& Detector1MGeometryBase<G>::assembledCenter() const
+{
+  return a_center_;
 }
 
 template<typename G>
@@ -370,35 +392,23 @@ void Detector1MGeometryBase<G>::checkShapeForAssembling(const SrcShape& ss, cons
     throw std::invalid_argument(fmt.str());
   }
 
-  if (ss[1] != G::n_modules)
+  if (ss[1] != G::n_modules || ss[2] != G::module_shape[0] || ss[3] != G::module_shape[1])
   {
     std::stringstream fmt;
-    fmt << "Expected " << G::n_modules << " modules, get " << ss[1] << "!";
-    throw std::invalid_argument(fmt.str());
-  }
-
-  if (ss[2] != G::module_shape[0] || ss[3] != G::module_shape[1])
-  {
-    std::stringstream fmt;
-    fmt << "Expected modules with shape (" << G::module_shape[0] << ", " << G::module_shape[1]
-        << ") modules, get (" << ss[2] << ", " << ss[3] << ")!";
+    fmt << "Expected modules with shape ("
+        << G::n_modules << ", " << G::module_shape[0] << ", " << G::module_shape[1]
+        << ")! Actual: ("
+        << ss[1] << ", " << ss[2] << ", " << ss[3] << ")";
     throw std::invalid_argument(fmt.str());
   }
 
   auto as = assembledShape();
-  if (as[0] < 1024 or as[1] < 1024 or as[0] > 1536 or as[1] > 1536)
-  {
-    std::stringstream fmt;
-    fmt << "Expected output array with shape (" << as[0] << ", " << as[1]
-        << "). Side length of a 1M detector must be within [1024, 1536]!";
-    throw std::invalid_argument(fmt.str());
-  }
-
   if (as[0] != ds[1] | as[1] != ds[2])
   {
     std::stringstream fmt;
     fmt << "Expected output array with shape (" << as[0] << ", " << as[1]
-        << ") modules, get (" << ds[1] << ", " << ds[2] << ")!";
+        << ")! Actual: ("
+        << ds[1] << ", " << ds[2] << ")";
     throw std::invalid_argument(fmt.str());
   }
 }
@@ -426,7 +436,8 @@ void Detector1MGeometryBase<G>::checkShapeForDismantling(const SrcShape& ss, con
   {
     std::stringstream fmt;
     fmt << "Expected source image with shape (" << expected_ss[0] << ", " << expected_ss[1]
-        << ") modules, get (" << ss[0] << ", " << ss[1] << ")!";
+        << ")! Actual: ("
+        << ss[0] << ", " << ss[1] << ")";
     throw std::invalid_argument(fmt.str());
   }
 
@@ -434,8 +445,9 @@ void Detector1MGeometryBase<G>::checkShapeForDismantling(const SrcShape& ss, con
   {
     std::stringstream fmt;
     fmt << "Expected output array with shape ("
-        << G::n_modules << ", " << G::module_shape[0] << ", " << G::module_shape[1] << ") modules, get ("
-        << ds[1] << ", " << ds[2] << ", " << ds[3] << ")!";
+        << G::n_modules << ", " << G::module_shape[0] << ", " << G::module_shape[1]
+        << ")! Actual: ("
+        << ds[1] << ", " << ds[2] << ", " << ds[3] << ")";
     throw std::invalid_argument(fmt.str());
   }
 }
@@ -574,6 +586,8 @@ AGIPD_1MGeometry::AGIPD_1MGeometry()
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 AGIPD_1MGeometry::AGIPD_1MGeometry(
@@ -594,12 +608,13 @@ AGIPD_1MGeometry::AGIPD_1MGeometry(
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 template<typename M, typename N, typename T>
 void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -618,10 +633,10 @@ void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_t
     int ix0 = it * wt;
     int iy0 = 0;
 
-    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                             : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                             : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                             : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                             : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
@@ -635,7 +650,6 @@ void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_t
 template<typename M, typename N, typename T>
 void AGIPD_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -648,10 +662,10 @@ void AGIPD_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
     int ix_dir = (pos(it, 1, 0) - x0 > 0) ? 1 : -1;
     int iy_dir = (pos(it, 1, 1) - y0 > 0) ? 1 : -1;
 
-    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                         : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                         : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                         : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                         : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
 
     int ix0_dst = it * wt;
     int iy0_dst = 0;
@@ -793,6 +807,8 @@ LPD_1MGeometry::LPD_1MGeometry()
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 LPD_1MGeometry::LPD_1MGeometry(
@@ -809,12 +825,13 @@ LPD_1MGeometry::LPD_1MGeometry(
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 template<typename M, typename N, typename T>
 void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -832,10 +849,10 @@ void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_til
 
     int ix0 = (it / 8) * wt;
     int iy0 = it < 8 ? (7 - it % 8) * ht : (it % 8) * ht;
-    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                             : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                             : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                             : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                             : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
@@ -849,7 +866,6 @@ void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_til
 template<typename M, typename N, typename T>
 void LPD_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -862,10 +878,10 @@ void LPD_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
     int ix_dir = (pos(it, 1, 0) - x0 > 0) ? 1 : -1;
     int iy_dir = (pos(it, 1, 1) - y0 > 0) ? 1 : -1;
 
-    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                         : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                         : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                         : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                         : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
 
     int ix0_dst = (it / 8) * wt;
     int iy0_dst = it < 8 ? (7 - it % 8) * ht : (it % 8) * ht;
@@ -999,6 +1015,8 @@ DSSC_1MGeometry::DSSC_1MGeometry()
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 DSSC_1MGeometry::DSSC_1MGeometry(
@@ -1019,12 +1037,13 @@ DSSC_1MGeometry::DSSC_1MGeometry(
       corner_pos_(im, it, 1, 2) = 0.0;
     }
   }
+
+  computeAssembledDim();
 }
 
 template<typename M, typename N, typename T>
 void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -1042,10 +1061,10 @@ void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_ti
 
     int ix0 = it * wt;
     int iy0 = 0;
-    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                             : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                             : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                             : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                             : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
@@ -1059,7 +1078,6 @@ void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_ti
 template<typename M, typename N, typename T>
 void DSSC_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
 {
-  auto center = assembledDim().second;
   int n_tiles = n_tiles_per_module;
   int wt = tile_shape[1];
   int ht = tile_shape[0];
@@ -1072,10 +1090,10 @@ void DSSC_1MGeometry::dismantleModuleImp(M&& src, N& dst, T&& pos) const
     int ix_dir = (pos(it, 1, 0) - x0 > 0) ? 1 : -1;
     int iy_dir = (pos(it, 1, 1) - y0 > 0) ? 1 : -1;
 
-    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
-                         : static_cast<int>(std::round(x0)) + center[0] - 1;
-    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
-                         : static_cast<int>(std::round(y0)) + center[1] - 1;
+    int ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                         : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+    int iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                         : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
 
     int ix0_dst = it * wt;
     int iy0_dst = 0;

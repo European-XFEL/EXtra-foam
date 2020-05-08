@@ -126,23 +126,6 @@ class TestDSSC_1MGeometryFast(_Test1MGeometryMixin):
         cls.module_shape = DSSC_1MGeometryFast.module_shape
         cls.tile_shape = DSSC_1MGeometryFast.tile_shape
 
-    def test_ill_quad_positions(self):
-        modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), _RAW_IMAGE_DTYPE)
-
-        quad_positions = [[1,  1], [1,  -1], [-1,  -1], [-1,  1]]
-        geom = DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
-            self.geom_file, quad_positions)
-        out = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
-        with pytest.raises(ValueError, match="[1024, 1536]"):
-            geom.position_all_modules(modules, out)
-
-        quad_positions = [[1,  1], [1,  -1], [-1,  -1], [-1,  200]]
-        geom = DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
-            self.geom_file, quad_positions)
-        out = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
-        with pytest.raises(ValueError, match="[1024, 1536]"):
-            geom.position_all_modules(modules, out)
-
 
 class TestLPD_1MGeometryFast(_Test1MGeometryMixin):
     @classmethod
