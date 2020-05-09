@@ -146,3 +146,7 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
             for at in self._exclusive_btns:
                 if at != self.sender():
                     at.setChecked(False)
+
+    def setInteractiveButtonsEnabled(self, state):
+        self.draw_mask_btn.setEnabled(state)
+        self.erase_mask_btn.setEnabled(state)

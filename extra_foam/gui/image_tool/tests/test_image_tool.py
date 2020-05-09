@@ -823,6 +823,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
         self.assertEqual(0, tab.currentIndex())
+        mask_ctrl_widget = self.image_tool._mask_ctrl_widget
 
         TabIndex = self.image_tool.TabIndex
 
@@ -832,6 +833,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         tab.setCurrentIndex(TabIndex.GAIN_OFFSET)
         QTest.mouseClick(record_btn, Qt.LeftButton)  # start recording
         self.assertTrue(record_btn.isChecked())
+        self.assertFalse(mask_ctrl_widget.draw_mask_btn.isEnabled())
+        self.assertFalse(mask_ctrl_widget.erase_mask_btn.isEnabled())
 
         # switch to "reference"
         tab.tabBarClicked.emit(TabIndex.REFERENCE)
@@ -848,6 +851,12 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # switch to "geometry"
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)
         tab.setCurrentIndex(TabIndex.GEOMETRY)
+
+        # switch back to "corrected"
+        tab.tabBarClicked.emit(TabIndex.CORRECTED)
+        tab.setCurrentIndex(TabIndex.CORRECTED)
+        self.assertTrue(mask_ctrl_widget.draw_mask_btn.isEnabled())
+        self.assertTrue(mask_ctrl_widget.erase_mask_btn.isEnabled())
 
 
 class TestImageToolTs(unittest.TestCase):
