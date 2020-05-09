@@ -97,7 +97,7 @@ class TestImageAnalysis(unittest.TestCase):
         with patch.object(item, "maybeInitializeMask") as init:
             with patch.object(item, "setMask") as set_mask:
                 # test set valid data
-                image_data = ImageData.from_array(np.ones((10, 10)))
+                image_data = ImageData.from_array(np.ones((2, 10, 10)))
                 widget.setImage(image_data)
                 np.testing.assert_array_equal(image_data.image_mask_in_modules, widget._mask_in_modules)
                 np.testing.assert_array_equal(image_data.masked_mean, widget._image)
@@ -107,14 +107,23 @@ class TestImageAnalysis(unittest.TestCase):
 
                 # test set image with different shape
                 with patch("extra_foam.gui.items.GeometryItem.geometry") as geom:
-                    image_data = ImageData.from_array(np.ones((5, 5)))
+                    image_data = ImageData.from_array(np.ones((2, 4, 4)))
+                    # image_mask_in_modules is None
+                    widget.setImage(image_data)
+                    geom.output_array_for_position_fast.assert_not_called()
+                    geom.position_all_modules.assert_not_called()
+                    init.assert_called_once()
+                    init.reset_mock()
+                    set_mask.assert_not_called()
+                    # set image_mask_in_modules
+                    image_data = ImageData.from_array(np.ones((2, 8, 8)))
+                    image_data.image_mask_in_modules = np.ones((4, 2, 2))
                     widget.setImage(image_data)
                     geom.output_array_for_position_fast.assert_called_once()
                     geom.position_all_modules.assert_called_once()
                     init.assert_called_once()
                     init.reset_mock()
                     set_mask.assert_called_once()
-                    set_mask.reset_mock()
 
                 # test set with image = None
                 image_data = ImageData()
