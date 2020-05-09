@@ -59,16 +59,22 @@ class ImageAnalysis(ImageViewF):
             raise TypeError(
                 "The first argument must be an ImageData instance!")
 
+        # It will be None for detectors without a geometry and detector
+        # with a geometry but has no masking operation yet.
         self._mask_in_modules = image_data.image_mask_in_modules
 
         image = image_data.masked_mean
-        if image is not None:
-            # re-assemble a mask if image shape changes
-            if self.image is not None and image.shape != self.image.shape:
-                geom = self._geom_item.geometry
-                assembled = geom.output_array_for_position_fast(dtype=bool)
-                geom.position_all_modules(self._mask_in_modules, out=assembled)
-                self._mask_item.setMask(assembled)
+
+        # re-assemble a mask if image shape changes
+        # caveat: the image shape checked must be done before updating image
+        if self._mask_in_modules is not None \
+                and image is not None \
+                and self.image is not None \
+                and image.shape != self.image.shape:
+            geom = self._geom_item.geometry
+            assembled = geom.output_array_for_position_fast(dtype=bool)
+            geom.position_all_modules(self._mask_in_modules, out=assembled)
+            self._mask_item.setMask(assembled)
 
         self._updateImage(image, **kwargs)
         if image is not None:
