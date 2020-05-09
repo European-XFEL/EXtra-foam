@@ -437,7 +437,7 @@ void Detector1MGeometryBase<G>::checkShapeForDismantling(const SrcShape& ss, con
     std::stringstream fmt;
     fmt << "Expected source image with shape (" << expected_ss[0] << ", " << expected_ss[1]
         << ")! Actual: ("
-        << ss[0] << ", " << ss[1] << ")";
+        << ss[1] << ", " << ss[2] << ")";
     throw std::invalid_argument(fmt.str());
   }
 
