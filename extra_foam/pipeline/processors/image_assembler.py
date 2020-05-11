@@ -28,7 +28,23 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 _TRAIN_ID = SourceCatalog.TRAIN_ID
 
 
-def _stack_detector_modules(data, src, modules):
+def _maybe_squeeze_to_image(arr):
+    """Try to squeeze an array to a 2D image."""
+    if arr.ndim == 2:
+        return arr
+
+    try:
+        return np.squeeze(arr, axis=0)
+    except ValueError:
+        try:
+            return np.squeeze(arr, axis=-1)
+        except ValueError:
+            raise ValueError(f"Array with shape {arr.shape} cannot be "
+                             f"squeezed to a 2D image")
+
+
+def _stack_detector_modules(data, src, modules, *,
+                            pulse_resolved=True, memory_cell_last=False):
     """Stack detector modules.
 
     It should be used for detectors like, JungFrau, ePix100, etc. For
@@ -38,6 +54,8 @@ def _stack_detector_modules(data, src, modules):
     :param str src: source name.
     :param list modules: a list of module indices. The module indices do
         not need to be continuous or be monotonically increasing.
+    :param bool pulse_resolved: whether the detector is pulse-resolved.
+    :param bool memory_cell_last: whether memory cell is the last dimention.
     """
     if isinstance(data, np.ndarray):
         # This happens when the source name if one of the modules. if the
@@ -59,6 +77,15 @@ def _stack_detector_modules(data, src, modules):
             array = data[f"{prefix}{modno}{suffix}"][ppt]
         except KeyError:
             continue
+
+        if not pulse_resolved:
+            # single-module train-resolved detector data may have the
+            # shape (1, y, x), (y, x, 1)
+            array = _maybe_squeeze_to_image(array)
+        elif memory_cell_last:
+            # (y, x, memory cells) -> (memory cells, y x)
+            array = np.moveaxis(array, -1, 0)
+
         dtypes.add(array.dtype)
         shapes.add(array.shape)
         modno_arrays[i] = array
@@ -72,22 +99,8 @@ def _stack_detector_modules(data, src, modules):
         modno_arrays, len(modules), shape, dtype,
         fillvalue=np.nan, stack_axis=-3
     )
+
     return stack
-
-
-def _maybe_squeeze_to_image(arr):
-    """Try to squeeze an array to a 2D image."""
-    if arr.ndim == 2:
-        return arr
-
-    try:
-        return np.squeeze(arr, axis=0)
-    except ValueError:
-        try:
-            return np.squeeze(arr, axis=-1)
-        except ValueError:
-            raise ValueError(f"Array with shape {arr.shape} cannot be "
-                             f"squeezed to a 2D image")
 
 
 class ImageAssemblerFactory(ABC):
@@ -294,8 +307,8 @@ class ImageAssemblerFactory(ABC):
                 n_modules_actual = shape[-3]
                 # allow single module operation
                 if n_modules_actual != 1:
-                    raise AssemblingError(f"Expected {n_modules} modules, but get "
-                                          f"{n_modules_actual} instead!")
+                    raise AssemblingError(f"Expected {n_modules} modules, but "
+                                          f"get {n_modules_actual} instead!")
 
             # check number of memory cells
             if not shape[0]:
@@ -437,7 +450,7 @@ class ImageAssemblerFactory(ABC):
 
             Calibrated data only.
 
-            - calibrated, "data.adc", (y, x, modules)
+            - calibrated, "data.adc", (y, x, 1)
             - raw, "data.adc", TODO
             -> (y, x)
             """
@@ -450,8 +463,8 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src, modules):
             """Override.
 
-            - calibrated, "data.adc", (modules, y, x)
-            - raw, "data.adc", (modules, y, x)
+            - calibrated, "data.adc", (1, y, x)
+            - raw, "data.adc", (1, y, x)
             -> (y, x)
             """
             modules_data = data[src]
@@ -480,16 +493,23 @@ class ImageAssemblerFactory(ABC):
             # TODO: deal with modules received separately
             modules_data = data[src]
 
-            if modules_data.shape[-2] == self._module_shape[1]:
-                # Reshaping could have already been done upstream (e.g.
-                # at the PipeToZeroMQ device), if not:
-                #   (y, x, memory cells) -> (memory cells, y, x)
-                #   (modules, y, x, memory cells) -> (memory cells, modules, y, x)
-                modules_data = np.moveaxis(modules_data, -1, 0)
-
             if self._n_modules == 1:
-                return np.expand_dims(modules_data, axis=1)
-            return modules_data
+                #   (y, x, memory cells) -> (memory cells, 1, y, x)
+                return np.expand_dims(np.moveaxis(modules_data, -1, 0), axis=1)
+
+            if isinstance(modules_data, np.ndarray):
+                if modules_data.shape[1] == self._module_shape[0]:
+                    # Reshaping could have already been done upstream (e.g.
+                    # at the PipeToZeroMQ device), if not:
+                    #   (modules, y, x, memory cells) ->
+                    #   (memory cells, modules, y, x)
+                    modules_data = np.moveaxis(modules_data, -1, 0)
+                # (memory cells, modules, y, x)
+                return modules_data
+
+            # modules data arrives without being stacked
+            return _stack_detector_modules(modules_data, src, modules,
+                                           memory_cell_last=True)
 
         def _get_modules_file(self, data, src, modules):
             """Override.
@@ -514,7 +534,16 @@ class ImageAssemblerFactory(ABC):
             - raw, "data.image.data", (1, y, x)
             -> (y, x)
             """
-            return _maybe_squeeze_to_image(data[src])
+            modules_data = data[src]
+
+            if self._n_modules == 1:
+                return _maybe_squeeze_to_image(modules_data)
+
+            if isinstance(modules_data, np.ndarray):
+                # assume the stacked array has the shape: (modules, y, x)
+                return modules_data
+            return _stack_detector_modules(modules_data, src, modules,
+                                           pulse_resolved=False)
 
         def _get_modules_file(self, data, src, modules):
             """Override.
@@ -523,9 +552,11 @@ class ImageAssemblerFactory(ABC):
             - raw, "data.image.pixels", (y, x)
             -> (y, x)
             """
+            modules_data = data[src]
             if self._n_modules == 1:
-                return data[src]
-            return _stack_detector_modules(data[src], src, modules)
+                return modules_data
+            return _stack_detector_modules(modules_data, src, modules,
+                                           pulse_resolved=False)
 
     class FastCCDImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src, modules):
