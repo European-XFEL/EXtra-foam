@@ -55,6 +55,8 @@ More info on command line arguments can be obtained as
                             Address of the Redis server
 
 
+For more details about detector modules, please refer to :ref:`Geometry`.
+
 .. note::
     It sometime takes more than a minute to start **EXtra-foam** for the first time! This
     is actually an issue related to the infrastructure and not because

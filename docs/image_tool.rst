@@ -28,13 +28,6 @@ Image control
 |                            | but also in other plot windows) by automatically selecting levels  |
 |                            | based on the maximum and minimum values in the data.               |
 +----------------------------+--------------------------------------------------------------------+
-| ``Threshold mask``         | An interval that pixel values outside the interval are set to 0.   |
-|                            | Please distinguish *threshold mask* from clipping_.                |
-+----------------------------+--------------------------------------------------------------------+
-| ``Mask tile edges``        | Mask the edge pixel of each tile. *Only applicable for AGIPD, LPD  |
-|                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
-|                            | :ref:`Geometry`.                                                   |
-+----------------------------+--------------------------------------------------------------------+
 | ``Save image``             | Save the current image to file. Please also see ImageFileFormat_   |
 +----------------------------+--------------------------------------------------------------------+
 
@@ -62,9 +55,14 @@ will also not be overwritten after loading an image mask from file.
 |                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
 |                            | :ref:`Geometry`.                                                   |
 +----------------------------+--------------------------------------------------------------------+
-| ``Draw``                   | Draw mask in a rectangular region.                                 |
+| ``Mask ASIC edges``        | Mask the edge pixel of each ASIC. *Only applicable for JungFrau    |
+|                            | and ePix100.*                                                      |
 +----------------------------+--------------------------------------------------------------------+
-| ``Erase``                  | Erase mask in a rectangular region.                                |
+| ``Draw``                   | Draw mask in a rectangular region. *Only available in the          |
+|                            | Corrected panel.*                                                  |
++----------------------------+--------------------------------------------------------------------+
+| ``Erase``                  | Erase mask in a rectangular region. *Only available in the         |
+|                            | Corrected panel.*                                                  |
 +----------------------------+--------------------------------------------------------------------+
 | ``Remove mask``            | Remove the image mask.                                             |
 +----------------------------+--------------------------------------------------------------------+
@@ -299,31 +297,71 @@ Geometry
 
 .. _EXtra-geom : https://github.com/European-XFEL/EXtra-geom
 
-Geometry is only available for the multi-module detector which requires a geometry file to
-assemble the images from different modules, for example, AGIPD, LPD and DSSC. For details
-about geometries of those detectors, please refer to the
-`documentation <https://extra-geom.readthedocs.io/en/latest/geometry.html>`_.
+Geometry is only available for the detector which requires a geometry to
+assemble the images from different modules, for example, AGIPD, LPD, DSSC as well as
+JungFrau and ePix100 used in a combined way.
+
+For details about geometries of AGIPD, LPD and DSSC,
+please refer to this `documentation <https://extra-geom.readthedocs.io/en/latest/geometry.html>`_.
+It should be noted that the online and offline data format are different. For real-time data received
+from the `ZMQ bridge`, all the 16 modules have been stacked in a single array and the source name
+is usually a Karabo device name. However, for data streamed from files, modules data are distributed in
+different files and each module has a unique source name. For example, DSSC modules at SCS are named as
+`SCS_DET_DSSC1M-1/DET/0CH0:xtdf`, `SCS_DET_DSSC1M-1/DET/1CH0:xtdf`, ..., `SCS_DET_DSSC1M-1/DET/15CH0:xtdf`.
+**EXtra-foam** relies on the "index" (0 - 15) in the source name to find the corresponding module. Accordingly,
+in the :ref:`Data source` tree, one should use `SCS_DET_DSSC1M-1/DET/*CH0:xtdf` as the source name,
+which has a '*' at the location where the module index is expected.
+
+LPD-1M with 16 modules:
 
 .. image:: images/geometry.png
    :width: 640
 
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| ``Quadrant positions``     | The first pixel of the first module in each quadrant,              |
-|                            | corresponding to data channels 0, 4, 8 and 12.                     |
-+----------------------------+--------------------------------------------------------------------+
-| ``Load geometry file``     | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system.                                                 |
-+----------------------------+--------------------------------------------------------------------+
-| ``Assembler``              | There are two assemblers available in *EXtra-foam*. One is         |
-|                            | EXtra-geom_ implemented in Python and the other is the local C++   |
-|                            | implementation. Indeed, the latter follows the assembling          |
-|                            | methodology implemented in the former but is much faster with      |
-|                            | multi-core processors.                                             |
-+----------------------------+--------------------------------------------------------------------+
-| ``Stack only``             | When the checkbox is checked, the modules will be seamlessly       |
-|                            | stacked together. Unfortunately, it does not mean that this will   |
-|                            | be faster than assembling with a geometry. It simply provides an   |
-|                            | alternative to check the data from different modules.              |
-+----------------------------+--------------------------------------------------------------------+
+**EXtra-foam** implemented a generalized geometry for detectors like JungFrau and ePix100. To allow
+more than one modules, **one must explicitly specify the number of modules in the command line at startup**.
+Similar to AGIPD, LPD and DSSC, the online and offline data format can be different. For real-time data
+received from the `ZMQ bridge`, all the modules could have been stacked in a single array and the source
+name is usually a Karabo device name. However, it also supports data arriving in modules, as data streamed
+from files. Similarly, it relies on the "index" in the source name to find the corresponding module. Different
+from AGIPD, LPD and DSSC, **the module index starts from 1**. For example, JungFrau modules at SPB are
+named as `SPB_IRDA_JNGFR/DET/MODULE_1:daqOutput`, `SPB_IRDA_JNGFR/DET/MODULE_2:daqOutput`, ...,
+`SPB_IRDA_JNGFR/DET/MODULE_8:daqOutput`. Similarly, in the :ref:`Data source` tree, one should use
+`SPB_IRDA_JNGFR/DET/MODULE_*:daqOutput` as the source name.
+
+6-module JungFrau with geometry file in the CFEL format. Module 1 is located on the top-right corner and
+all modules (1, 2, 3, 6, 7, 8) are arranged in closewise order.
+
+.. image:: images/JungFrau_6_module_geometry.jpg
+   :width: 640
+
+2-module ePix100 without geometry file. Module 1 is located on top of module 2.
+
+.. image:: images/ePix100_2_module_geometry.jpg
+   :width: 640
+
++---------------------------------+--------------------------------------------------------------------+
+| Input                           | Description                                                        |
++=================================+====================================================================+
+| ``Quadrant positions``          | The first pixel of the first module in each quadrant,              |
+|                                 | corresponding to data channels 0, 4, 8 and 12. *Only avaible for   |
+|                                 | 1M detectors, i.e. AGIPD, LPD and DSSC, with non-CFEL format       |
+|                                 | geometry file.*                                                    |
++---------------------------------+--------------------------------------------------------------------+
+| ``Module positions``            | The first pixel of each module. *Only available for JungFrau and   |
+|                                 | ePix100 with non-CFEL format geometry file. Not implemented yet*   |
++---------------------------------+--------------------------------------------------------------------+
+| ``Load geometry file``          | Open a *FileDialog* window to choose a geometry file from the      |
+|                                 | local file system. *Ignored if* ``Stack without geometry file``    |
+|                                 | *is checked.*                                                      |
++---------------------------------+--------------------------------------------------------------------+
+| ``Assembler``                   | There are two assemblers available in *EXtra-foam* for AGIPD, LPD  |
+|                                 | and DSSC. One is EXtra-geom_ implemented in Python and the other   |
+|                                 | is the local C++ implementation. Indeed, the latter follows the    |
+|                                 | assembling methodology implemented in the former but is much       |
+|                                 | faster with multi-core processors.                                 |
++---------------------------------+--------------------------------------------------------------------+
+| ``Stack without geometry file`` | When the checkbox is checked, the modules will be seamlessly       |
+|                                 | stacked together. Unfortunately, it does not mean that this will   |
+|                                 | be faster than assembling with a geometry. It simply provides an   |
+|                                 | alternative to check the data from different modules.              |
++---------------------------------+--------------------------------------------------------------------+
