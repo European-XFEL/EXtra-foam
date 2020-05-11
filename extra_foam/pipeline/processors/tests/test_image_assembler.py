@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 import copy
 import os
 import random
@@ -81,7 +81,8 @@ class TestAgipdAssembler:
     def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
         # we do not test using GeomAssembler.EXTRA_GEOM for AGIPD
-        self._assembler._load_geometry(self._geom_file, self._quad_positions, GeomAssembler.OWN, False)
+        self._assembler._load_geometry(
+            False, self._geom_file, self._quad_positions, GeomAssembler.OWN)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -92,12 +93,13 @@ class TestAgipdAssembler:
     def testInvalidGeometryFile(self):
         # test file does not exist
         with pytest.raises(AssemblingError):
-            self._assembler._load_geometry("abc", self._quad_positions, GeomAssembler.OWN, False)
+            self._assembler._load_geometry(False, "abc", self._quad_positions, GeomAssembler.OWN)
 
         # test invalid file
         with tempfile.NamedTemporaryFile() as fp:
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp.name, self._quad_positions, GeomAssembler.OWN, False)
+                self._assembler._load_geometry(
+                    False, fp.name, self._quad_positions, GeomAssembler.OWN)
 
     def testGeneral(self):
         # Note: this test does not need to repeat for each detector
@@ -167,19 +169,20 @@ class TestAgipdAssembler:
         key_name = 'image.data'
         src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((4, 16, 100, 100), dtype=_IMAGE_DTYPE),
+            },
+        }
+
         with pytest.raises(AssemblingError, match='Expected module shape'):
-            data = {
-                'catalog': catalog,
-                'meta': {
-                    src: {
-                        'train_id': 10001,
-                        'source_type': DataSource.BRIDGE,
-                    }
-                },
-                'raw': {
-                    src: np.ones((4, 16, 100, 100), dtype=_IMAGE_DTYPE),
-                },
-            }
             self._assembler.process(data)
 
         with pytest.raises(AssemblingError, match='modules, but'):
@@ -229,7 +232,8 @@ class TestLpdAssembler:
         self._assembler = ImageAssemblerFactory.create("LPD")
 
     def _load_geometry(self, assembler_type, stack_only=False):
-        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, stack_only)
+        self._assembler._load_geometry(
+            stack_only, self._geom_file, self._quad_positions, assembler_type)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -241,18 +245,19 @@ class TestLpdAssembler:
     def testInvalidGeometryFile(self, assembler_type):
         # test file does not exist
         with pytest.raises(AssemblingError):
-            self._assembler._load_geometry("abc", self._quad_positions, assembler_type, False)
+            self._assembler._load_geometry(False, "abc", self._quad_positions, assembler_type)
 
         # test invalid file (file signature not found)
         with tempfile.TemporaryFile() as fp:
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp, self._quad_positions, assembler_type, False)
+                self._assembler._load_geometry(False, fp, self._quad_positions, assembler_type)
 
         # test invalid h5 file (component not found)
         with tempfile.NamedTemporaryFile() as fp:
             fph5 = h5py.File(fp.name, 'r+')
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp.name, self._quad_positions, assembler_type, False)
+                self._assembler._load_geometry(
+                    False, fp.name, self._quad_positions, assembler_type)
 
     @patch('extra_foam.ipc.ProcessLogger.info')
     def testUpdate(self, info):
@@ -263,7 +268,7 @@ class TestLpdAssembler:
             'stack_only': 'False',
             'assembler': '2',
             'geometry_file': self._geom_file,
-            'quad_positions': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
+            'coordinates': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
         }
 
         # Note: this test does not need to repeat for each detector
@@ -273,7 +278,7 @@ class TestLpdAssembler:
         assembler._stack_only = True
         assembler.update(geom_cfg)
         assert isinstance(assembler._geom, LPD_1MGeometry)
-        assert assembler._quad_position == [[0, 1], [1, 1], [1, 0], [0, 0]]
+        assert assembler._coordinates == [[0, 1], [1, 1], [1, 0], [0, 0]]
         assert assembler._geom_file == self._geom_file
         assert assembler._assembler_type == GeomAssembler.EXTRA_GEOM
         assert not assembler._stack_only
@@ -292,7 +297,7 @@ class TestLpdAssembler:
         assembler.update(geom_cfg)
         assembler._load_geometry.assert_called_once()
         assembler._load_geometry.reset_mock()
-        geom_cfg.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
+        geom_cfg.update({'coordinates':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
         assembler.update(geom_cfg)
         assembler._load_geometry.assert_called_once()
         assembler._load_geometry.reset_mock()
@@ -304,6 +309,8 @@ class TestLpdAssembler:
         assembler.update(geom_cfg)
         assembler._load_geometry.assert_called_once()
         assembler._load_geometry.reset_mock()
+        info.assert_called_once()
+        info.reset_mock()
         geom_cfg.update({'stack_only': 'False'})
         assembler.update(geom_cfg)
         assembler._load_geometry.assert_called_once()
@@ -366,19 +373,20 @@ class TestLpdAssembler:
         key_name = 'image.data'
         src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE)
+            },
+        }
+
         with pytest.raises(AssemblingError, match='Expected module shape'):
-            data = {
-                'catalog': catalog,
-                'meta': {
-                    src: {
-                        'train_id': 10001,
-                        'source_type': DataSource.BRIDGE,
-                    }
-                },
-                'raw': {
-                    src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE)
-                },
-            }
             self._assembler.process(data)
 
         with pytest.raises(AssemblingError, match='modules, but'):
@@ -435,7 +443,7 @@ class TestLpdAssembler:
         quad_positions[0][1] += 2  # modify the quad positions
         quad_positions[3][0] -= 4
         quad_positions = [tuple(v) for v in quad_positions]
-        self._assembler._load_geometry(self._geom_file, tuple(quad_positions), assembler_type, False)
+        self._assembler._load_geometry(False, self._geom_file, tuple(quad_positions), assembler_type)
         data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
@@ -443,7 +451,7 @@ class TestLpdAssembler:
         assert assembled_shape_old != assembled_shape
         assert self._assembler._out_array.shape == assembled_shape
         # change the geometry back
-        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, False)
+        self._assembler._load_geometry(False, self._geom_file, self._quad_positions, assembler_type)
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleDtype(self, assembler_type):
@@ -496,7 +504,8 @@ class TestDSSCAssembler:
         self._assembler = ImageAssemblerFactory.create("DSSC")
 
     def _load_geometry(self, assembler_type, stack_only=False):
-        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, stack_only)
+        self._assembler._load_geometry(
+            stack_only, self._geom_file, self._quad_positions, assembler_type)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -508,18 +517,18 @@ class TestDSSCAssembler:
     def testInvalidGeometryFile(self, assembler_type):
         # test file does not exist
         with pytest.raises(AssemblingError):
-            self._assembler._load_geometry("abc", self._quad_positions, assembler_type, False)
+            self._assembler._load_geometry(False, "abc", self._quad_positions, assembler_type)
 
         # test invalid file (file signature not found)
         with tempfile.TemporaryFile() as fp:
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp, self._quad_positions, assembler_type, False)
+                self._assembler._load_geometry(False, fp, self._quad_positions, assembler_type)
 
         # test invalid h5 file (component not found)
         with tempfile.NamedTemporaryFile() as fp:
             fph5 = h5py.File(fp.name, 'r+')
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp.name, self._quad_positions, assembler_type, False)
+                self._assembler._load_geometry(False, fp.name, self._quad_positions, assembler_type)
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleFileCal(self, assembler_type):
@@ -576,19 +585,20 @@ class TestDSSCAssembler:
         key_name = 'image.data'
         src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
 
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE),
+            },
+        }
+
         with pytest.raises(AssemblingError, match='Expected module shape'):
-            data = {
-                'catalog': catalog,
-                'meta': {
-                    src: {
-                        'train_id': 10001,
-                        'source_type': DataSource.BRIDGE,
-                    }
-                },
-                'raw': {
-                    src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE),
-                },
-            }
             self._assembler.process(data)
 
         with pytest.raises(AssemblingError, match='modules, but'):
@@ -716,7 +726,7 @@ class TestJungfrauAssembler(unittest.TestCase):
             data['raw'][src] = np.ones((1, 100, 100))
             self._assembler.process(data)
 
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesRegex(NotImplementedError, "Use 'JungFrauPR'"):
             data['raw'][src] = np.ones((2, 512, 1024))
             self._assembler.process(data)
 
@@ -744,8 +754,13 @@ class TestJungfrauAssembler(unittest.TestCase):
             self._assembler.process(data)
 
         data['raw'][src] = np.ones((512, 1024, 2))
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesRegex(NotImplementedError, "Use 'JungFrauPR'"):
             self._assembler.process(data)
+
+
+class TestStackingDetectorModules(unittest.TestCase):
+    def testGeneral(self):
+        pass
 
 
 class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
@@ -760,11 +775,22 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrauPR")
 
-    def _create_catalog(self, src_name, key_name):
+    def _create_catalog(self, src_name, key_name, n_modules=1):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('JungFrauPR', src_name, [], key_name, None, None))
+        modules = [] if n_modules == 1 else list(range(1, n_modules+1))
+        catalog.add_item(SourceItem('JungFrauPR', src_name, modules, key_name, None, None))
         return src, catalog
+
+    def _check6ModuleResult(self, data, src):
+        # test the module keys have been deleted
+        assert data['raw'][src] is None
+
+        assembled = data['assembled']['data']
+        assert 3 == assembled.ndim
+        assembled_shape = assembled.shape
+        assert assembled_shape == (2, 1536, 2048)
+        assert _IMAGE_DTYPE == assembled.dtype
 
     def testAssembleFileCal(self):
         # 16 is the number of memory cells
@@ -774,8 +800,11 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self._runAssembleFileTest((16, 512, 1024), _RAW_IMAGE_DTYPE)
 
     def _runAssembleFileTest(self, shape, dtype):
+        self._assembler._n_modules = 1
+
         key_name = 'data.adc'
-        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput', key_name)
+        src, catalog = self._create_catalog(
+            'FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput', key_name)
 
         data = {
             'catalog': catalog,
@@ -792,18 +821,57 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
 
         self._assembler.process(data)
         self.assertIsNone(data['raw'][src])
-
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data['raw'][src] = np.ones((16, 100, 100))
-            self._assembler.process(data)
-
-        data['raw'][src] = np.ones((16, 512, 1024))
-        self._assembler.process(data)
         assembled = data['assembled']['data']
-        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
+        self.assertTupleEqual(assembled.shape, shape)
         assert _IMAGE_DTYPE == assembled.dtype
 
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data['raw'][src] = np.ones((16, 100, 100), dtype=dtype)
+            self._assembler.process(data)
+
+    def testAssembleFile6ModulesCal(self):
+        # 16 is the number of memory cells
+        self._runAssembleFileTest((2, 512, 1024), _IMAGE_DTYPE)
+
+    def testAssembleFile6ModulesRaw(self):
+        self._runAssembleFileTest((2, 512, 1024), _RAW_IMAGE_DTYPE)
+
+    def _runAssembleFile6ModulesTest(self, shape, dtype):
+        self._assembler._n_modules = 6
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        key_name = 'data.adc'
+        src, catalog = self._create_catalog(
+            'FXE_XAD_JF1M/DET/RECEIVER-*:daqOutput', key_name, n_modules=6)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: {
+                    'FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-3:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-4:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
+        }
+
+        self._assembler.process(data)
+        self._check6ModuleResult(data, src)
+
     def testAssembleBridge(self):
+        self._assembler._n_modules = 1
+
         key_name = 'data.adc'
         src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:display', key_name)
 
@@ -816,37 +884,62 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
                 }
             },
             'raw': {
-                src: np.ones((512, 1024, 1))
+                src: np.ones((2, 512, 1024, 16))
             },
         }
 
+        with pytest.raises(AssemblingError, match='1 modules, but'):
+            self._assembler.process(data)
+
+        # (y, x, memory cells)
+        data['raw'][src] = np.ones((512, 1024, 16))
         self._assembler.process(data)
         self.assertIsNone(data['raw'][src])
-
-        assembled = data['assembled']['data']
-        self.assertTupleEqual(assembled.shape, (1, 512, 1024))
-
-        # test single-module JungFrau
-        data['raw'][src] = np.ones((512, 1024, 16))
-
-        self._assembler.process(data)
         assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
-        # test two-module JungFrau
-        data['raw'][src] = np.ones((2, 512, 1024, 16))
-
+        # (memory cells, y, x)
+        data['raw'][src] = np.ones((16, 512, 1024))
         self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
         assembled = data['assembled']['data']
-        self.assertTupleEqual(assembled.shape, (16, 1024, 1024))
+        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
-        # test multi-frame, three-module JungFrau
-        with self.assertRaisesRegex(AssemblingError, 'Expected 1 or 2 module'):
-            data['raw'][src] = np.ones((3, 512, 1024, 16))
+    def testAssembleBridge6Modules(self):
+        self._assembler._n_modules = 6
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        key_name = 'data.adc'
+        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((6, 512, 1024, 2), dtype=_IMAGE_DTYPE),
+            },
+        }
+
+        # (modules, y, x, memory cells)
+        self._assembler.process(data)
+        self._check6ModuleResult(data, src)
+
+        # (memory cells, modules, y, x)
+        data['raw'][src] = np.ones((2, 6, 512, 1024), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        self._check6ModuleResult(data, src)
+
+        with pytest.raises(AssemblingError, match='Expected module shape'):
+            data['raw'][src] = np.ones((6, 100, 100, 2), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data['raw'][src] = np.ones((100, 100, 1))
+        with pytest.raises(AssemblingError, match='modules, but'):
+            data['raw'][src] = np.ones((2, 512, 1024, 2), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
 
@@ -933,20 +1026,32 @@ class TestEPix100Assembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("ePix100")
 
-    def _create_catalog(self, src_name, key_name):
+    def _create_catalog(self, src_name, key_name, n_modules=1):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('ePix100', src_name, [], key_name, None, None))
+        modules = [] if n_modules == 1 else list(range(1, n_modules+1))
+        catalog.add_item(SourceItem('ePix100', src_name, modules, key_name, None, None))
         return src, catalog
 
+    def _check4ModuleResult(self, data, src):
+        # test the module keys have been deleted
+        assert data['raw'][src] is None
+
+        assembled = data['assembled']['data']
+        assert 2 == assembled.ndim
+        assembled_shape = assembled.shape
+        assert assembled_shape == (1416, 1536)
+        assert _IMAGE_DTYPE == assembled.dtype
+
     def testAssembleFileCal(self):
-        self._runAssembleFileTest((708, 768), _IMAGE_DTYPE, 'data.image.pixels')
+        self._runAssembleFileTest((708, 768), _IMAGE_DTYPE)
 
     def testAssembleFileRaw(self):
-        self._runAssembleFileTest((708, 768), np.int16, 'data.image.pixels')
+        self._runAssembleFileTest((708, 768), np.int16)
 
-    def _runAssembleFileTest(self, shape, dtype, key):
-        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
+    def _runAssembleFileTest(self, shape, dtype):
+        key_name = 'data.image.pixels'
+        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key_name)
 
         data = {
             'catalog': catalog,
@@ -957,15 +1062,54 @@ class TestEPix100Assembler(unittest.TestCase):
                 }
             },
             'raw': {
-                src: np.ones(shape, dtype=dtype)
+                src: np.ones(shape, dtype=dtype),
             },
         }
+
         self._assembler.process(data)
         self.assertIsNone(data['raw'][src])
+        assembled = data['assembled']['data']
+        self.assertTupleEqual(assembled.shape, shape)
+        assert _IMAGE_DTYPE == assembled.dtype
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data['raw'][src] = np.ones((100, 100))
+            data['raw'][src] = np.ones((100, 100), dtype=dtype)
             self._assembler.process(data)
+
+    def testAssembleFile4ModulesCal(self):
+        self._runAssembleFile4ModulesTest((708, 768), _IMAGE_DTYPE)
+
+    def testAssembleFile4ModulesRaw(self):
+        self._runAssembleFile4ModulesTest((708, 768), np.int16)
+
+    def _runAssembleFile4ModulesTest(self, shape, dtype):
+        self._assembler._n_modules = 4
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        key_name = 'data.image.pixels'
+        src, catalog = self._create_catalog(
+            'MID_EXP_EPIX-*/DET/RECEIVER:daqOutput', key_name, n_modules=4)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: {
+                    'MID_EXP_EPIX-1/DET/RECEIVER:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'MID_EXP_EPIX-2/DET/RECEIVER:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                },
+            }
+        }
+
+        self._assembler.process(data)
+        self._check4ModuleResult(data, src)
 
     def testAssembleBridgeCal(self):
         self._runAssembleBridgeTest((708, 768, 1), _IMAGE_DTYPE, "data.image")

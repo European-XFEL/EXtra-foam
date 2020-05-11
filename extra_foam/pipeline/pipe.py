@@ -140,7 +140,6 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                 modules = item['modules']
                 slicer = item['slicer']
                 vrange = item['vrange']
-
                 self._catalog.add_item(
                     category,
                     item['name'],

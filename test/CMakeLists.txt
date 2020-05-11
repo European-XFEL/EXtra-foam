@@ -44,6 +44,7 @@ find_package(Threads REQUIRED)
 set(FOAM_TESTS
         test_tbb.cpp
         test_imageproc.cpp
+        test_geometry.cpp
         test_geometry_1m.cpp
         test_statistics.cpp)
 

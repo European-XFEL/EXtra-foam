@@ -11,6 +11,8 @@ SOURCE:
 
         JungFrauPR:
             PIPELINE:
+                SPB_IRDA_JNGFR/DET/MODULE_*:daqOutput:
+                    - data.adc
                 SPB_IRDA_JNGFR/DET/MODULE_1:daqOutput:
                     - data.adc
                 SPB_IRDA_JNGFR/DET/MODULE_2:daqOutput:

@@ -8,6 +8,7 @@ set(extra-foam_MODULE_FILES
         f_helpers.cpp
         f_imageproc.cpp
         f_datamodel.cpp
+        f_geometry.cpp
         f_geometry_1m.cpp
         f_statistics.cpp
 )

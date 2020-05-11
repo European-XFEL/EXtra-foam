@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
 from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import SmartBoundaryLineEdit
 from ..gui_helpers import create_icon_button
-from ...config import GeomAssembler
+from ...config import config, GeomAssembler
 from ...database import Metadata as mt
 
 
@@ -30,6 +30,7 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setMinimumWidth(160)
 
         self.mask_tile_cb = QCheckBox("Mask tile edges")
+        self.mask_asic_cb = QCheckBox("Mask ASIC edge")
 
         icon_size = 30
         self.draw_mask_btn = create_icon_button(
@@ -50,14 +51,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self._non_reconfigurable_widgets = [
             self.save_btn,
             self.load_btn,
+            self.mask_save_in_modules_cb,
         ]
-
-        if not self._require_geometry:
-            self.mask_tile_cb.setDisabled(True)
-            self.mask_save_in_modules_cb.setDisabled(True)
-        else:
-            self._non_reconfigurable_widgets.append(
-                self.mask_save_in_modules_cb)
 
         self.initUI()
         self.initConnections()
@@ -71,8 +66,13 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(QLabel("Threshold mask: "), row, 0, AR)
         layout.addWidget(self.threshold_mask_le, row, 1)
 
-        row += 1
-        layout.addWidget(self.mask_tile_cb, row, 0, AR)
+        if config["MASK_TILE_EDGE"]:
+            row += 1
+            layout.addWidget(self.mask_tile_cb, row, 0, AR)
+
+        if config["MASK_ASIC_EDGE"]:
+            row += 1
+            layout.addWidget(self.mask_asic_cb, row, 0, AR)
 
         row += 1
         sub_layout = QHBoxLayout()
@@ -85,8 +85,9 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.load_btn, row, 0)
         layout.addWidget(self.save_btn, row, 1)
 
-        row += 1
-        layout.addWidget(self.mask_save_in_modules_cb, row, 0, 1, 2, AR)
+        if self._require_geometry:
+            row += 1
+            layout.addWidget(self.mask_save_in_modules_cb, row, 0, 1, 2, AR)
 
         layout.setVerticalSpacing(20)
         self.setLayout(layout)
@@ -100,6 +101,10 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
 
         self.mask_tile_cb.toggled.connect(
             mediator.onImageMaskTileEdgeChange)
+
+        self.mask_asic_cb.toggled.connect(
+            mediator.onImageMaskAsicEdgeChange)
+
         mediator.assembler_change_sgn.connect(self._onAssemblerChange)
 
         self.erase_mask_btn.toggled.connect(self._updateExclusiveBtns)
@@ -117,16 +122,21 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
             self.mask_tile_cb.setChecked(False)
             self.mask_tile_cb.setEnabled(False)
 
+            self.mask_asic_cb.setChecked(False)
+            self.mask_asic_cb.setEnabled(False)
+
             self.mask_save_in_modules_cb.setChecked(False)
             self.mask_save_in_modules_cb.setEnabled(False)
         else:
             self.mask_tile_cb.setEnabled(True)
+            self.mask_asic_cb.setEnabled(True)
             self.mask_save_in_modules_cb.setEnabled(True)
 
     def updateMetaData(self):
         """Override."""
         self.threshold_mask_le.returnPressed.emit()
         self.mask_tile_cb.toggled.emit(self.mask_tile_cb.isChecked())
+        self.mask_asic_cb.toggled.emit(self.mask_asic_cb.isChecked())
         self.mask_save_in_modules_cb.toggled.emit(
             self.mask_save_in_modules_cb.isChecked())
         return True
@@ -135,8 +145,13 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
         self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])
-        if self._require_geometry:
+        if config["MASK_TILE_EDGE"]:
             self.mask_tile_cb.setChecked(cfg["mask_tile"] == 'True')
+
+        if config["MASK_ASIC_EDGE"]:
+            self.mask_asic_cb.setChecked(cfg["mask_asic"] == 'True')
+
+        if self._require_geometry:
             self.mask_save_in_modules_cb.setChecked(
                 cfg["mask_save_in_modules"] == 'True')
 
@@ -146,3 +161,7 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
             for at in self._exclusive_btns:
                 if at != self.sender():
                     at.setChecked(False)
+
+    def setInteractiveButtonsEnabled(self, state):
+        self.draw_mask_btn.setEnabled(state)
+        self.erase_mask_btn.setEnabled(state)

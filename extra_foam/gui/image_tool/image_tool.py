@@ -244,6 +244,9 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._views_tab.currentWidget().onActivated()
         self.updateWidgets(True)  # force update
 
+        self._mask_ctrl_widget.setInteractiveButtonsEnabled(
+            self._views_tab.currentIndex() == self.TabIndex.CORRECTED)
+
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):
         self._auto_update = state

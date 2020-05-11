@@ -104,6 +104,9 @@ class Mediator(QObject):
     def onImageMaskTileEdgeChange(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "mask_tile", str(value))
 
+    def onImageMaskAsicEdgeChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "mask_asic", str(value))
+
     def onImageMaskSaveInModulesToggled(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "mask_save_in_modules", str(value))
 
@@ -117,8 +120,8 @@ class Mediator(QObject):
     def onGeomFileChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)
 
-    def onGeomQuadPositionsChange(self, value: str):
-        self._meta.hset(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
+    def onGeomCoordinatesChange(self, value: str):
+        self._meta.hset(mt.GEOMETRY_PROC, "coordinates", json.dumps(value))
 
     def onPoiIndexChange(self, idx: int, value: int):
         self._meta.hset(mt.GLOBAL_PROC, f"poi{idx+1}_index", str(value))
