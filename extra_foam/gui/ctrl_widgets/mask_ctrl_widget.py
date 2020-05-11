@@ -30,7 +30,11 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setMinimumWidth(160)
 
         self.mask_tile_cb = QCheckBox("Mask tile edges")
+        if config["MASK_TILE_EDGE"]:
+            self.mask_tile_cb.setChecked(True)
         self.mask_asic_cb = QCheckBox("Mask ASIC edge")
+        if config["MASK_ASIC_EDGE"]:
+            self.mask_asic_cb.setChecked(True)
 
         icon_size = 30
         self.draw_mask_btn = create_icon_button(
@@ -144,7 +148,9 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
+
         self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])
+
         if config["MASK_TILE_EDGE"]:
             self.mask_tile_cb.setChecked(cfg["mask_tile"] == 'True')
 

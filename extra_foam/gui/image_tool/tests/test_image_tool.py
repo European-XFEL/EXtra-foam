@@ -213,21 +213,25 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc = self.pulse_worker._image_proc
         assembler = proc._assembler
 
+        self.assertTrue(config["MASK_TILE_EDGE"])
+        self.assertFalse(config["MASK_ASIC_EDGE"])
         # test default
+        self.assertTrue(widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_asic_cb.isChecked())
         proc.update()
         self.assertEqual((-1e5, 1e5), proc._threshold_mask)
-        self.assertFalse(assembler._mask_tile)
+        self.assertTrue(assembler._mask_tile)
         self.assertFalse(assembler._mask_asic)
         self.assertFalse(view._mask_save_in_modules)
 
         # test set new value
         widget.threshold_mask_le.setText("1, 10")
-        widget.mask_tile_cb.setChecked(True)
+        widget.mask_tile_cb.setChecked(False)
         widget.mask_asic_cb.setChecked(True)
         widget.mask_save_in_modules_cb.setChecked(True)
         proc.update()
         self.assertEqual((1, 10), proc._threshold_mask)
-        self.assertTrue(assembler._mask_tile)
+        self.assertFalse(assembler._mask_tile)
         self.assertTrue(assembler._mask_asic)
         self.assertTrue(view._mask_save_in_modules)
 
@@ -251,7 +255,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget.loadMetaData()
         self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
         self.assertEqual(not mask_tile_state, widget.mask_tile_cb.isChecked())
-        assert(not config["MASK_ASIC_EDGE"])
         self.assertEqual(mask_asic_state, widget.mask_asic_cb.isChecked())
         self.assertEqual(not mask_save_in_modules_state, widget.mask_save_in_modules_cb.isChecked())
 
@@ -926,6 +929,8 @@ class TestImageToolTs(unittest.TestCase):
     def testMaskCtrlWidget(self):
         widget = self.image_tool._mask_ctrl_widget
 
+        self.assertFalse(config["MASK_TILE_EDGE"])
+        self.assertFalse(config["MASK_ASIC_EDGE"])
         # test default
         self.assertFalse(widget.mask_tile_cb.isChecked())
         self.assertFalse(widget.mask_asic_cb.isChecked())
