@@ -758,11 +758,6 @@ class TestJungfrauAssembler(unittest.TestCase):
             self._assembler.process(data)
 
 
-class TestStackingDetectorModules(unittest.TestCase):
-    def testGeneral(self):
-        pass
-
-
 class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -789,7 +784,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         assembled = data['assembled']['data']
         assert 3 == assembled.ndim
         assembled_shape = assembled.shape
-        assert assembled_shape == (2, 1536, 2048)
+        assert assembled_shape == (16, 1536, 2048)
         assert _IMAGE_DTYPE == assembled.dtype
 
     def testAssembleFileCal(self):
@@ -830,11 +825,10 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
             self._assembler.process(data)
 
     def testAssembleFile6ModulesCal(self):
-        # 16 is the number of memory cells
-        self._runAssembleFileTest((2, 512, 1024), _IMAGE_DTYPE)
+        self._runAssembleFileTest((16, 512, 1024), _IMAGE_DTYPE)
 
     def testAssembleFile6ModulesRaw(self):
-        self._runAssembleFileTest((2, 512, 1024), _RAW_IMAGE_DTYPE)
+        self._runAssembleFileTest((16, 512, 1024), _RAW_IMAGE_DTYPE)
 
     def _runAssembleFile6ModulesTest(self, shape, dtype):
         self._assembler._n_modules = 6
@@ -898,14 +892,47 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
-        # (memory cells, y, x)
-        data['raw'][src] = np.ones((16, 512, 1024))
-        self._assembler.process(data)
-        self.assertIsNone(data['raw'][src])
-        assembled = data['assembled']['data']
-        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
+    def testAssembleBridge6ModulesCal(self):
+        self._runAssembleBridge6ModulesTest((512, 1024, 16), _IMAGE_DTYPE)
 
-    def testAssembleBridge6Modules(self):
+    def testAssembleBridge6ModulesRaw(self):
+        # TODO
+        pass
+
+    def _runAssembleBridge6ModulesTest(self, shape, dtype):
+        self._assembler._n_modules = 6
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        key_name = "data.adc"
+        src, catalog = self._create_catalog(
+            'FXE_XAD_JF1M/DET/RECEIVER-*:display', key_name, n_modules=6)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: {
+                    'FXE_XAD_JF1M/DET/RECEIVER-1:display':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-2:display':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-3:display':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_XAD_JF1M/DET/RECEIVER-6:display':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
+        }
+
+        self._assembler.process(data)
+        self._check6ModuleResult(data, src)
+
+    def testAssembleBridge6ModulesStacked(self):
         self._assembler._n_modules = 6
         self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
 
@@ -921,7 +948,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
                 }
             },
             'raw': {
-                src: np.ones((6, 512, 1024, 2), dtype=_IMAGE_DTYPE),
+                src: np.ones((6, 512, 1024, 16), dtype=_IMAGE_DTYPE),
             },
         }
 
@@ -930,12 +957,12 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self._check6ModuleResult(data, src)
 
         # (memory cells, modules, y, x)
-        data['raw'][src] = np.ones((2, 6, 512, 1024), dtype=_IMAGE_DTYPE)
+        data['raw'][src] = np.ones((16, 6, 512, 1024), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         self._check6ModuleResult(data, src)
 
         with pytest.raises(AssemblingError, match='Expected module shape'):
-            data['raw'][src] = np.ones((6, 100, 100, 2), dtype=_IMAGE_DTYPE)
+            data['raw'][src] = np.ones((6, 100, 100, 16), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
         with pytest.raises(AssemblingError, match='modules, but'):
@@ -1038,7 +1065,7 @@ class TestEPix100Assembler(unittest.TestCase):
         assert data['raw'][src] is None
 
         assembled = data['assembled']['data']
-        assert 2 == assembled.ndim
+        assert assembled.ndim == 2
         assembled_shape = assembled.shape
         assert assembled_shape == (1416, 1536)
         assert _IMAGE_DTYPE == assembled.dtype
@@ -1118,6 +1145,7 @@ class TestEPix100Assembler(unittest.TestCase):
         self._runAssembleBridgeTest((1, 708, 768), np.int16, "data.image.data")
 
     def _runAssembleBridgeTest(self, shape, dtype, key):
+        self._assembler._n_modules = 1
         src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
 
         data = {
@@ -1141,6 +1169,71 @@ class TestEPix100Assembler(unittest.TestCase):
                 data['raw'][src] = np.ones((100, 100, 1), dtype=dtype)
             else:
                 data['raw'][src] = np.ones((1, 100, 100), dtype=np.int16)
+            self._assembler.process(data)
+
+    def testAssembleBridge4ModulesCal(self):
+        self._runAssembleBridge4ModulesTest((708, 768, 1), _IMAGE_DTYPE, "data.image")
+
+    def testAssembleBridge4ModulesRaw(self):
+        self._runAssembleBridge4ModulesTest((1, 708, 768), np.int16, "data.image.data")
+
+    def _runAssembleBridge4ModulesTest(self, shape, dtype, key_name):
+        self._assembler._n_modules = 4
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        src, catalog = self._create_catalog(
+            'MID_EXP_EPIX-*/DET/RECEIVER:daqOutput', key_name, n_modules=4)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: {
+                    'MID_EXP_EPIX-1/DET/RECEIVER:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'MID_EXP_EPIX-2/DET/RECEIVER:daqOutput':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
+        }
+
+        self._assembler.process(data)
+        self._check4ModuleResult(data, src)
+
+    def testAssembleBridge4ModulesStacked(self):
+        self._assembler._n_modules = 4
+        self._assembler._load_geometry(True, None, None, GeomAssembler.OWN)
+
+        src, catalog = self._create_catalog(
+            'MID_EXP_EPIX/DET/RECEIVER', "data.image", n_modules=4)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((4, 708, 768), dtype=_IMAGE_DTYPE),
+            },
+        }
+
+        self._assembler.process(data)
+        self._check4ModuleResult(data, src)
+
+        with pytest.raises(AssemblingError, match='Expected module shape'):
+            data['raw'][src] = np.ones((4, 100, 100), dtype=_IMAGE_DTYPE)
+            self._assembler.process(data)
+
+        with pytest.raises(AssemblingError, match='modules, but'):
+            data['raw'][src] = np.ones((2, 708, 768), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
 
