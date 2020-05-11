@@ -796,13 +796,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         for i in range(4):
             for j in range(2):
                 widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
-        with patch.object(assembler, "_load_geometry"):
+        with patch.object(assembler, "_load_geometry") as mocked_load_geometry:
             image_proc.update()
-        self.assertEqual(GeomAssembler.EXTRA_GEOM, assembler._assembler_type)
-        self.assertFalse(assembler._stack_only)
+            mocked_load_geometry.assert_called_once_with(
+                "/geometry/file/", [[0., 0.] for i in range(4)], GeomAssembler.EXTRA_GEOM, False)
         self.assertFalse(assembler._mask_tile)
-        self.assertEqual("/geometry/file/", assembler._geom_file)
-        self.assertListEqual([[0., 0.] for i in range(4)], assembler._quad_position)
 
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
         self.assertTrue(widget._stack_only_cb.isEnabled())

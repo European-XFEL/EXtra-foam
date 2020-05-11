@@ -13,10 +13,12 @@ import copy
 import os
 import random
 import tempfile
+import json
 
 import pytest
 
 import numpy as np
+import h5py
 
 from extra_foam.pipeline.processors.image_assembler import (
     _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, ImageAssemblerFactory
@@ -78,7 +80,8 @@ class TestAgipdAssembler:
 
     def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
-        self._assembler._load_geometry(self._geom_file, self._quad_positions)
+        # we do not test using GeomAssembler.EXTRA_GEOM for AGIPD
+        self._assembler._load_geometry(self._geom_file, self._quad_positions, GeomAssembler.OWN, False)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -86,17 +89,15 @@ class TestAgipdAssembler:
         catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
 
-    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
-    def testInvalidGeometryFile(self, assembler_type):
-        self._assembler._assembler_type = assembler_type
+    def testInvalidGeometryFile(self):
         # test file does not exist
         with pytest.raises(AssemblingError):
-            self._assembler._load_geometry("abc", self._quad_positions)
+            self._assembler._load_geometry("abc", self._quad_positions, GeomAssembler.OWN, False)
 
         # test invalid file
         with tempfile.NamedTemporaryFile() as fp:
             with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp.name, self._quad_positions)
+                self._assembler._load_geometry(fp.name, self._quad_positions, GeomAssembler.OWN, False)
 
     def testGeneral(self):
         # Note: this test does not need to repeat for each detector
@@ -212,29 +213,7 @@ class TestAgipdAssembler:
         _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
 
-class _AssemblerGeometryTest:
-    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
-    def testInvalidGeometryFile(self, assembler_type):
-        import h5py
-
-        self._assembler._assembler_type = assembler_type
-        # test file does not exist
-        with pytest.raises(AssemblingError):
-            self._assembler._load_geometry("abc", self._quad_positions)
-
-        # test invalid file (file signature not found)
-        with tempfile.TemporaryFile() as fp:
-            with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp, self._quad_positions)
-
-        # test invalid h5 file (component not found)
-        with tempfile.NamedTemporaryFile() as fp:
-            fph5 = h5py.File(fp.name, 'r+')
-            with pytest.raises(AssemblingError):
-                self._assembler._load_geometry(fp.name, self._quad_positions)
-
-
-class TestLpdAssembler(_AssemblerGeometryTest):
+class TestLpdAssembler:
     @classmethod
     def setup_class(cls):
         config.load('LPD', 'FXE')
@@ -248,11 +227,9 @@ class TestLpdAssembler(_AssemblerGeometryTest):
 
     def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("LPD")
-        self._load_geometry(GeomAssembler.EXTRA_GEOM)
 
-    def _load_geometry(self, assembler_type):
-        self._assembler._assembler_type = assembler_type
-        self._assembler._load_geometry(self._geom_file, self._quad_positions)
+    def _load_geometry(self, assembler_type, stack_only=False):
+        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, stack_only)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -260,9 +237,25 @@ class TestLpdAssembler(_AssemblerGeometryTest):
         catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
 
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions, assembler_type, False)
+
+        # test invalid file (file signature not found)
+        with tempfile.TemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp, self._quad_positions, assembler_type, False)
+
+        # test invalid h5 file (component not found)
+        with tempfile.NamedTemporaryFile() as fp:
+            fph5 = h5py.File(fp.name, 'r+')
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions, assembler_type, False)
+
     @patch('extra_foam.ipc.ProcessLogger.info')
     def testUpdate(self, info):
-        import json
         from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.geometries import LPD_1MGeometry
 
@@ -276,8 +269,14 @@ class TestLpdAssembler(_AssemblerGeometryTest):
         # Note: this test does not need to repeat for each detector
         assembler = self._assembler
 
+        assert assembler._assembler_type is None
+        assembler._stack_only = True
         assembler.update(geom_cfg)
         assert isinstance(assembler._geom, LPD_1MGeometry)
+        assert assembler._quad_position == [[0, 1], [1, 1], [1, 0], [0, 0]]
+        assert assembler._geom_file == self._geom_file
+        assert assembler._assembler_type == GeomAssembler.EXTRA_GEOM
+        assert not assembler._stack_only
 
         # test assembler switching
         geom_cfg.update({'assembler': 1})
@@ -436,7 +435,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
         quad_positions[0][1] += 2  # modify the quad positions
         quad_positions[3][0] -= 4
         quad_positions = [tuple(v) for v in quad_positions]
-        self._assembler._load_geometry(self._geom_file, tuple(quad_positions))
+        self._assembler._load_geometry(self._geom_file, tuple(quad_positions), assembler_type, False)
         data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
@@ -444,7 +443,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
         assert assembled_shape_old != assembled_shape
         assert self._assembler._out_array.shape == assembled_shape
         # change the geometry back
-        self._assembler._load_geometry(self._geom_file, self._quad_positions)
+        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, False)
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleDtype(self, assembler_type):
@@ -481,7 +480,7 @@ class TestLpdAssembler(_AssemblerGeometryTest):
                 self._assembler.process(data)
 
 
-class TestDSSCAssembler(_AssemblerGeometryTest):
+class TestDSSCAssembler:
     @classmethod
     def setup_class(cls):
         config.load('DSSC', 'SCS')
@@ -495,17 +494,32 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
 
     def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("DSSC")
-        self._load_geometry(GeomAssembler.EXTRA_GEOM)
 
-    def _load_geometry(self, assembler_type):
-        self._assembler._assembler_type = assembler_type
-        self._assembler._load_geometry(self._geom_file, self._quad_positions)
+    def _load_geometry(self, assembler_type, stack_only=False):
+        self._assembler._load_geometry(self._geom_file, self._quad_positions, assembler_type, stack_only)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
         catalog.add_item(SourceItem('DSSC', src_name, [], key_name, slice(None, None), None))
         return src, catalog
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions, assembler_type, False)
+
+        # test invalid file (file signature not found)
+        with tempfile.TemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp, self._quad_positions, assembler_type, False)
+
+        # test invalid h5 file (component not found)
+        with tempfile.NamedTemporaryFile() as fp:
+            fph5 = h5py.File(fp.name, 'r+')
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions, assembler_type, False)
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleFileCal(self, assembler_type):
@@ -595,7 +609,10 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
         self._assembler.process(data)
         _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
-    def testOutArray(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testOutArray(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
 
@@ -622,7 +639,10 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
         assembled_shape = data['assembled']['data'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
 
-    def testAssembleDtype(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleDtype(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
 
@@ -643,9 +663,15 @@ class TestDSSCAssembler(_AssemblerGeometryTest):
             self._assembler.process(data)
 
         data['raw'][src] = np.ones((16, 512, 128, 4), dtype=np.int16)
-        self._assembler.process(data)
-        assembled_dtype = data['assembled']['data'].dtype
-        assert _IMAGE_DTYPE == assembled_dtype
+        if assembler_type == GeomAssembler.EXTRA_GEOM:
+            self._assembler.process(data)
+
+            assembled_dtype = data['assembled']['data'].dtype
+            assert _IMAGE_DTYPE == assembled_dtype
+        else:
+            # C++ implementation does not allow any implicit type conversion
+            with pytest.raises(TypeError):
+                self._assembler.process(data)
 
 
 class TestJungfrauAssembler(unittest.TestCase):
