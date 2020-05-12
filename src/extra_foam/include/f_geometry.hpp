@@ -751,7 +751,7 @@ void DetectorGeometry<Detector>::checkShapeForDismantling(const SrcShape& ss, co
   {
     std::stringstream fmt;
     fmt << "Expected source image with shape (" << expected_ss[0] << ", " << expected_ss[1]
-        << ") modules, get (" << ss[0] << ", " << ss[1] << ")!";
+        << ") modules, get (" << ss[1] << ", " << ss[2] << ")!";
     throw std::invalid_argument(fmt.str());
   }
 
