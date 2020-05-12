@@ -234,8 +234,13 @@ class ImageProcessor(_BaseProcessor):
                 self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
                     dtype=np.bool)
 
-            geom.dismantle_all_modules(
-                image_mask, out=self._image_mask_in_modules)
+            try:
+                geom.dismantle_all_modules(
+                    image_mask, out=self._image_mask_in_modules)
+            except ValueError as e:
+                raise ImageProcessingError(
+                    f"{str(e)}: Geometry changed during updating "
+                    f"image mask!")
 
         if image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
