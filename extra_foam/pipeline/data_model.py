@@ -441,12 +441,19 @@ class ImageData:
     """
 
     __slots__ = ["_pixel_size",
-                 "images", "mean", "masked_mean",
+                 "images", "mean", "masked_mean", "featured",
                  "sliced_indices", "poi_indices",
                  "gain_mean", "offset_mean",
                  "n_dark_pulses", "dark_mean", "dark_count",
                  "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
-                 "reference"]
+                 "reference", "transformed"]
+
+    class _Transformed:
+        __slots__ = ['origin', 'transformed']
+
+        def __init__(self):
+            self.origin = None
+            self.transformed = None
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
@@ -454,6 +461,7 @@ class ImageData:
         self.images = None
         self.mean = None
         self.masked_mean = None
+        self.featured = None
 
         self.sliced_indices = None
         self.poi_indices = None
@@ -470,6 +478,7 @@ class ImageData:
         self.threshold_mask = None
         self.mask = None
 
+        self.transformed = self._Transformed()
         self.reference = None
 
     @property

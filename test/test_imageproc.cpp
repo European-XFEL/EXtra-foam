@@ -16,6 +16,7 @@
 
 #include "f_imageproc.hpp"
 
+
 namespace foam
 {
 namespace test
@@ -26,10 +27,9 @@ using ::testing::ElementsAreArray;
 using ::testing::NanSensitiveFloatEq;
 using ::testing::FloatEq;
 
-auto nan = std::numeric_limits<float>::quiet_NaN();
-auto zero_mt = NanSensitiveFloatEq(0.f);
-auto nan_mt = NanSensitiveFloatEq(nan);
-
+static constexpr auto nan = std::numeric_limits<float>::quiet_NaN();
+static const auto zero_mt = NanSensitiveFloatEq(0.f);
+static const auto nan_mt = NanSensitiveFloatEq(nan);
 
 TEST(TestNanmeanImageArray, TestGeneral)
 {
@@ -101,8 +101,8 @@ TEST(TestMaskImageData, Test2DThresholdMask)
     f(img, 2, 4);
   };
 
-  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>, float>, NanSensitiveFloatEq(0.f));
-  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>, float>, NanSensitiveFloatEq(nan));
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>, float>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>, float>, nan_mt);
 
   auto testMaskImageDataWithOutput = [](auto f, auto mt)
   {

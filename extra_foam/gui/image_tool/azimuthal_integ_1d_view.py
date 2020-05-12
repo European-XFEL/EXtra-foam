@@ -28,7 +28,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         x_label, y_label = plot_labels[AnalysisType.AZIMUTHAL_INTEG]
         self.setLabel('bottom', x_label)
         self.setLabel('left', y_label)
-        self.setTitle(' ')
+        self.setTitle('Azimuthal integration')
 
         self._plot = self.plotCurve(pen=FColor.mkPen("p"))
 
@@ -54,8 +54,12 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._corrected = ImageViewF(hide_axis=False)
+        self._corrected.setTitle("Averaged over train")
+
         self._q_view = ImageViewF(hide_axis=False)
+        self._q_view.setTitle("q-map")
         self._q_view.setMouseHoverValueRoundingDecimals(4)
+
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
         self.initUI()

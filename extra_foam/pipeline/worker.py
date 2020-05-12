@@ -21,12 +21,13 @@ from .processors import (
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
     BinningProcessor,
     CorrelationProcessor,
-    ImageProcessor,
     CtrlDataProcessor,
     FomPulseFilter, FomTrainFilter,
-    PumpProbeProcessor,
-    ImageRoiPulse, ImageRoiTrain,
     HistogramProcessor,
+    ImageProcessor,
+    ImageRoiPulse, ImageRoiTrain,
+    ImageTransformProcessor,
+    PumpProbeProcessor,
     XgmProcessor,
 )
 from ..config import config, PipelineSlowPolicy
@@ -209,7 +210,8 @@ class PulseWorker(ProcessWorker):
             ('image_roi', ImageRoiPulse),
             ('ai_proc', AzimuthalIntegProcessorPulse),
             ('filter', FomPulseFilter),
-            ('pp_proc', PumpProbeProcessor)
+            ('pp_proc', PumpProbeProcessor),
+            ('image_transform_proc', ImageTransformProcessor)
         ])
 
 

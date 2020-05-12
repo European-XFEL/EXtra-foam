@@ -42,11 +42,14 @@ set(GMOCK_INCLUDE_DIRS "${gmock_SOURCE_DIR}/include")
 find_package(Threads REQUIRED)
 
 set(FOAM_TESTS
-        test_tbb.cpp
-        test_imageproc.cpp
-        test_geometry.cpp
-        test_geometry_1m.cpp
-        test_statistics.cpp)
+    test_tbb.cpp
+    test_imageproc.cpp
+    test_geometry.cpp
+    test_geometry_1m.cpp
+    test_statistics.cpp
+    test_smooth.cpp
+    test_canny.cpp
+)
 
 foreach(filename IN LISTS FOAM_TESTS)
     string(REPLACE ".cpp" "" targetname ${filename})

@@ -302,3 +302,21 @@ class Mediator(QObject):
 
     def onFomFilterPulseResolvedChange(self, value: bool):
         self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
+
+    def onItMaWindowChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ma_window", value)
+
+    def onItTransformTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "transform_type", int(value))
+
+    def onItFftLogrithmicScaleChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "fft:logrithmic", str(value))
+
+    def onItEdKernelSizeChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:kernel_size", value)
+
+    def onItEdSigmaChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:sigma", value)
+
+    def onItEdThresholdChange(self, value: tuple):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:threshold", str(value))

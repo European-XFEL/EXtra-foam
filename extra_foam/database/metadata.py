@@ -51,6 +51,7 @@ class Metadata(metaclass=MetaMetadata):
     META_PROC = "meta:proc:meta"
     GLOBAL_PROC = "meta:proc:global"
     IMAGE_PROC = "meta:proc:image"
+    IMAGE_TRANSFORM_PROC = "meta:proc:image_transform"
     GEOMETRY_PROC = "meta:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "meta:proc:azimuthal_integration"
     PUMP_PROBE_PROC = "meta:proc:pump_probe"
