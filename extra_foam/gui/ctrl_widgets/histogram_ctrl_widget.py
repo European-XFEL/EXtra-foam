@@ -12,17 +12,18 @@ from collections import OrderedDict
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QGridLayout, QLabel, QPushButton
+    QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
+    QPushButton
 )
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ..gui_helpers import invert_dict
 from ...config import AnalysisType
 from ...database import Metadata as mt
 
 
-class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class HistogramCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up histogram analysis parameters."""
 
     _analysis_types = OrderedDict({
@@ -32,7 +33,7 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
     _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Histogram setup", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(self._analysis_types.keys())
@@ -58,19 +59,28 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QGridLayout()
         AR = Qt.AlignRight
+        AT = Qt.AlignTop
 
-        layout.addWidget(self._pulse_resolved_cb, 0, 4, AR)
-        layout.addWidget(self._reset_btn, 0, 5, AR)
+        lwidget = QFrame()
+        llayout = QGridLayout()
+        llayout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
+        llayout.addWidget(self._analysis_type_cb, 0, 1)
+        llayout.addWidget(self._reset_btn, 1, 0, 1, 2)
+        lwidget.setLayout(llayout)
 
-        layout.addWidget(QLabel("Analysis type: "), 1, 0, AR)
-        layout.addWidget(self._analysis_type_cb, 1, 1)
-        layout.addWidget(QLabel("Bin range: "), 1, 2, AR)
-        layout.addWidget(self._bin_range_le, 1, 3)
-        layout.addWidget(QLabel("# of bins: "), 1, 4, AR)
-        layout.addWidget(self._n_bins_le, 1, 5)
+        rwidget = QFrame()
+        rlayout = QGridLayout()
+        rlayout.addWidget(QLabel("Bin range: "), 1, 0, AR)
+        rlayout.addWidget(self._bin_range_le, 1, 1)
+        rlayout.addWidget(QLabel("# of bins: "), 1, 2, AR)
+        rlayout.addWidget(self._n_bins_le, 1, 3)
+        rlayout.addWidget(self._pulse_resolved_cb, 1, 4, AR)
+        rwidget.setLayout(rlayout)
 
+        layout = QHBoxLayout()
+        layout.addWidget(lwidget, alignment=AT)
+        layout.addWidget(rwidget, alignment=AT)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -102,9 +112,17 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.HISTOGRAM_PROC)
+        if not cfg:
+            # not initialized
+            return
+
         self._analysis_type_cb.setCurrentText(
             self._analysis_types_inv[int(cfg["analysis_type"])])
         self._bin_range_le.setText(cfg["bin_range"][1:-1])
         self._n_bins_le.setText(cfg['n_bins'])
         if self._pulse_resolved:
             self._pulse_resolved_cb.setChecked(cfg["pulse_resolved"] == 'True')
+
+    def resetAnalysisType(self):
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[AnalysisType.UNDEFINED])

@@ -200,8 +200,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
-            succeeded = widget.updateMetaData()
-            if not succeeded:
+            if not widget.updateMetaData():
                 return False
         return True
 

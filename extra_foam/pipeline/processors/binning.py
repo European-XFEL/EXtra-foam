@@ -189,6 +189,9 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.BIN_PROC)
+        if not cfg:
+            # BinningWindow not initialized
+            return
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
             # reset when analysis type changes

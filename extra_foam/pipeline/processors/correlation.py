@@ -61,8 +61,12 @@ class CorrelationProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        idx = self._idx
         cfg = self._meta.hget_all(mt.CORRELATION_PROC)
+        if not cfg:
+            # CorrelationWindow not initialized
+            return
+
+        idx = self._idx
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
             self._reset = True
