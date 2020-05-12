@@ -368,6 +368,9 @@ def application():
     # update global configuration
     if detector in ("JungFrauPR", "ePix100"):
         n_modules = args.n_modules
+        if n_modules is None:
+            n_modules = 1
+
         config.load(detector, topic,
                     NUMBER_OF_MODULES=n_modules,
                     REQUIRE_GEOMETRY=n_modules > 1,

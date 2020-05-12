@@ -401,6 +401,8 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
 
+        def dismantle_side_effect(*args, **kwargs):
+            raise ValueError
         with patch.object(proc._assembler, "_geom") as geom:
             with patch.object(proc._mask_sub, "update") as update:
                 # test generation of image_mask_in_modules
@@ -409,6 +411,12 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
                 proc.process(data)
                 geom.output_array_for_dismantle_fast.assert_called_once()
                 geom.dismantle_all_modules.assert_called_once()
+
+                with patch.object(geom, "dismantle_all_modules",
+                                  side_effect=dismantle_side_effect):
+                    with self.assertRaisesRegex(ImageProcessingError,
+                                                "Geometry changed during updating image mask"):
+                        proc.process(data)
 
                 # for invalid mask with all zeros, a new mask will be generated automatically
                 update.return_value = (True, np.zeros([3, 2], dtype=bool))

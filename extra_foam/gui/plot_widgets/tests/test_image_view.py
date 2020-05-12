@@ -163,12 +163,12 @@ class TestImageAnalysis(unittest.TestCase):
         # test failing to save
         # --------------------
 
+        # test saving a mask in modules without geometry
         widget._mask_save_in_modules = True
-        with patch("extra_foam.gui.items.GeometryItem._detector",
-                   new_callable=PropertyMock, create=True):
-            with self.assertLogs(logger, level='ERROR') as cm:
-                widget.saveImageMask()
-                self.assertIn('Failed to create geometry to dismantle image mask', cm.output[0])
+        with self.assertLogs(logger, level='ERROR') as cm:
+            widget.saveImageMask()
+            # geometry file is not specified
+            self.assertIn('Failed to create geometry to dismantle image mask', cm.output[0])
 
         # --------------------
         # test fail to load
@@ -195,14 +195,16 @@ class TestImageAnalysis(unittest.TestCase):
         with patch("extra_foam.gui.items.GeometryItem._detector",
                    new_callable=PropertyMock, create=True) as mocked:
             with self.assertLogs(logger, level='ERROR') as cm:
-                mocked.return_value = "LPD"
+                mocked.return_value = "FastCCD"
                 widget._require_geometry = False
                 widget.loadImageMask()
                 self.assertIn('Only detectors with a geometry can have image mask in modules', cm.output[0])
 
             with self.assertLogs(logger, level='ERROR') as cm:
+                mocked.return_value = "LPD"
                 widget._require_geometry = True
                 widget.loadImageMask()
+                # geometry file is not specified
                 self.assertIn('Failed to create geometry to assemble image mask', cm.output[0])
                 mocked_set_mask.assert_not_called()
 
@@ -247,12 +249,19 @@ class TestImageAnalysis(unittest.TestCase):
         # test saving mask in modules
         # -----------------------------
         widget._mask_save_in_modules = True
+        def dismantle_side_effect(*args, **kwargs):
+            raise ValueError
         with patch("extra_foam.gui.items.GeometryItem.geometry") as geom:
             mask_in_modules = np.ones_like((3, 3, 3), dtype=bool)
             geom.output_array_for_dismantle_fast.return_value = mask_in_modules
             widget.saveImageMask()
             geom.output_array_for_dismantle_fast.assert_called_once()
             geom.dismantle_all_modules.assert_called_once()
+
+            geom.dismantle_all_modules.side_effect = dismantle_side_effect
+            with self.assertLogs(logger, level='ERROR') as cm:
+                widget.saveImageMask()
+                self.assertIn("Geometry does not match the assembled image", cm.output[0])
 
         # -----------------------------
         # test loading mask in modules

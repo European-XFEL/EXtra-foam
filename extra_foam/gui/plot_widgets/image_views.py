@@ -69,8 +69,8 @@ class ImageAnalysis(ImageViewF):
         # caveat: the image shape checked must be done before updating image
         if self._mask_in_modules is not None \
                 and image is not None \
-                and self.image is not None \
-                and image.shape != self.image.shape:
+                and self._image is not None \
+                and image.shape != self._image.shape:
             geom = self._geom_item.geometry
             assembled = geom.output_array_for_position_fast(dtype=bool)
             geom.position_all_modules(self._mask_in_modules, out=assembled)
@@ -129,13 +129,30 @@ class ImageAnalysis(ImageViewF):
                     f"{str(e)}")
                 return
 
+            # We do not use self._mask_in_modules in order to allow users
+            # to save mask which has not been applied and send back by the
+            # pipeline.
             modules = geom.output_array_for_dismantle_fast(dtype=np.bool)
-            geom.dismantle_all_modules(image_mask, out=modules)
+            try:
+                geom.dismantle_all_modules(image_mask, out=modules)
+            except ValueError as e:
+                logger.error(f"{str(e)}. "
+                             f"Geometry does not match the assembled "
+                             f"image! Change the geometry back or wait "
+                             f"until update of new assembled image.")
+                return
+
             image_mask = modules
 
         np.save(filepath, image_mask)
 
-        logger.info(f"Image mask saved in {filepath}.npy")
+        if not filepath.endswith('.npy'):
+            filepath += '.npy'
+
+        if self._mask_save_in_modules:
+            logger.info(f"Image mask saved in modules in {filepath}")
+        else:
+            logger.info(f"Image mask saved in {filepath}")
 
     def loadImageMask(self):
         if self._image is None:
