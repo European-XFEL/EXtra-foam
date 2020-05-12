@@ -11,6 +11,8 @@ SOURCE:
 
         JungFrau:
             PIPELINE:
+                FXE_XAD_JF1M/CAL/APPEND:
+                    - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-1:display:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-2:display:
@@ -19,20 +21,7 @@ SOURCE:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput:
                     - data.adc
-                FXE_XAD_JF500K/DET/RECEIVER:daqOutput:
-                    - data.adc
                 FXE_XAD_JF1M1/DET/RECEIVER:daqOutput:
-                    - data.adc
-
-        JungFrauPR:
-            PIPELINE:
-                FXE_XAD_JF1M/CAL/APPEND:
-                    - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput:
-                    - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput:
-                    - data.adc
-                FXE_XAD_JF500K/DET/RECEIVER:display:
                     - data.adc
 
         XGM:
@@ -86,14 +75,6 @@ DETECTOR:
         PHOTON_ENERGY": 9.3
 
     JungFrau:
-        BRIDGE_ADDR: 10.253.0.53
-        BRIDGE_PORT: 4501
-        LOCAL_ADDR: 127.0.0.1
-        LOCAL_PORT: 45453
-        SAMPLE_DISTANCE: 2.0
-        PHOTON_ENERGY: 9.3
-
-    JungFrauPR:
         BRIDGE_ADDR: 10.253.0.53
         BRIDGE_PORT: 4501
         LOCAL_ADDR: 127.0.0.1

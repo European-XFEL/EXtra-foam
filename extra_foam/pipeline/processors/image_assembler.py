@@ -121,7 +121,7 @@ class ImageAssemblerFactory(ABC):
             _coordinates (list): (x, y) coordinates for the corners of 4
                 quadrants for detectors like AGIPD, LPD and DSSC; (x, y)
                 coordinates for the corners of all modules for detectors like
-                JungFrauPR.
+                JungFrau.
             _geom: geometry instance in use.
             _out_array (numpy.ndarray): buffer to store the assembled modules.
         """
@@ -231,7 +231,7 @@ class ImageAssemblerFactory(ABC):
                 and (y, x) for train resolved detectors.
             """
             if modules.ndim == 4:
-                # single module operation (for all 1M detectors and JungFrauPR)
+                # single module operation (for all 1M detectors and JungFrau)
                 if modules.shape[1] == 1:
                     return modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
 
@@ -450,36 +450,6 @@ class ImageAssemblerFactory(ABC):
 
             Calibrated data only.
 
-            - calibrated, "data.adc", (y, x, 1)
-            - raw, "data.adc", TODO
-            -> (y, x)
-            """
-            try:
-                return _maybe_squeeze_to_image(data[src])
-            except ValueError:
-                raise NotImplementedError(
-                    "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
-
-        def _get_modules_file(self, data, src, modules):
-            """Override.
-
-            - calibrated, "data.adc", (1, y, x)
-            - raw, "data.adc", (1, y, x)
-            -> (y, x)
-            """
-            modules_data = data[src]
-            if modules_data.shape[0] == 1:
-                return modules_data.squeeze(axis=0)
-
-            raise NotImplementedError(
-                "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
-
-    class JungFrauPulseResolvedImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src, modules):
-            """Override.
-
-            Calibrated data only.
-
             Single module:
             - calibrated, "data.adc", (y, x, memory cells)
             - raw, "data.adc", TODO
@@ -618,8 +588,5 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'BaslerCamera':
             return cls.BaslerCameraImageAssembler()
-
-        if detector == 'JungFrauPR':
-            return cls.JungFrauPulseResolvedImageAssembler()
 
         raise NotImplementedError(f"Unknown detector type {detector}!")

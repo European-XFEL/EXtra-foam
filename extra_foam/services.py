@@ -315,7 +315,8 @@ def application():
                         version="%(prog)s " + __version__)
     parser.add_argument("detector",
                         help="detector name (case insensitive)",
-                        choices=[det.upper() for det in config.detectors],
+                        choices=[det.upper() for det in config.detectors]
+                                + ["JUNGFRAUPR"],
                         type=lambda s: s.upper())
     parser.add_argument("topic",
                         help="name of the instrument",
@@ -354,6 +355,13 @@ def application():
 
     detector = config.parse_detector_name(args.detector)
     topic = args.topic
+    if detector == "JUNGFRAUPR":
+        raise ValueError(f"Invalid detector type!\n\n"
+                         f"Please use JungFrau instead and modify your config "
+                         f"file {topic.lower()}.config.yaml accordingly: \n"
+                         f"1. Move non-duplicated data sources under JungFrauPR "
+                         f"into JungFrau;\n"
+                         f"2. Remove JungFrauPR from 'SOURCE' and 'DETECTOR'.")
 
     redis_address = args.redis_address
     if redis_address not in ["localhost", "127.0.0.1"]:
@@ -366,7 +374,7 @@ def application():
     )
 
     # update global configuration
-    if detector in ("JungFrauPR", "ePix100"):
+    if detector in ("JungFrau", "ePix100"):
         n_modules = args.n_modules
         if n_modules is None:
             n_modules = 1

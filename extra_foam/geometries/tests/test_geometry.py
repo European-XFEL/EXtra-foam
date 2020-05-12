@@ -24,8 +24,8 @@ class TestJungFrauGeometryFast:
         cls.module_shape = (512, 1024)
         cls.asic_shape = (256, 256)
 
-        cls.geom_21_stack = load_geometry("JungFrauPR", stack_only=True, n_modules=2)
-        cls.geom_32_stack = load_geometry("JungFrauPR", stack_only=True, n_modules=6)
+        cls.geom_21_stack = load_geometry("JungFrau", stack_only=True, n_modules=2)
+        cls.geom_32_stack = load_geometry("JungFrau", stack_only=True, n_modules=6)
 
         cls.cases = [
             (cls.geom_21_stack, 2, (1024, 1024)),
@@ -35,7 +35,7 @@ class TestJungFrauGeometryFast:
         # TODO: add default JungFrau geometries
         geom_file = osp.join(osp.expanduser("~"), "jungfrau.geom")
         try:
-            cls.geom_32_cfel = load_geometry("JungFrauPR", filepath=geom_file, n_modules=6)
+            cls.geom_32_cfel = load_geometry("JungFrau", filepath=geom_file, n_modules=6)
         except FileNotFoundError:
             from extra_foam.geometries import JungFrauGeometryFast
 

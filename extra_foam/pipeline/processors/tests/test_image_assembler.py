@@ -696,85 +696,11 @@ class TestJungfrauAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrau")
 
-    def _create_catalog(self, src_name, key_name):
-        catalog = SourceCatalog()
-        src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('JungFrau', src_name, [], key_name, None, None))
-        return src, catalog
-
-    def testAssembleFile(self):
-        key_name = 'data.adc'
-        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput', key_name)
-
-        data = {
-            'catalog': catalog,
-            'meta': {
-                src: {
-                    'train_id': 10001,
-                    'source_type': DataSource.FILE,
-                }
-            },
-            'raw': {
-                src: np.ones((1, 512, 1024))
-            },
-        }
-
-        self._assembler.process(data)
-        self.assertIsNone(data['raw'][src])
-
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data['raw'][src] = np.ones((1, 100, 100))
-            self._assembler.process(data)
-
-        with self.assertRaisesRegex(NotImplementedError, "Use 'JungFrauPR'"):
-            data['raw'][src] = np.ones((2, 512, 1024))
-            self._assembler.process(data)
-
-    def testAssembleBridge(self):
-        key_name = 'data.adc'
-        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:display', key_name)
-
-        data = {
-            'catalog': catalog,
-            'meta': {
-                src: {
-                    'train_id': 10001,
-                    'source_type': DataSource.BRIDGE,
-                }
-            },
-            'raw': {
-                src: np.ones((512, 1024, 1))
-            },
-        }
-        self._assembler.process(data)
-        self.assertIsNone(data['raw'][src])
-
-        data['raw'][src] = np.ones((100, 100, 1))
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            self._assembler.process(data)
-
-        data['raw'][src] = np.ones((512, 1024, 2))
-        with self.assertRaisesRegex(NotImplementedError, "Use 'JungFrauPR'"):
-            self._assembler.process(data)
-
-
-class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        config.load('JungFrauPR', 'FXE')
-
-    @classmethod
-    def tearDownClass(cls):
-        os.remove(config.config_file)
-
-    def setUp(self):
-        self._assembler = ImageAssemblerFactory.create("JungFrauPR")
-
     def _create_catalog(self, src_name, key_name, n_modules=1):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
         modules = [] if n_modules == 1 else list(range(1, n_modules+1))
-        catalog.add_item(SourceItem('JungFrauPR', src_name, modules, key_name, None, None))
+        catalog.add_item(SourceItem('JungFrau', src_name, modules, key_name, None, None))
         return src, catalog
 
     def _check6ModuleResult(self, data, src):
@@ -788,10 +714,13 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         assert _IMAGE_DTYPE == assembled.dtype
 
     def testAssembleFileCal(self):
+        # train-resolved JungFrau
+        self._runAssembleFileTest((1, 512, 1024), _IMAGE_DTYPE)
         # 16 is the number of memory cells
         self._runAssembleFileTest((16, 512, 1024), _IMAGE_DTYPE)
 
     def testAssembleFileRaw(self):
+        self._runAssembleFileTest((1, 512, 1024), _RAW_IMAGE_DTYPE)
         self._runAssembleFileTest((16, 512, 1024), _RAW_IMAGE_DTYPE)
 
     def _runAssembleFileTest(self, shape, dtype):
@@ -863,7 +792,17 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self._assembler.process(data)
         self._check6ModuleResult(data, src)
 
-    def testAssembleBridge(self):
+    def testAssembleBridgeCal(self):
+        # train-resolved JungFrau
+        self._runAssembleBridgeTest((512, 1024, 1), _IMAGE_DTYPE)
+        # 16 is the number of memory cells
+        self._runAssembleBridgeTest((512, 1024, 16), _IMAGE_DTYPE)
+
+    def testAssembleBridgeRaw(self):
+        # TODO
+        pass
+
+    def _runAssembleBridgeTest(self, shape, dtype):
         self._assembler._n_modules = 1
 
         key_name = 'data.adc'
@@ -878,19 +817,22 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
                 }
             },
             'raw': {
-                src: np.ones((2, 512, 1024, 16))
+                src: np.ones(shape, dtype=dtype)
             },
         }
 
-        with pytest.raises(AssemblingError, match='1 modules, but'):
-            self._assembler.process(data)
-
-        # (y, x, memory cells)
-        data['raw'][src] = np.ones((512, 1024, 16))
         self._assembler.process(data)
         self.assertIsNone(data['raw'][src])
         assembled = data['assembled']['data']
-        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
+        self.assertTupleEqual(assembled.shape, (shape[2], shape[0], shape[1]))
+
+        with pytest.raises(AssemblingError, match='1 modules, but'):
+            data['raw'][src] = np.ones((2, *shape), dtype=dtype)
+            self._assembler.process(data)
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data['raw'][src] = np.ones((shape[2], 100, 100), dtype=dtype)
+            self._assembler.process(data)
 
     def testAssembleBridge6ModulesCal(self):
         self._runAssembleBridge6ModulesTest((512, 1024, 16), _IMAGE_DTYPE)
