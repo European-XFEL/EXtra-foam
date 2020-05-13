@@ -14,6 +14,9 @@ from PyQt5.QtWidgets import (
     QGridLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 )
 
+from extra_foam.gui.gui_helpers import create_icon_button
+
+from . import __version__
 from .cam_view_w import CamViewWindow
 from .multicam_view_w import MultiCamViewWindow
 from .gotthard_w import GotthardWindow
@@ -22,8 +25,6 @@ from .trxas_w import TrXasWindow
 from .xas_tim_w import XasTimWindow
 from .xas_tim_xmcd_w import XasTimXmcdWindow
 from .module_scan_w import ModuleScanWindow
-from ..gui.gui_helpers import create_icon_button
-from .. import __version__
 
 
 class SpecialSuiteController:

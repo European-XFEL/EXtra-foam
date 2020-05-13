@@ -8,14 +8,14 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
 from PyQt5.QtWidgets import QWidget
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 from extra_foam.special_suite.special_analysis_base import (
     _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase, create_special,
     QThreadKbClient, QThreadFoamClient, QThreadWorker
 )
-from extra_foam.pipeline.tests import _RawDataMixin
 
 
 app = mkQApp()

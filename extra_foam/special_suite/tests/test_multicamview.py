@@ -8,13 +8,13 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.multicam_view_proc import MultiCamViewProcessor
 from extra_foam.special_suite.multicam_view_w import (
     MultiCamViewWindow, CameraView
 )
-from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 

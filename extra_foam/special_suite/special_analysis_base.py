@@ -22,31 +22,27 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QFileDialog, QFormLayout, QFrame, QGridLayout, QLabel,
-    QMainWindow, QPushButton, QSizePolicy, QSplitter, QWidget
+    QMainWindow, QPushButton, QSizePolicy, QSplitter
 )
 
 from extra_data import RunDirectory
 from karabo_bridge import Client as KaraboBridgeClient
 
-from extra_foam import __version__
 from extra_foam.algorithms import intersection
-from extra_foam.config import config as __core_config
 from extra_foam.database import SourceCatalog
 from extra_foam.gui.ctrl_widgets import _SingleRoiCtrlWidget, SmartLineEdit
 from extra_foam.gui.plot_widgets import ImageViewF
 from extra_foam.gui.misc_widgets import GuiLogger, set_button_color
-from extra_foam.logger import logger_suite as logger
 from extra_foam.pipeline.f_queue import SimpleQueue
 from extra_foam.pipeline.f_transformer import DataTransformer
 from extra_foam.pipeline.f_zmq import FoamZmqClient
 from extra_foam.pipeline.exceptions import ProcessingError
 
-_EXTENSION_PORT = __core_config["EXTENSION_PORT"]
+from . import __version__
 
-from .config import (
-    _IMAGE_DTYPE, _DEFAULT_CLIENT_PORT, _CLIENT_TIME_OUT,
-    _GUI_PLOT_UPDATE_TIMER, _GUI_SPECIAL_WINDOW_SIZE
-)
+
+from . import logger
+from .config import _IMAGE_DTYPE, config
 
 
 class _SharedCtrlWidgetS(QFrame):
@@ -75,7 +71,7 @@ class _SharedCtrlWidgetS(QFrame):
 
         self._hostname_le = SmartLineEdit("127.0.0.1")
         self._hostname_le.setMinimumWidth(100)
-        self._port_le = SmartLineEdit(str(_DEFAULT_CLIENT_PORT))
+        self._port_le = SmartLineEdit(str(config["DEFAULT_CLIENT_PORT"]))
         self._port_le.setValidator(QIntValidator(0, 65535))
 
         self.start_btn = QPushButton("Start")
@@ -573,8 +569,8 @@ class _BaseQThreadClient(QThread):
     def updateParamsST(self, params):
         """Update internal states of the client."""
         self._endpoint_st = params["endpoint"]
-        ctl = self._catalog_st
 
+        ctl = self._catalog_st
         ctl.clear()
         for name, ppt in params["sources"]:
             ctl.add_item(None, name, None, ppt, None, None)
@@ -588,7 +584,7 @@ class QThreadFoamClient(_BaseQThreadClient):
         self.onResetST()
 
         with self._client_instance_type(
-                self._endpoint_st, timeout=_CLIENT_TIME_OUT) as client:
+                self._endpoint_st, timeout=config["CLIENT_TIME_OUT"]) as client:
 
             self.log.info(f"Connected to {self._endpoint_st}")
 
@@ -629,7 +625,7 @@ class QThreadKbClient(_BaseQThreadClient):
         self.onResetST()
 
         with self._client_instance_type(
-                self._endpoint_st, timeout=_CLIENT_TIME_OUT) as client:
+                self._endpoint_st, timeout=config["CLIENT_TIME_OUT"]) as client:
             self.log.info(f"Connected to {self._endpoint_st}")
             correlated = None
             while not self.isInterruptionRequested():
@@ -676,7 +672,7 @@ class _SpecialAnalysisBase(QMainWindow):
     It should be inherited by all concrete windows.
     """
 
-    _TOTAL_W, _TOTAL_H = _GUI_SPECIAL_WINDOW_SIZE
+    _TOTAL_W, _TOTAL_H = config["GUI_SPECIAL_WINDOW_SIZE"]
 
     started_sgn = pyqtSignal()
     stopped_sgn = pyqtSignal()
@@ -690,7 +686,8 @@ class _SpecialAnalysisBase(QMainWindow):
 
         self._topic_st = topic
 
-        self.setWindowTitle(f"EXtra-foam {__version__} - {self._title}")
+        self.setWindowTitle(f"EXtra-foam {__version__} - " +
+                            f"special suite - {self._title}")
 
         self._com_ctrl_st = _SharedCtrlWidgetS(**kwargs)
 
@@ -703,10 +700,12 @@ class _SpecialAnalysisBase(QMainWindow):
         self._ctrl_widget_st = self._ctrl_instance_type(topic)
 
         if isinstance(self._client_st, QThreadFoamClient):
-            self._com_ctrl_st.updateDefaultPort(_EXTENSION_PORT)
+            self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
 
-        self._plot_widgets_st = WeakKeyDictionary()  # book-keeping plot widgets
-        self._image_views_st = WeakKeyDictionary()  # book-keeping ImageView widget
+        # book-keeping plot widgets
+        self._plot_widgets_st = WeakKeyDictionary()
+        # book-keeping ImageView widget
+        self._image_views_st = WeakKeyDictionary()
 
         self._data_st = None
 
@@ -718,7 +717,7 @@ class _SpecialAnalysisBase(QMainWindow):
         self.setCentralWidget(self._cw_st)
 
         self._plot_timer_st = QTimer()
-        self._plot_timer_st.setInterval(_GUI_PLOT_UPDATE_TIMER)
+        self._plot_timer_st.setInterval(config["GUI_PLOT_UPDATE_TIMER"])
         self._plot_timer_st.timeout.connect(self.updateWidgetsST)
 
         # init UI

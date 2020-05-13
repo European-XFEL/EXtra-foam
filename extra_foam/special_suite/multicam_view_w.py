@@ -11,13 +11,14 @@ import functools
 
 from PyQt5.QtWidgets import QGridLayout, QWidget
 
+from extra_foam.gui.ctrl_widgets.smart_widgets import SmartLineEdit
+from extra_foam.gui.plot_widgets import ImageViewF
+
 from .multicam_view_proc import MultiCamViewProcessor
 from .special_analysis_base import (
     create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-from ..gui.plot_widgets import ImageViewF
-from ..gui.ctrl_widgets.smart_widgets import SmartLineEdit
 
 
 _N_CAMERAS = 4

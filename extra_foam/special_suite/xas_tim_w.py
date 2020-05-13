@@ -16,10 +16,10 @@ from PyQt5.QtWidgets import (
 )
 
 from extra_foam.gui.ctrl_widgets import SmartLineEdit, SmartStringLineEdit
-from extra_foam.gui.plot_widgets import PlotWidgetF, TimedPlotWidgetF
 from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.plot_widgets import PlotWidgetF, TimedPlotWidgetF
 
-from .config import _MAX_N_PULSES_PER_TRAIN
+from .config import config
 from .xas_tim_proc import (
     XasTimProcessor, _DEFAULT_N_PULSES_PER_TRAIN, _DEFAULT_I0_THRESHOLD,
     _MAX_WINDOW, _MAX_CORRELATION_WINDOW, _DIGITIZER_CHANNEL_NAMES,
@@ -64,7 +64,7 @@ class XasTimCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.n_pulses_per_train_le = SmartLineEdit(
             str(_DEFAULT_N_PULSES_PER_TRAIN))
         self.n_pulses_per_train_le.setValidator(
-            QIntValidator(1, _MAX_N_PULSES_PER_TRAIN))
+            QIntValidator(1, config["MAX_N_PULSES_PER_TRAIN"]))
 
         self.apd_stride_le = SmartLineEdit("1")
 

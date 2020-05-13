@@ -13,15 +13,16 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QCheckBox, QSplitter
 
-from extra_foam.gui.plot_widgets import (
-    HistMixin, ImageViewF, PlotWidgetF
-)
-from extra_foam.gui.misc_widgets import FColor
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit,
     SmartStringLineEdit
 )
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.plot_widgets import (
+    HistMixin, ImageViewF, PlotWidgetF
+)
 
+from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 from .gotthard_proc import (
     GotthardProcessor, _DEFAULT_BIN_RANGE, _DEFAULT_N_BINS
 )
@@ -29,7 +30,6 @@ from .special_analysis_base import (
     create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 
 _MAX_N_BINS = 999
 
