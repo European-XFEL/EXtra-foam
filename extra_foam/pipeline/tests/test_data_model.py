@@ -329,7 +329,7 @@ class TestRoiGeom(unittest.TestCase):
             self.assertIsNone(roi.rect(img))
 
             # no intersection
-            roi.geometry = [-3, -4, 2, 2]
+            roi.geometry = [0, 0, 0, 2]
             self.assertIsNone(roi.rect(img))
 
             # has intersection

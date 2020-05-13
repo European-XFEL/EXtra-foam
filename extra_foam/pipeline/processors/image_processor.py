@@ -10,6 +10,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import _BaseProcessor
+from .image_assembler import ImageAssemblerFactory
 from ..data_model import RawImageData
 from ..exceptions import ImageProcessingError, ProcessingError
 from ...database import Metadata as mt
@@ -32,6 +33,8 @@ class ImageProcessor(_BaseProcessor):
     """ImageProcessor class.
 
     Attributes:
+        _require_geom (bool): whether a Geometry is required to assemble
+            the detector modules.
         _dark (RawImageData): store the moving average of dark
             images in a train. Shape = (indices, y, x) for pulse-resolved
             and shape = (y, x) for train-resolved
@@ -73,6 +76,9 @@ class ImageProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
+        self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
+        self._require_geom = config['REQUIRE_GEOMETRY']
+
         self._correct_gain = True
         self._correct_offset = True
         self._full_gain = None
@@ -92,6 +98,7 @@ class ImageProcessor(_BaseProcessor):
         self._dark_mean = None
 
         self._image_mask = None
+        self._image_mask_in_modules = None
         self._threshold_mask = None
         self._reference = None
 
@@ -102,8 +109,15 @@ class ImageProcessor(_BaseProcessor):
         self._cal_sub = CalConstantsSub()
 
     def update(self):
-        # image
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
+        geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
+        global_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+
+        self._assembler.update(
+            geom_cfg,
+            mask_tile=cfg["mask_tile"] == 'True',
+            mask_asic=cfg["mask_asic"] == 'True',
+        )
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
@@ -135,13 +149,14 @@ class ImageProcessor(_BaseProcessor):
         self._threshold_mask = self.str2tuple(
             cfg['threshold_mask'], handler=float)
 
-        # global
-        gp_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._poi_indices = [
-            int(gp_cfg['poi1_index']), int(gp_cfg['poi2_index'])]
+            int(global_cfg['poi1_index']), int(global_cfg['poi2_index'])]
 
-    @profiler("Image Processor (pulse)")
+    @profiler("Image processor")
     def process(self, data):
+
+        self._assembler.process(data)
+
         image_data = data['processed'].image
         assembled = data['assembled']['data']
         catalog = data['catalog']
@@ -177,9 +192,10 @@ class ImageProcessor(_BaseProcessor):
         #       based on the sliced data.
         data['assembled']['sliced'] = sliced_assembled
 
-        image_shape = sliced_assembled.shape[-2:]
-        self._update_image_mask(image_shape)
+        self._update_image_mask(sliced_assembled.shape[-2:])
         image_data.image_mask = self._image_mask
+        image_data.image_mask_in_modules = self._image_mask_in_modules
+        image_data.threshold_mask = self._threshold_mask
 
         self._update_reference()
         image_data.reference = self._reference
@@ -188,8 +204,6 @@ class ImageProcessor(_BaseProcessor):
         image_data.images = [None] * n_sliced
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, sliced_assembled)
-
-        image_data.threshold_mask = self._threshold_mask
 
     def _record_dark(self, assembled):
         if self._dark is None:
@@ -206,23 +220,47 @@ class ImageProcessor(_BaseProcessor):
         self._dark_mean = nanmean_image_data(self._dark)
 
     def _update_image_mask(self, image_shape):
-        image_mask = self._mask_sub.update(self._image_mask, image_shape)
-        if image_mask is not None and image_mask.shape != image_shape:
+        try:
+            updated, image_mask = self._mask_sub.update(
+                self._image_mask, image_shape)
+        except Exception as e:
+            raise ImageProcessingError(str(e))
+
+        if updated and self._require_geom:
+            # keep a mask in modules for assembling later
+            geom = self._assembler.geometry
+
+            if self._image_mask_in_modules is None:
+                self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
+                    dtype=np.bool)
+
+            try:
+                geom.dismantle_all_modules(
+                    image_mask, out=self._image_mask_in_modules)
+            except ValueError as e:
+                raise ImageProcessingError(
+                    f"{str(e)}: Geometry changed during updating "
+                    f"image mask!")
+
+        if image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically
-                image_mask = None
+                image_mask = np.zeros(image_shape, dtype=np.bool)
             else:
-                # This could only happen when the mask is loaded from the files
-                # and the image shapes in the ImageTool is different from the
-                # shape of the live images.
-                # The original image mask remains the same.
-                raise ImageProcessingError(
-                    f"[Image processor] The shape of the image mask "
-                    f"{image_mask.shape} is different from the shape of the image "
-                    f"{image_shape}!")
-
-        if image_mask is None:
-            image_mask = np.zeros(image_shape, dtype=np.bool)
+                if self._require_geom:
+                    # reassemble a mask
+                    geom = self._assembler.geometry
+                    image_mask = geom.output_array_for_position_fast(dtype=np.bool)
+                    geom.position_all_modules(
+                        self._image_mask_in_modules, image_mask)
+                else:
+                    # This can happen if the image shapes in the ImageTool is
+                    # different from the shape of in the pipeline, i.e. the
+                    # shape of the image just changed.
+                    raise ImageProcessingError(
+                        f"[Image processor] The shape of the image mask "
+                        f"{image_mask.shape} is different from the shape of "
+                        f"the image {image_shape}!")
 
         self._image_mask = image_mask
 
@@ -348,8 +386,7 @@ class ImageProcessor(_BaseProcessor):
                 image_data.images[i] = assembled[i].copy()
                 mask_image_data(image_data.images[i],
                                 image_mask=self._image_mask,
-                                threshold_mask=self._threshold_mask,
-                                keep_nan=True)
+                                threshold_mask=self._threshold_mask)
             else:
                 out_of_bound_indices.append(i)
 

@@ -7,8 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .special_analysis_base import QThreadWorker
-from ..utils import profiler
+from .special_analysis_base import profiler, QThreadWorker
 
 
 class ModuleScanProcessor(QThreadWorker):
@@ -21,13 +20,18 @@ class ModuleScanProcessor(QThreadWorker):
 
         pass
 
+    def sources(self):
+        """Override."""
+        return {
+
+        }
+
     @profiler("Module scan Processor")
     def process(self, data):
         """Override."""
+        data, meta = data["raw"], data["meta"]
 
-        data, _ = data
-
-        tid = data['metadata']["timestamp.tid"]
+        tid = self.getTrainId(meta)
 
         self.log.info(f"Train {tid} processed")
 

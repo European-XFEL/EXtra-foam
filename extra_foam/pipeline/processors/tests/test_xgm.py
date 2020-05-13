@@ -33,7 +33,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         item = SourceItem('XGM', 'xgm1', [], 'some_property', None, None)
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
-        meta[src] = {'tid': 12346}
+        meta[src] = {'train_id': 12346}
         raw[src] = [100, 200, 300]
         with self.assertRaises(ProcessingError):
             proc.process(data)
@@ -47,7 +47,9 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.ixPos', None, None))
         catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.iyPos', None, None))
 
-        meta.update({src_pf: {'tid': 12345}, src_bpx: {'tid': 12345}, src_bpy: {'tid': 12345}})
+        meta.update({
+            src_pf: {'train_id': 12345}, src_bpx: {'train_id': 12345}, src_bpy: {'train_id': 12345}
+        })
         raw.update({src_pf: 0.02, src_bpx: 1e-5, src_bpy: -2e-5})
         proc.process(data)
         self.assertEqual(0.02, processed.xgm.intensity)
@@ -60,7 +62,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         item = SourceItem('XGM', 'xgm1:output', [], 'some_property', None, None)
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
-        meta[src] = {'tid': 12346}
+        meta[src] = {'train_id': 12346}
         raw[src] = [100, 200, 300]
         with self.assertRaises(ProcessingError):
             proc.process(data)
@@ -70,7 +72,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src_it = 'xgm1:output data.intensityTD'
         catalog.add_item(SourceItem(
             'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), (0, 1000)))
-        meta[src_it] = {'tid': 12346}
+        meta[src_it] = {'train_id': 12346}
         raw[src_it] = [100, 200, 300]
         proc.process(data)
         self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity.tolist())
@@ -97,7 +99,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
             'XGM', 'xgm1:output', [], 'data.intensitySa3TD', slice(2, 3), (0, 10)))
 
         meta.update({
-            src_it1: {'tid': 54321}, src_it2: {'tid': 54321}, src_it3: {'tid': 54321}
+            src_it1: {'train_id': 54321}, src_it2: {'train_id': 54321}, src_it3: {'train_id': 54321}
         })
         raw.update({
             src_it1: [10, 20, 30], src_it2: [1, 2, 3], src_it3: [1000, 2000, 3000],
@@ -144,13 +146,13 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src_pf = 'xgm1 pulseEnergy.photonFlux'
         catalog.add_item(SourceItem(
             'XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None))
-        meta[src_pf] = {'tid': 12345}
+        meta[src_pf] = {'train_id': 12345}
         raw[src_pf] = 0.02
 
         src_it = 'xgm1:output data.intensityTD'
         catalog.add_item(SourceItem(
             'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), None))
-        meta[src_it] = {'tid': 12345}
+        meta[src_it] = {'train_id': 12345}
         raw[src_it] = [100, 200, 300]
 
         proc = XgmProcessor()

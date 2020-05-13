@@ -13,10 +13,17 @@
 
 #include "xtensor/xexpression.hpp"
 #include "xtensor/xtensor.hpp"
+#include "xtensor/xarray.hpp"
 
 
 namespace foam
 {
+
+template<typename T>
+struct IsArray : std::false_type {};
+
+template<typename T, xt::layout_type L>
+struct IsArray<xt::xarray<T, L>> : std::true_type {};
 
 template<typename T>
 struct IsImage : std::false_type {};
@@ -35,6 +42,12 @@ struct IsImageArray : std::false_type {};
 
 template<typename T, xt::layout_type L>
 struct IsImageArray<xt::xtensor<T, 3, L>> : std::true_type {};
+
+template<typename T>
+struct IsImageVector : std::false_type {};
+
+template<typename T, xt::layout_type L>
+struct IsImageVector<std::vector<xt::xtensor<T, 2, L>>> : std::true_type {};
 
 template<typename T>
 struct IsModulesArray : std::false_type {};

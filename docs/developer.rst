@@ -58,8 +58,12 @@ Release **EXtra-foam**
 - Update the version number in `extra_foam/__init__.py`;
 - Merge the above change into the `dev` branch;
 - Merge the `dev` branch into the `master` branch;
-- Tag the `master` branch.
-
+- Tag the `master` branch;
+- Create a new branch from the new `master` branch and update the version number in
+  `extra_foam/__init__.py`. For example, if the latest release version is "0.8.0",
+  the new version number should be "0.8.1dev", supposing the next release is 0.8.1.
+  Also, the name of the new branch should be "0.8.1dev";
+- Merge the new branch into the `dev` branch;
 
 Deployment on EuXFEL Anaconda Environment
 """""""""""""""""""""""""""""""""""""""""

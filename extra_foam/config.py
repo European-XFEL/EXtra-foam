@@ -29,6 +29,7 @@ _MIN_INT32 = np.iinfo(np.int32).min
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge
+    UNKNOWN = 2  # not specified
 
 
 class PumpProbeMode(IntEnum):
@@ -91,10 +92,6 @@ class GeomAssembler(IntEnum):
 class PipelineSlowPolicy(IntEnum):
     DROP = 0
     WAIT = 1
-
-
-class StreamerMode(IntEnum):
-    CONTINUOUS = 1
 
 
 def list_azimuthal_integ_methods(detector):
@@ -187,22 +184,34 @@ class _Config(dict):
         "REQUIRE_GEOMETRY": False,
         # absolute path of geometry file
         "GEOMETRY_FILE": "",
+        # Note: due to the historical reason, we have "QUAD_POSITIONS" in the
+        #       config file for a long time. However, it is only used in
+        #       1M detectors geometry, while "MODULE_POSITIONS", which is
+        #       introduced in version 0.8.3, is used in general detector
+        #       geometry.
         # quadrant coordinates for assembling detector modules,
         # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-        "QUAD_POSITIONS": ((0, 0), (0, 0), (0, 0), (0, 0)),
+        "QUAD_POSITIONS": ((0, 0), ) * 4,
+        # module coordinates for assembling detector modules,
+        # a tuple of (x, y), we assume 12 modules will be used at maximum
+        "MODULE_POSITIONS": ((0, 0),) * 12,
         # number of modules
         "NUMBER_OF_MODULES": 1,
         # shape of a single module
         "MODULE_SHAPE": (-1, -1),
         # detector pixel size, in meter
         "PIXEL_SIZE": 1.e-3,
-        # Default TCP address of the online ZMQ bridge
+        # whether the detector supports masking edge pixels of tiles
+        "MASK_TILE_EDGE": False,
+        # whether the detector supports masking edge pixels of asics
+        "MASK_ASIC_EDGE": False,
+        # Default TCP address when data source is BRIDGE
         "BRIDGE_ADDR": "127.0.0.1",
-        # Default TCP port of the online ZMQ bridge
-        "BRIDGE_PORT": 45454,
-        # Default TCP address of the file streamer
+        # Default TCP port when data source is BRIDGE
+        "BRIDGE_PORT": 4501,
+        # Default TCP address when data source is FILE
         "LOCAL_ADDR": "127.0.0.1",
-        # Default TCP port of the file streamer
+        # Default TCP port when data source is FILE
         "LOCAL_PORT": 45454,
         # distance from sample to detector plan (orthogonal distance,
         # not along the beam), in meter
@@ -225,10 +234,11 @@ class _Config(dict):
         "PIPELINE_SLOW_POLICY": PipelineSlowPolicy.DROP,
         # timeout of the zmq bridge, in second
         "BRIDGE_TIMEOUT": 0.1,
-        # maximum length of the cache used in data correlation by train ID
-        "CORRELATION_QUEUE_CACHE_SIZE": 20,
         # default extension port
         "EXTENSION_PORT": 5555,
+        # size of cache when correlating data arriving at different time
+        # with train ID
+        "TRANSFORMER_CACHE_SIZE": 20,
         # -------------------------------------------------------------
         # Source of data
         # -------------------------------------------------------------
@@ -280,8 +290,6 @@ class _Config(dict):
         "GUI_IMAGE_TOOL_SIZE": (1680, 1080),
         # initial (width, height) of a large plot window
         "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
-        # initial (width, height) of a special analysis window
-        "GUI_SPECIAL_WINDOW_SIZE": (1680, 1080),
         # color map in contour plots, valid options are: thermal, flame,
         # yellowy, bipolar, spectrum, cyclic, greyclip, grey
         "GUI_COLOR_MAP": 'thermal',
@@ -294,6 +302,8 @@ class _Config(dict):
         "GUI_CORRELATION_COLORS": (('b', 'r'), ('g', 'p')),
         # color of the image mask bounding box while drawing
         "GUI_MASK_BOUNDING_BOX_COLOR": 'b',
+        # color of the masked area for MaskItem
+        "GUI_MASK_FILL_COLOR": 'g',
         # -------------------------------------------------------------
         # Misc
         # -------------------------------------------------------------
@@ -303,7 +313,9 @@ class _Config(dict):
 
     _AreaDetectorConfig = namedtuple("_AreaDetectorConfig", [
         "REDIS_PORT", "PULSE_RESOLVED", "REQUIRE_GEOMETRY",
-        "NUMBER_OF_MODULES", "MODULE_SHAPE", "PIXEL_SIZE"])
+        "NUMBER_OF_MODULES", "MODULE_SHAPE", "PIXEL_SIZE",
+        "MASK_TILE_EDGE", "MASK_ASIC_EDGE",
+    ])
 
     # "name" is only used for labeling, it is ignored in the pipeline code.
     StreamerEndpointItem = namedtuple("StreamerEndpointItem",
@@ -319,14 +331,20 @@ class _Config(dict):
             REQUIRE_GEOMETRY=True,
             NUMBER_OF_MODULES=16,
             MODULE_SHAPE=(512, 128),
-            PIXEL_SIZE=0.2e-3),
+            PIXEL_SIZE=0.2e-3,
+            MASK_TILE_EDGE=True,
+            MASK_ASIC_EDGE=False,
+        ),
         "LPD": _AreaDetectorConfig(
             REDIS_PORT=6379,
             PULSE_RESOLVED=True,
             REQUIRE_GEOMETRY=True,
             NUMBER_OF_MODULES=16,
             MODULE_SHAPE=(256, 256),
-            PIXEL_SIZE=0.5e-3),
+            PIXEL_SIZE=0.5e-3,
+            MASK_TILE_EDGE=True,
+            MASK_ASIC_EDGE=False,
+        ),
         # DSSC has hexagonal pixels:
         # 236 μm step in fast-scan axis, 204 μm in slow-scan
         "DSSC": _AreaDetectorConfig(
@@ -335,35 +353,50 @@ class _Config(dict):
             REQUIRE_GEOMETRY=True,
             NUMBER_OF_MODULES=16,
             MODULE_SHAPE=(128, 512),
-            PIXEL_SIZE=0.22e-3),
+            PIXEL_SIZE=0.22e-3,
+            MASK_TILE_EDGE=True,
+            MASK_ASIC_EDGE=False,
+        ),
         "JungFrauPR": _AreaDetectorConfig(
             REDIS_PORT=6381,
             PULSE_RESOLVED=True,
             REQUIRE_GEOMETRY=False,
-            NUMBER_OF_MODULES=2,
+            NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(512, 1024),
-            PIXEL_SIZE=0.075e-3),
+            PIXEL_SIZE=0.075e-3,
+            MASK_TILE_EDGE=False,
+            MASK_ASIC_EDGE=True,
+        ),
         "JungFrau": _AreaDetectorConfig(
             REDIS_PORT=6382,
             PULSE_RESOLVED=False,
             REQUIRE_GEOMETRY=False,
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(512, 1024),
-            PIXEL_SIZE=0.075e-3),
+            PIXEL_SIZE=0.075e-3,
+            MASK_TILE_EDGE=False,
+            MASK_ASIC_EDGE=False,
+        ),
         "FastCCD": _AreaDetectorConfig(
             REDIS_PORT=6383,
             PULSE_RESOLVED=False,
             REQUIRE_GEOMETRY=False,
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(1934, 960),
-            PIXEL_SIZE=0.030e-3),
+            PIXEL_SIZE=0.030e-3,
+            MASK_TILE_EDGE=False,
+            MASK_ASIC_EDGE=False,
+        ),
         "ePix100": _AreaDetectorConfig(
             REDIS_PORT=6384,
             PULSE_RESOLVED=False,
             REQUIRE_GEOMETRY=False,
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(708, 768),
-            PIXEL_SIZE=0.110e-3),
+            PIXEL_SIZE=0.050e-3,
+            MASK_TILE_EDGE=False,
+            MASK_ASIC_EDGE=True,
+        ),
         "BaslerCamera": _AreaDetectorConfig(
             REDIS_PORT=6389,
             PULSE_RESOLVED=False,
@@ -372,7 +405,10 @@ class _Config(dict):
             # BaslerCamera has quite a few different models with different
             # module shapes and pixel sizes.
             MODULE_SHAPE=(-1, -1),
-            PIXEL_SIZE=0.0022e-3),
+            PIXEL_SIZE=0.0022e-3,
+            MASK_TILE_EDGE=False,
+            MASK_ASIC_EDGE=False,
+        ),
     }
 
     _misc_source_categories = (
@@ -387,13 +423,6 @@ class _Config(dict):
         self.control_sources = dict()
         # pipeline data sources listed in the DataSourceWidget
         self.pipeline_sources = dict()
-        # meta data sources which is not listed in the DataSourceWidget but
-        # is used in statistics analysis
-        self.meta_sources = {
-            "Metadata": {
-                "META": ["timestamp.tid"],
-            }
-        }
 
         self.appendix_streamers = []
 
@@ -427,17 +456,19 @@ class _Config(dict):
 
         self.__setitem__("DETECTOR", det)
         self.__setitem__("TOPIC", topic)
-        for k, v in kwargs.items():
-            if k in self:
-                self.__setitem__(k, v)
-            else:
-                raise KeyError
 
         # update the configurations of the main detector
         for k, v in self._detector_config[det]._asdict().items():
             self[k] = v
 
         self.from_file(det, topic)
+
+        # kwargs may contain the configuration for the main detector
+        for k, v in kwargs.items():
+            if k in self:
+                self.__setitem__(k, v)
+            else:
+                raise KeyError
 
     def from_file(self, detector, topic):
         """Read configs from the config file."""
@@ -455,6 +486,7 @@ class _Config(dict):
                              f"returned 'None' from the loader!")
 
         # update the main detector config
+        # TODO: may add "MODULE_POSITIONS" in the future
         det_cfg = cfg.get("DETECTOR", dict()).get(detector, dict())
         for key in ["GEOMETRY_FILE", "QUAD_POSITIONS", "BRIDGE_ADDR",
                     "BRIDGE_PORT", "LOCAL_ADDR", "LOCAL_PORT",
@@ -551,10 +583,6 @@ class ConfigWrapper(abc.Mapping):
     @property
     def pipeline_sources(self):
         return self._data.pipeline_sources
-
-    @property
-    def meta_sources(self):
-        return self._data.meta_sources
 
     @property
     def appendix_streamers(self):

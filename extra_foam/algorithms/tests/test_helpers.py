@@ -21,6 +21,11 @@ class TestGeometry(unittest.TestCase):
         self.assertListEqual(intersection([-10, -10, 5, 5], [0, 0, 100, 100]),
                              [0, 0, -5, -5])
 
+        self.assertListEqual(intersection([0, 0, 100, 100], [-10, -10, 10, 10]),
+                             [0, 0, 0, 0])
+        self.assertListEqual(intersection([-10, -10, 10, 10], [0, 0, 100, 100]),
+                             [0, 0, 0, 0])
+
         # partially intersect
         self.assertListEqual(intersection([0, 0, 10, 10], [-10, -10, 15, 15]),
                              [0, 0, 5, 5])

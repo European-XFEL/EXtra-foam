@@ -13,7 +13,6 @@ from PyQt5.QtWidgets import (
     QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 )
 
-from ..mediator import Mediator
 from ..plot_widgets.plot_items import RectROI
 from ..ctrl_widgets import _AbstractCtrlWidget, SmartLineEdit
 from ..misc_widgets import FColor
@@ -33,12 +32,23 @@ class _SingleRoiCtrlWidget(QWidget):
     _pos_validator = QIntValidator(-10000, 10000)
     _size_validator = QIntValidator(1, 10000)
 
-    def __init__(self, roi: RectROI, *, parent=None):
+    def __init__(self, roi: RectROI, *,
+                 mediator=None, with_lock=True, parent=None):
         super().__init__(parent=parent)
 
         self._roi = roi
+        # Here is mediator is a general mediator object which has a slot
+        # 'onRoiGeometryChange'.
+        self._mediator = mediator
 
-        self._activate_cb = QCheckBox("On")
+        idx = self._roi.index
+        self._activate_cb = QCheckBox(f"ROI{idx}")
+        palette = self._activate_cb.palette()
+        palette.setColor(palette.WindowText,
+                         FColor.mkColor(config['GUI_ROI_COLORS'][idx-1]))
+        self._activate_cb.setPalette(palette)
+
+        self._with_lock = with_lock
         self._lock_cb = QCheckBox("Lock")
 
         self._width_le = SmartLineEdit()
@@ -60,17 +70,10 @@ class _SingleRoiCtrlWidget(QWidget):
 
     def initUI(self):
         layout = QHBoxLayout()
-        idx = self._roi.index
-
-        label = QLabel(f"ROI{idx}: ")
-        palette = label.palette()
-        palette.setColor(palette.WindowText,
-                         FColor.mkColor(config['GUI_ROI_COLORS'][idx-1]))
-        label.setPalette(palette)
-        layout.addWidget(label)
 
         layout.addWidget(self._activate_cb)
-        layout.addWidget(self._lock_cb)
+        if self._with_lock:
+            layout.addWidget(self._lock_cb)
         layout.addWidget(QLabel("w: "))
         layout.addWidget(self._width_le)
         layout.addWidget(QLabel("h: "))
@@ -81,8 +84,6 @@ class _SingleRoiCtrlWidget(QWidget):
         layout.addWidget(self._py_le)
 
         self.setLayout(layout)
-        # left, top, right, bottom
-        self.layout().setContentsMargins(2, 1, 2, 1)
 
     def initConnections(self):
         self._width_le.value_changed_sgn.connect(self.onRoiSizeEdited)
@@ -96,6 +97,9 @@ class _SingleRoiCtrlWidget(QWidget):
         self._activate_cb.stateChanged.connect(self.onToggleRoiActivation)
         self._activate_cb.stateChanged.emit(self._activate_cb.checkState())
         self._lock_cb.stateChanged.connect(self.onLock)
+
+    def setLabel(self, text):
+        self._activate_cb.setText(text)
 
     @pyqtSlot(int)
     def onToggleRoiActivation(self, state):
@@ -160,7 +164,6 @@ class _SingleRoiCtrlWidget(QWidget):
         w, h = [int(v) for v in roi.size()]
         self.updateParameters(x, y, w, h)
         # inform widgets outside this window
-
         self.roi_geometry_change_sgn.emit(
             (roi.index, self._activate_cb.isChecked(), 0, x, y, w, h))
 
@@ -176,7 +179,8 @@ class _SingleRoiCtrlWidget(QWidget):
         self._py_le.setText(y)
         self._width_le.setText(w)
         self._height_le.setText(h)
-        self.roi_geometry_change_sgn.connect(Mediator().onRoiGeometryChange)
+        self.roi_geometry_change_sgn.connect(
+            self._mediator.onRoiGeometryChange)
         self._activate_cb.setChecked(bool(int(state)))
 
     def updateParameters(self, x, y, w, h):
@@ -185,7 +189,8 @@ class _SingleRoiCtrlWidget(QWidget):
         self._py_le.setText(str(y))
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self.roi_geometry_change_sgn.connect(Mediator().onRoiGeometryChange)
+        self.roi_geometry_change_sgn.connect(
+            self._mediator.onRoiGeometryChange)
 
     def setEditable(self, editable):
         for w in self._line_edits:
@@ -240,10 +245,9 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
         mediator = self._mediator
         layout = QVBoxLayout()
         for roi in rois:
-            widget = _SingleRoiCtrlWidget(roi)
+            widget = _SingleRoiCtrlWidget(roi, mediator=mediator)
             self._roi_ctrls.append(widget)
             widget.roi_geometry_change_sgn.connect(
                 mediator.onRoiGeometryChange)
-
             layout.addWidget(widget)
         self.setLayout(layout)

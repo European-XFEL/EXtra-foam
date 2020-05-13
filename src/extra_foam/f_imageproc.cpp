@@ -58,6 +58,18 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MOVING_AVG_IMAGE_DATA_IMPL(double, 3)
   FOAM_MOVING_AVG_IMAGE_DATA_IMPL(float, 3)
 
+  //
+  // mask
+  //
+
+#define FOAM_IMAGE_DATA_NAN_MASK_IMPL(VALUE_TYPE, N_DIM)                                      \
+  m.def("imageDataNanMask",                                                                   \
+    &imageDataNanMask<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, N_DIM>>,            \
+    py::arg("src").noconvert(), py::arg("out").noconvert());
+
+  FOAM_IMAGE_DATA_NAN_MASK_IMPL(double, 2)
+  FOAM_IMAGE_DATA_NAN_MASK_IMPL(float, 2)
+
 #define FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                 \
   m.def(#FUNCTOR,                                                                             \
     &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>>, py::arg("src").noconvert());
@@ -68,11 +80,11 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, double, 3)                                               \
   FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, float, 3)
 
-  FOAM_MASK_IMAGE_DATA(maskZeroImageData)
-  FOAM_MASK_IMAGE_DATA(maskNanImageData)
+  FOAM_MASK_IMAGE_DATA(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA(maskImageDataNan)
 
 #define FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                      \
-  m.def(#FUNCTOR,                                                                         \
+  m.def(#FUNCTOR,                                                                            \
     (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, VALUE_TYPE, VALUE_TYPE))                     \
     &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, VALUE_TYPE>,                                   \
     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
@@ -83,11 +95,24 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, double, 3)                                    \
   FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, float, 3)
 
-  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskZeroImageData)
-  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskNanImageData)
+  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskImageDataNan)
+
+#define FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                      \
+  m.def(#FUNCTOR,                                                                                     \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, VALUE_TYPE, VALUE_TYPE, xt::pytensor<bool, N_DIM>&))  \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, VALUE_TYPE, xt::pytensor<bool, N_DIM>>,                 \
+    py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"), py::arg("out").noconvert());
+
+#define FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT(FUNCTOR)                                              \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT_IMPL(FUNCTOR, double, 2)                                    \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT_IMPL(FUNCTOR, float, 2)
+
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_WITH_OUT(maskImageDataNan)
 
 #define FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                        \
-  m.def(#FUNCTOR,                                                                         \
+  m.def(#FUNCTOR,                                                                          \
     (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<bool, 2>&))             \
     &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, 2>>,                      \
     py::arg("src").noconvert(), py::arg("mask").noconvert());
@@ -98,8 +123,21 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, double, 3)                                      \
   FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, float, 3)
 
-  FOAM_MASK_IMAGE_DATA_IMAGE(maskZeroImageData)
-  FOAM_MASK_IMAGE_DATA_IMAGE(maskNanImageData)
+  FOAM_MASK_IMAGE_DATA_IMAGE(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_IMAGE(maskImageDataNan)
+
+#define FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                \
+  m.def(#FUNCTOR,                                                                                           \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<bool, 2>&, xt::pytensor<bool, N_DIM>&))  \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, 2>, xt::pytensor<bool, N_DIM>>,            \
+    py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("out").noconvert());
+
+#define FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT(FUNCTOR)                                                \
+  FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT_IMPL(FUNCTOR, double, 2)                                      \
+  FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT_IMPL(FUNCTOR, float, 2)
+
+  FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_IMAGE_WITH_OUT(maskImageDataNan)
 
 #define FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                      \
   m.def(#FUNCTOR,                                                                                       \
@@ -113,26 +151,25 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, double, 3)                                      \
   FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, float, 3)
 
-  FOAM_MASK_IMAGE_DATA_BOTH(maskZeroImageData)
-  FOAM_MASK_IMAGE_DATA_BOTH(maskNanImageData)
+  FOAM_MASK_IMAGE_DATA_BOTH(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_BOTH(maskImageDataNan)
 
-#define FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(VALUE_TYPE)                                       \
-  m.def("maskImageData",                                                                     \
-    (void (*)(xt::pytensor<VALUE_TYPE, 2>&, xt::pytensor<bool, 2>&))                         \
-    &maskImageData<xt::pytensor<VALUE_TYPE, 2>, xt::pytensor<bool, 2>>,                      \
-    py::arg("src").noconvert(), py::arg("mask").noconvert());
+#define FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                                         \
+  m.def(#FUNCTOR,                                                                                                                   \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<bool, 2>&, VALUE_TYPE, VALUE_TYPE, xt::pytensor<bool, N_DIM>&))  \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, 2>, VALUE_TYPE, xt::pytensor<bool, N_DIM>>,                        \
+    py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"), py::arg("out").noconvert());
 
-  FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(double)
-  FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(float)
+#define FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT(FUNCTOR)                                                \
+  FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT_IMPL(FUNCTOR, double, 2)                                      \
+  FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT_IMPL(FUNCTOR, float, 2)
 
-#define FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(VALUE_TYPE)                                  \
-  m.def("maskImageData",                                                                     \
-    (void (*)(xt::pytensor<VALUE_TYPE, 2>&, xt::pytensor<bool, 2>&, VALUE_TYPE, VALUE_TYPE)) \
-    &maskImageData<xt::pytensor<VALUE_TYPE, 2>, xt::pytensor<bool, 2>, VALUE_TYPE>,          \
-    py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT(maskImageDataZero)
+  FOAM_MASK_IMAGE_DATA_BOTH_WITH_OUT(maskImageDataNan)
 
-  FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(double)
-  FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(float)
+  //
+  // gain / offset correction
+  //
 
 #define FOAM_CORRECT_OFFSET_IMPL(VALUE_TYPE, N_DIM)                                         \
   m.def("correctOffset",                                                                    \

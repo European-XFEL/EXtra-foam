@@ -17,11 +17,11 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import slice_curve
-from ...config import AnalysisType, Normalizer, list_azimuthal_integ_methods
+from ...config import AnalysisType, Normalizer
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import energy2wavelength, image_with_mask
+from extra_foam.algorithms import energy2wavelength, mask_image_data
 
 
 class _AzimuthalIntegProcessorBase(_BaseProcessor):
@@ -162,8 +162,11 @@ class AzimuthalIntegProcessorPulse(_AzimuthalIntegProcessorBase):
 
         def _integrate1d_imp(i):
             masked = assembled[i].copy()
-            mask = image_mask.copy()
-            image_with_mask(masked, mask, threshold_mask=threshold_mask)
+            mask = np.zeros_like(image_mask)
+            mask_image_data(masked,
+                            image_mask=image_mask,
+                            threshold_mask=threshold_mask,
+                            out=mask)
             return integ1d(masked, integ_points, mask=mask)
 
         intensities = []  # pulsed A.I.

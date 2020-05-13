@@ -32,13 +32,40 @@ class TestStatistics:
         assert quick_min_max(arr) == (1., 2.)
         assert quick_min_max(arr, q=0.9) == (1, 2)
 
-    def testNanmean(self):
-        roi = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=np.float32)
-        assert 3 == nanmean(roi)
+    def _assert_array_almost_equal(self, a, b):
+        np.testing.assert_array_almost_equal(a, b)
+        if isinstance(a, np.ndarray):
+            assert a.dtype == b.dtype
 
-    def testNansum(self):
-        roi = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=np.float32)
-        assert 12 == nansum(roi)
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("f_cpp, f_py", [(nanmean, np.nanmean), (nansum, np.nansum)])
+    def testCppStatistics(self, f_cpp, f_py, dtype):
+        a1d = np.array([np.nan, 1, 2], dtype=dtype)
+        a2d = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=dtype)
+        a3d = np.array([[[np.nan, np.nan,      2], [3, 6, np.nan]],
+                        [[     1,      4, np.nan], [6, 3, np.nan]]], dtype=dtype)
+        a4d = np.ones((2, 3, 4, 5), dtype=dtype)
+        a4d[:, ::2, ::3, ::4] = np.nan
+        a5d = np.ones((1, 2, 3, 4, 5), dtype=dtype)
+        a5d[:, ::2, :2, ::3, ::4] = np.nan
+
+        with np.warnings.catch_warnings():
+            np.warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            # axis is None
+            self._assert_array_almost_equal(f_py(a1d), f_cpp(a1d))
+            self._assert_array_almost_equal(f_py(a2d), f_cpp(a2d))
+            self._assert_array_almost_equal(f_py(a3d), f_cpp(a3d))
+            self._assert_array_almost_equal(f_py(a4d), f_cpp(a4d))
+            self._assert_array_almost_equal(f_py(a5d), f_cpp(a5d))
+
+            # axis = 0
+            self._assert_array_almost_equal(f_py(a3d, axis=0), f_cpp(a3d, axis=0))
+            self._assert_array_almost_equal(f_py(a4d, axis=0), f_cpp(a4d, axis=0))
+
+            # axis = (1, 2)
+            self._assert_array_almost_equal(f_py(a3d, axis=(-2, -1)), f_cpp(a3d, axis=(-2, -1)))
+            self._assert_array_almost_equal(f_py(a4d, axis=(-2, -1)), f_cpp(a4d, axis=(-2, -1)))
 
     def testNanhistWithStats(self):
         # case 1

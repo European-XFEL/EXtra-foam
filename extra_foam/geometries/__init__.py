@@ -16,24 +16,80 @@ from extra_geom import AGIPD_1MGeometry as _geom_AGIPD_1MGeometry
 from extra_geom import LPD_1MGeometry as _geom_LPD_1MGeometry
 from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
 
-from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
-from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
-from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
+from ..algorithms.geometry import EPix100Geometry, JungFrauGeometry
+from ..algorithms.geometry_1m import AGIPD_1MGeometry as _AGIPD_1MGeometry
+from ..algorithms.geometry_1m import LPD_1MGeometry as _LPD_1MGeometry
+from ..algorithms.geometry_1m import DSSC_1MGeometry as _DSSC_1MGeometry
+from ..config import config, GeomAssembler
+
+
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
+
+
+def module_indices(n_modules, *, detector=None, topic=None):
+    """Return the indices of a given number of modules.
+
+    :param int n_modules: number of modules
+    :param str detector: detector name
+    :param str topic: topic
+    """
+    if detector == "JungFrauPR":
+        if n_modules == 6:
+            return [1, 2, 3, 6, 7, 8]
+        return [*range(1, n_modules + 1)]
+
+    if detector == "ePix100":
+        return [*range(1, n_modules + 1)]
+
+    return [*range(n_modules)]
+
+
+def module_grid_shape(n_modules, *, detector=None, topic=None):
+    """Return grid shape (n_rows, n_columns) of a given number of modules.
+
+    :param int n_modules: number of modules
+    :param str detector: detector name
+    :param str topic: topic
+    """
+    if n_modules == 8:
+        return 4, 2
+    if n_modules == 6:
+        return 3, 2
+    if n_modules == 4:
+        return 2, 2
+    if n_modules == 2:
+        return 2, 1
+
+    raise NotImplementedError(
+        f"Grid layout with {n_modules} modules is not supported!")
 
 
 class _1MGeometryPyMixin:
-    def output_array_for_position_fast(self, extra_shape, dtype):
-        """Match the EXtra-geom signature."""
+    def output_array_for_position_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
+        """Make an array with the shape of assembled data filled with nan.
+
+        Match the EXtra-geom signature.
+        """
         shape = extra_shape + tuple(self.assembledShape())
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 
-    def position_all_modules(self, modules, out, *, ignore_tile_edge=False):
-        """Match the EXtra-geom signature.
+    def position_all_modules(self, modules, out, *,
+                             ignore_tile_edge=False, ignore_asic_edge=False):
+        """Assemble data in modules according to where the pixels are.
 
+        Match the EXtra-geom signature.
+
+        :param numpy.ndarray/list modules: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
         :param ignore_tile_edge: True for ignoring the pixels at the edges
             of tiles. If 'out' is pre-filled with nan, it it equivalent to
             masking the tile edges. This is an extra feature which does not
             exist in EXtra-geom.
+        :param ignore_asic_edge: placeholder. Not used.
         """
         if isinstance(modules, np.ndarray):
             self.positionAllModules(modules, out, ignore_tile_edge)
@@ -42,6 +98,23 @@ class _1MGeometryPyMixin:
             for i in range(self.n_modules):
                 ml.append(modules[:, i, ...])
             self.positionAllModules(ml, out, ignore_tile_edge)
+
+    def output_array_for_dismantle_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
+        """Make an array with the shape of data in modules filled with nan."""
+        shape = extra_shape + (self.n_modules, *self.module_shape)
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
+        return np.full(shape, np.nan, dtype=dtype)
+
+    def dismantle_all_modules(self, assembled, out):
+        """Dismantle assembled data into data in modules.
+
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
+        :param numpy.ndarray out: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        """
+        self.dismantleAllModules(assembled, out)
 
 
 class DSSC_1MGeometryFast(_DSSC_1MGeometry, _1MGeometryPyMixin):
@@ -130,16 +203,17 @@ class AGIPD_1MGeometryFast(_AGIPD_1MGeometry, _1MGeometryPyMixin):
 
         geom_dict = load_crystfel_geometry(filename)
         modules = []
-        for p in range(cls.n_modules):
+        for i_p in range(cls.n_modules):
             tiles = []
             modules.append(tiles)
-            for a in range(cls.n_tiles_per_module):
-                d = geom_dict['panels']['p{}a{}'.format(p, a)]
+            for i_a in range(cls.n_tiles_per_module):
+                d = geom_dict['panels'][f'p{i_p}a{i_a}']
                 tiles.append(GeometryFragment.from_panel_dict(d).corner_pos)
 
         return cls(modules)
 
-# patches for geometry classes from EXtra-geom
+# Patch geometry classes from EXtra-geom since EXtra-foam passes
+# extra arguments.
 
 class AGIPD_1MGeometry(_geom_AGIPD_1MGeometry):
     def position_all_modules(self, modules, out, *args, **kwargs):
@@ -154,3 +228,156 @@ class LPD_1MGeometry(_geom_LPD_1MGeometry):
 class DSSC_1MGeometry(_geom_DSSC_1MGeometry):
     def position_all_modules(self, modules, out, *args, **kwargs):
         super().position_all_modules(modules, out)
+
+
+class _GeometryPyMixin:
+    def output_array_for_position_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
+        """Make an array with the shape of assembled data filled with nan.
+
+        Match the EXtra-geom signature.
+        """
+        shape = extra_shape + tuple(self.assembledShape())
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
+        return np.full(shape, np.nan, dtype=dtype)
+
+    def position_all_modules(self, modules, out, *,
+                             ignore_tile_edge=False, ignore_asic_edge=False):
+        """Assemble data in modules according to where the pixels are.
+
+        Match the EXtra-geom signature.
+
+        :param numpy.ndarray/list modules: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
+        :param ignore_tile_edge: placeholder. Not used.
+        :param ignore_asic_edge: True for ignoring the pixels at the edges
+            of asics. If 'out' is pre-filled with nan, it it equivalent to
+            masking the asic edges.
+        """
+        if isinstance(modules, np.ndarray):
+            self.positionAllModules(modules, out, ignore_asic_edge)
+        else:  # extra_data.StackView
+            ml = []
+            for i in range(self.nModules()):
+                ml.append(modules[..., i, :, :])
+            self.positionAllModules(ml, out, ignore_asic_edge)
+
+    def output_array_for_dismantle_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
+        """Make an array with the shape of data in modules filled with nan."""
+        shape = extra_shape + (self.nModules(), *self.module_shape)
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
+        return np.full(shape, np.nan, dtype=dtype)
+
+    def dismantle_all_modules(self, assembled, out):
+        """Dismantle assembled data into data in modules.
+
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
+        :param numpy.ndarray out: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        """
+        self.dismantleAllModules(assembled, out)
+
+
+class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
+    """JungFrauGeometryFast.
+
+    Extend the functionality of JungFrauGeometry implementation in C++.
+    """
+    @classmethod
+    def from_crystfel_geom(cls, n_rows, n_columns, filename):
+        from cfelpyutils.crystfel_utils import load_crystfel_geometry
+        from extra_geom.detectors import GeometryFragment
+
+        geom_dict = load_crystfel_geometry(filename)
+        modules = []
+        for i_p in module_indices(n_rows * n_columns, detector="JungFrauPR"):
+            i_a = 1 if i_p > 4 else 8
+            d = geom_dict['panels'][f'p{i_p}a{i_a}']
+            modules.append(GeometryFragment.from_panel_dict(d).corner_pos)
+        return cls(n_rows, n_columns, modules)
+
+
+class EPix100GeometryFast(EPix100Geometry, _GeometryPyMixin):
+    """EPix100GeometryFast.
+
+    Extend the functionality of EPix100Geometry implementation in C++.
+    """
+
+
+def load_geometry(detector, *,
+                  stack_only=False,
+                  filepath=None,
+                  coordinates=None,
+                  n_modules=None,
+                  assembler=GeomAssembler.OWN):
+    """A geometry factory which generate geometry instance.
+
+    :param str detector: name of the detector.
+    :param bool stack_only: True for stacking detector modules without
+        geometry file.
+    :param str filepath: path of the geometry file. Ignored if stack_only
+        is True.
+    :param coordinates: quadrant/module coordinates. Ignored if stack_only
+        is True of a CFEL geometry file is used.
+    :param int n_modules: number of modules.
+    :param GeomAssembler assembler: assembler type. Ignored for detectors
+        which does not support external assembler.
+    """
+    if not stack_only and not filepath:
+        raise ValueError(f"Geometry file is required for a "
+                         f"non-stack-only geometry!")
+
+    if detector == 'AGIPD':
+        if assembler == GeomAssembler.OWN:
+            if stack_only:
+                return AGIPD_1MGeometryFast()
+
+            return AGIPD_1MGeometryFast.from_crystfel_geom(filepath)
+
+        else:
+            return AGIPD_1MGeometry.from_crystfel_geom(filepath)
+
+    if detector == 'LPD':
+        if assembler == GeomAssembler.OWN:
+
+            if stack_only:
+                return LPD_1MGeometryFast()
+            return LPD_1MGeometryFast.from_h5_file_and_quad_positions(
+                filepath, coordinates)
+
+        else:
+            return LPD_1MGeometry.from_h5_file_and_quad_positions(
+                filepath, coordinates)
+
+    if detector == 'DSSC':
+        if assembler == GeomAssembler.OWN:
+            if stack_only:
+                return DSSC_1MGeometryFast()
+
+            return DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
+                filepath, coordinates)
+        else:
+            return DSSC_1MGeometry.from_h5_file_and_quad_positions(
+                filepath, coordinates)
+
+    if detector == "JungFrauPR":
+        shape = module_grid_shape(n_modules, detector=detector)
+        if stack_only:
+            return JungFrauGeometryFast(*shape)
+
+        return JungFrauGeometryFast.from_crystfel_geom(
+            *shape, filepath)
+
+    if detector == "ePix100":
+        shape = module_grid_shape(n_modules, detector=detector)
+        if stack_only:
+            return EPix100GeometryFast(*shape)
+
+        raise NotImplementedError(
+            "ePix100 detector does not support loading geometry from file!")
+
+    raise ValueError(f"Unknown detector {detector}!")

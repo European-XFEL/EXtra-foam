@@ -9,8 +9,44 @@ All rights reserved.
 """
 import numpy as np
 
-from .imageproc_py import mask_image_data
-from .statistics import nanmean, nansum
+from .imageproc_py import mask_image_data, nanmeanImageArray
+from .statistics import nanmean as _nanmean_cpp
+from .statistics import nansum as _nansum_cpp
+
+
+_NAN_CPP_TYPES = (np.float32, np.float64)
+
+
+def nansum(a, axis=None):
+    """Faster numpy.nansum.
+
+    This is a wrapper over numpy.nansum. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
+    """
+    if axis is None:
+        return _nansum_cpp(a)
+
+    if a.dtype in _NAN_CPP_TYPES:
+        return _nansum_cpp(a, axis=axis)
+
+    return np.nansum(a, axis=axis)
+
+
+def nanmean(a, axis=None):
+    """Faster numpy.nansum.
+
+    This is a wrapper over numpy.nanmean. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nanmean.
+    """
+    if axis is None:
+        return _nanmean_cpp(a)
+
+    if a.dtype in _NAN_CPP_TYPES:
+        if axis == 0 and a.ndim == 3:
+            return nanmeanImageArray(a)
+        return _nanmean_cpp(a, axis=axis)
+
+    return np.nanmean(a, axis=axis)
 
 
 def quick_min_max(x, q=None):
@@ -45,7 +81,7 @@ def quick_min_max(x, q=None):
            np.nanquantile(x, q, interpolation='nearest')
 
 
-def nanstd(a, axis=None, dtype=None, *, normalized=False):
+def nanstd(a, axis=None, *, normalized=False):
     """Faster numpy.nanstd.
 
     # TODO:
@@ -54,12 +90,11 @@ def nanstd(a, axis=None, dtype=None, *, normalized=False):
     in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
     """
     if normalized:
-        return np.nanstd(a, axis=axis, dtype=dtype) / \
-               np.nanmean(a, axis=axis, dtype=dtype)
-    return np.nanstd(a, axis=axis, dtype=dtype)
+        return np.nanstd(a, axis=axis) / np.nanmean(a, axis=axis)
+    return np.nanstd(a, axis=axis)
 
 
-def nanvar(a, axis=None, dtype=None, *, normalized=False):
+def nanvar(a, axis=None, *, normalized=False):
     """Faster numpy.nanvar.
 
     # TODO:
@@ -68,9 +103,8 @@ def nanvar(a, axis=None, dtype=None, *, normalized=False):
     in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
     """
     if normalized:
-        return np.nanvar(a, axis=axis, dtype=dtype) / \
-               np.nanmean(a, axis=axis, dtype=dtype) ** 2
-    return np.nanvar(a, axis=axis, dtype=dtype)
+        return np.nanvar(a, axis=axis) / np.nanmean(a, axis=axis) ** 2
+    return np.nanvar(a, axis=axis)
 
 
 def _get_outer_edges(arr, range):
@@ -148,7 +182,7 @@ def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
     # TODO: the following three steps can be merged into one to improve
     #       the performance.
     filtered = roi.copy()
-    mask_image_data(filtered, threshold_mask=bin_range, keep_nan=True)
+    mask_image_data(filtered, threshold_mask=bin_range)
     filtered = filtered[~np.isnan(filtered)]
 
     outer_edges = _get_outer_edges(filtered, bin_range)

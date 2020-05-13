@@ -1,6 +1,47 @@
 CHANGELOG
 =========
 
+0.8.3 (11 May 2020)
+------------------------
+
+- **Breaking change**
+    - In the terminal, "--n_modules 2" is required to run JungFrauPR with two modules. #41
+
+- **Bug Fix**
+    - Change pixel size of ePix100 from 0.11 mm to 0.05 mm. #189
+
+- **Improvement**
+    - Mask tile/ASIC edges by default. #192
+    - Improve geometry 1M and its unittest. #190
+    - Invert y axis for displayed image. #187
+    - Rename geometry to geometry_1m in C++. #186
+    - Improve tr-XAS analysis in special suite. #163 #183
+    - Improve correlating error message. #182
+    - Improve documentation for special suite. #177
+    - New reset interface in special suite. #170
+    - Regularize names of methods and attributes in special suite. #167
+    - Add new mode, start/end train ID control and progress bar, etc. in FileStreamer. #166
+    - Move definition of meta source from config to SourceCatalog. #165
+    - Use correlated queue in special suite. #164
+    - Improve shape comparing error message in C++. #160
+    - Improve mask image data implementation and interface. #157
+    - Move image assembler into image processor. # 155
+    - Refactor masking code. #149
+    - Implement generic binding for nansum and nanmean. #114
+
+- **New Feature**
+    - Add axis calibration in Gotthard analysis. #179
+    - Implement generalized geometry for multi-module detectors. #175 #196
+    - Implement streaming JungFrauPR data from files. #174
+    - Implement Gotthard pump-probe analysis in special suite. #173 #178
+    - Add ROI histogram in CameraView in special suite. #172
+    - Add ROI control in special suite. #171
+    - Implement XAS-TIM-XMCD in special suite. #162
+    - Implement MultiCameraView in special suite. #147
+    - Implement XAS-TIM in special suite. #146
+    - Implement load and save mask in pixel coordinates. #132 #154 #185 #191 #197
+
+
 0.8.2 (8 April 2020)
 ------------------------
 

@@ -29,29 +29,29 @@ The first block of the config file looks like the following:
                     FXE_DET_LPD1M-1/DET/*CH0:xtdf:
                         - image.data
 
-        JungFrau:
-            PIPELINE:
-                FXE_XAD_JF1M/DET/RECEIVER-1:display:
-                    - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-2:display:
-                    - data.adc
+            JungFrau:
+                PIPELINE:
+                    FXE_XAD_JF1M/DET/RECEIVER-1:display:
+                        - data.adc
+                    FXE_XAD_JF1M/DET/RECEIVER-2:display:
+                        - data.adc
 
-        XGM:
-            CONTROL:
-                SA1_XTD2_XGM/DOOCS/MAIN:
-                    - pulseEnergy.photonFlux
-                    - beamPosition.ixPos
-                    - beamPosition.iyPos
-            PIPELINE:
-                SA1_XTD2_XGM/DOOCS/MAIN:output:
-                    - data.intensitySa1TD
+            XGM:
+                CONTROL:
+                    SA1_XTD2_XGM/DOOCS/MAIN:
+                        - pulseEnergy.photonFlux
+                        - beamPosition.ixPos
+                        - beamPosition.iyPos
+                PIPELINE:
+                    SA1_XTD2_XGM/DOOCS/MAIN:output:
+                        - data.intensitySa1TD
 
-        Motor:
-            CONTROL:
-                FXE_SMS_USR/MOTOR/UM01:
-                    - actualPosition
-                FXE_SMS_USR/MOTOR/UM02:
-                    - actualPosition
+            Motor:
+                CONTROL:
+                    FXE_SMS_USR/MOTOR/UM01:
+                        - actualPosition
+                    FXE_SMS_USR/MOTOR/UM02:
+                        - actualPosition
 
 
 The next block of the config file looks like the following:

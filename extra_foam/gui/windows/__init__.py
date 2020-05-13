@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-from .file_stream_controller_w import FileStreamWindow
+from .file_stream_w import FileStreamWindow
 from .about_w import AboutWindow
 
 __all__ += [

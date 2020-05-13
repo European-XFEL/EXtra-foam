@@ -9,11 +9,11 @@ All rights reserved.
 """
 from PyQt5.QtCore import (
     QAbstractItemModel, QAbstractListModel, QAbstractTableModel, QModelIndex,
-    Qt, QTimer, pyqtSignal, pyqtSlot
+    Qt, QTimer, pyqtSignal
 )
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
-    QComboBox, QGridLayout, QHeaderView, QLabel, QLineEdit, QListView,
+    QComboBox, QHeaderView, QLineEdit, QListView,
     QSplitter, QStyledItemDelegate, QTableView, QTabWidget, QTreeView,
     QVBoxLayout
 )
@@ -22,10 +22,11 @@ from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit
 )
-from ..gui_helpers import parse_boundary, parse_id, parse_slice
+from ..gui_helpers import parse_boundary, parse_slice
 from ..mediator import Mediator
 from ...database import MonProxy, SourceItem
 from ...config import config, DataSource
+from ...geometries import module_indices
 from ...processes import list_foam_processes
 from ...logger import logger
 
@@ -281,11 +282,12 @@ class DataSourceItemModel(QAbstractItemModel):
                     False,
                     SourceItem('', old_device_id, [], old_ppt, '', ''))
 
+            main_det = config["DETECTOR"]
             ctg = item.parent().data(0)
             src_name = item.data(0)
-            if ctg == config["DETECTOR"] \
-                    and config["NUMBER_OF_MODULES"] > 1 and '*' in src_name:
-                modules = [*range(config["NUMBER_OF_MODULES"])]
+            n_modules = config["NUMBER_OF_MODULES"]
+            if ctg == main_det and n_modules > 1 and '*' in src_name:
+                modules = module_indices(n_modules, detector=main_det)
             else:
                 modules = []
 

@@ -15,6 +15,7 @@ import numpy as np
 from extra_foam.pipeline.processors.image_processor import ImageProcessor, _IMAGE_DTYPE
 from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
 from extra_foam.pipeline.tests import _TestDataMixin
+from extra_foam.pipeline.processors.image_processor import config
 
 
 class _ImageProcessorTestBase(_TestDataMixin, unittest.TestCase):
@@ -200,14 +201,18 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
     For train-resolved data.
     """
     def setUp(self):
-        self._proc = ImageProcessor()
+        with patch.dict(config._data, {"DETECTOR": "LPD"}):
+            self._proc = ImageProcessor()
+
         self._proc._gain_cells = slice(None, None)
         self._proc._offset_cells = slice(None, None)
 
+        self._proc._assembler.process = MagicMock(side_effect=lambda x: x)
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
+        self._proc._mask_sub.update = MagicMock(
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
 
         self._proc._threshold_mask = (-100, 100)
 
@@ -253,14 +258,18 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
     For pulse-resolved data.
     """
     def setUp(self):
-        self._proc = ImageProcessor()
+        with patch.dict(config._data, {"DETECTOR": "LPD"}):
+            self._proc = ImageProcessor()
+
         self._proc._gain_cells = slice(None, None)
         self._proc._offset_cells = slice(None, None)
 
+        self._proc._assembler.process = MagicMock(side_effect=lambda x: x)
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
+        self._proc._mask_sub.update = MagicMock(
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
 
         del self._proc._dark
 
@@ -392,13 +401,40 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
 
-        # test setting mask but the mask shape is different
-        # from the image shape
-        with self.assertRaises(ImageProcessingError):
-            image_mask = np.ones([3, 2, 2])
-            proc._mask_sub.update = MagicMock(return_value=image_mask)
-            proc.process(data)
-        self.assertIsNone(proc._image_mask)
+        def dismantle_side_effect(*args, **kwargs):
+            raise ValueError
+        with patch.object(proc._assembler, "_geom") as geom:
+            with patch.object(proc._mask_sub, "update") as update:
+                # test generation of image_mask_in_modules
+                proc._require_geom = True
+                update.return_value = (True, np.ones([2, 2], dtype=bool))
+                proc.process(data)
+                geom.output_array_for_dismantle_fast.assert_called_once()
+                geom.dismantle_all_modules.assert_called_once()
+
+                with patch.object(geom, "dismantle_all_modules",
+                                  side_effect=dismantle_side_effect):
+                    with self.assertRaisesRegex(ImageProcessingError,
+                                                "Geometry changed during updating image mask"):
+                        proc.process(data)
+
+                # for invalid mask with all zeros, a new mask will be generated automatically
+                update.return_value = (True, np.zeros([3, 2], dtype=bool))
+                proc.process(data)
+                np.testing.assert_array_equal(np.zeros([2, 2], dtype=bool), proc._image_mask)
+
+                # test setting mask but the mask shape is different from the image shape
+
+                # reassemble if there is a geometry
+                update.return_value = (True, np.ones([4, 2], dtype=bool))
+                proc.process(data)
+                geom.output_array_for_position_fast.assert_called_once()
+                geom.position_all_modules.assert_called_once()
+                # otherwise, exception will be raised
+                proc._require_geom = False
+                with self.assertRaises(ImageProcessingError):
+                    update.return_value = (True, np.ones([4, 2], dtype=bool))
+                    proc.process(data)
 
     @patch("extra_foam.ipc.ProcessLogger.info")
     def testReferenceUpdate(self, info):

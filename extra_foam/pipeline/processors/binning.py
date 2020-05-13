@@ -46,6 +46,43 @@ class _BinMixin:
         # use side = 'right' to match the result from scipy
         return np.searchsorted(edges, v, side='right') - 1
 
+    @staticmethod
+    def get_actual_range(data, bin_range, auto_range):
+        # It is guaranteed that bin_range[0] < bin_range[1]
+        if not auto_range[0] and not auto_range[1]:
+            return bin_range
+
+        if auto_range[0]:
+            v_min = None if data.size == 0 else data.min()
+        else:
+            v_min = bin_range[0]
+
+        if auto_range[1]:
+            v_max = None if data.size == 0 else data.max()
+        else:
+            v_max = bin_range[1]
+
+        # The following three cases caused by zero-sized array.
+        if v_min is None and v_max is None:
+            return 0., 1.
+        if v_min is None:
+            return v_max - 1., v_max
+        if v_max is None:
+            return v_min, v_min + 1.
+
+        if auto_range[0] and auto_range[1]:
+            if v_min == v_max:
+                # all elements have the same value
+                return v_min - 0.5, v_max + 0.5
+        elif v_min >= v_max:
+            # two tricky corner cases
+            if auto_range[0]:
+                v_min = v_max - 1.0
+            elif auto_range[1]:
+                v_max = v_min + 1.0
+            # else cannot happen
+        return v_min, v_max
+
 
 class BinningProcessor(_BaseProcessor, _BinMixin):
     """BinningProcessor class.
@@ -58,44 +95,37 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         analysis_type (AnalysisType): binning analysis type.
         _pp_analysis_type (AnalysisType): pump-probe analysis type.
         _mode (BinMode): binning mode.
-        _source1 (str): name of data source 1.
-        _source2 (str): name of data source 2.
-        _slow1 (SimpleSequence): store the data points of slow data 1.
-        _slow2 (SimpleSequence): store the data points of slow data 2.
-        _fom (SimpleSequence): store the data points of FOM.
-        _vfom (SimpleVectorSequence): store the data points of VFOM.
-        _bin_range1 (tuple): bin 1 range requested.
-        _bin_range2 (tuple): bin 2 range requested.
-        _actual_range1 (tuple): actual bin 1 range used in binning.
-        _actual_range2 (tuple): actual bin 2 range used in binning.
-        _n_bins1 (int): number of 1 bins.
-        _n_bins2 (int): number of 2 bins.
-        _edges1 (numpy.array): bin edges for parameter 1.
-        _edges2 (numpy.array): bin edges for parameter 2.
-        _stats1 (numpy.array): 1D FOM array for 1D binning with param1.
+        _source1 (str): source name 1.
+        _source2 (str): source name 2.
+        _slow1 (SimpleSequence): store train-resolved data of source 1.
+        _slow2 (SimpleSequence): store train-resolved data of source 2.
+        _fom (SimpleSequence): store train-resolved FOM data.
+        _vfom (SimpleVectorSequence): store train-resolved VFOM data.
+        _bin_range1 (tuple): requested range of bin 1.
+        _actual_range1 (tuple): actual bin range used in bin 1.
+        _n_bins1 (int): number of bins of bin 1.
+        _bin_range2 (tuple): requested range of bin 2.
+        _actual_range2 (tuple): actual bin range used in bin 2.
+        _n_bins2 (int): number of bins of bin 2.
+        _edges1 (numpy.array): edges of bin 1. shape = (_n_bins1 + 1,)
+        _counts1 (numpy.array): counts of bin 1. shape = (_n_bins1,)
+        _stats1 (numpy.array): 1D binning of FOM with respect to source 1.
             shape = (_n_bins1,)
-        _counts1 (numpy.array): 1D count array for 1D binning with param1.
-            shape = (_n_bins1,)
-        _vfom_heat1 (numpy.array): VFOM heatmap for 1D binning with param1.
-            shape = (VFOM length, _n_bins1)
-        _vfom_x1 (numpy.array): y coordinates of VFOM heatmap for 1D binning
-            with param1.
-        _stats2 (numpy.array): 1D FOM array for 1D binning with param2.
+        _vfom_heat1 (numpy.array): 1D binning of VFOM with respect to
+            source 1. shape = (VFOM length, _n_bins1)
+        _vfom_x1 (numpy.array): x coordinates of _vfom_heat1.
+        _edges2 (numpy.array): edges of bin 2. shape = (_n_bins2 + 1,)
+        _stats2 (numpy.array): 1D binning of FOM with respect to source 2.
             shape = (_n_bins2,)
-        _counts2 (numpy.array): 1D count array for 1D binning with param2.
-            shape = (_n_bins2,)
-        _heat (numpy.array): FOM heatmap for 2D binning.
+        _heat (numpy.array): 2D binning of FOM. shape = (_n_bins2, _n_bins1)
+        _heat_count (numpy.array): counts of 2D binning of FOM.
             shape = (_n_bins2, _n_bins1)
-        _heat_count (numpy.array): count heatmap for 2D binning.
-            shape = (_n_bins2, _n_bins1)
-        _has_param1 (bool): True if both 'device ID' and 'property' are
-            specified for param1.
-        _has_param2 (bool): True if both 'device ID' and 'property' are
-            specified for param2.
+        _has_param1 (bool): True if source 1 is not empty.
+        _has_param2 (bool): True if source 2 is not empty.
         _bin1d (bool): a flag indicates whether data need to be re-binned
-            with respect to param1.
+            with respect to source 1.
         _bin2d (bool): a flag indicates whether data need to be re-binned
-            with respect to param1 and param2.
+            with respect to source 1 and source 2.
         _reset (bool): True for clearing all the existing data.
         _reset_bin2d (bool): True for clearing all the existing data which
             only relate to 2D binning.
@@ -140,7 +170,6 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         self._vfom_heat1 = None
         self._vfom_x1 = None
         self._edges2 = None
-        self._counts2 = None
         self._stats2 = None
         self._heat = None
         self._heat_count = None
@@ -239,14 +268,14 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         elif self._reset_bin2d:
             self._clear_bin2d_history()
 
+        fom, vfom, vfom_x, s1, s2 = None, None, None, None, None
         try:
             fom, vfom, vfom_x, s1, s2 = self._update_data_point(
                 processed, raw)
         except ProcessingError as e:
             logger.error(f"[Binning] {str(e)}!")
-            fom = None
 
-        actual_range1 = self._get_actual_range(
+        actual_range1 = self.get_actual_range(
             self._slow1.data(), self._bin_range1, self._auto_range1)
         if actual_range1 != self._actual_range1:
             self._actual_range1 = actual_range1
@@ -261,7 +290,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
                 self._update_1d_binning(fom, vfom, s1)
 
         if self._has_param2:
-            actual_range2 = self._get_actual_range(
+            actual_range2 = self.get_actual_range(
                 self._slow2.data(), self._bin_range2, self._auto_range2)
             if actual_range2 != self._actual_range2:
                 self._actual_range2 = actual_range2
@@ -478,44 +507,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         self._bin2d = True
 
         self._edges2 = None
-        self._counts2 = None
         self._stats2 = None
 
         self._heat = None
         self._heat_count = None
-
-    def _get_actual_range(self, data, bin_range, auto_range):
-        # It is guaranteed that bin_range[0] < bin_range[1]
-        if not auto_range[0] and not auto_range[1]:
-            return bin_range
-
-        if auto_range[0]:
-            v_min = None if data.size == 0 else data.min()
-        else:
-            v_min = bin_range[0]
-
-        if auto_range[1]:
-            v_max = None if data.size == 0 else data.max()
-        else:
-            v_max = bin_range[1]
-
-        # The following three cases caused by zero-sized array.
-        if v_min is None and v_max is None:
-            return 0., 1.
-        if v_min is None:
-            return v_max - 1., v_max
-        if v_max is None:
-            return v_min, v_min + 1.
-
-        if auto_range[0] and auto_range[1]:
-            if v_min == v_max:
-                # all elements have the same value
-                return v_min - 0.5, v_max + 0.5
-        elif v_min >= v_max:
-            # two tricky corner cases
-            if auto_range[0]:
-                v_min = v_max - 1.0
-            elif auto_range[1]:
-                v_max = v_min + 1.0
-            # else cannot happen
-        return v_min, v_max

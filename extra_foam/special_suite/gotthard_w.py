@@ -9,29 +9,29 @@ All rights reserved.
 """
 from string import Template
 
-from PyQt5.QtCore import pyqtSlot, Qt
-from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QCheckBox, QGridLayout, QSplitter
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QDoubleValidator, QIntValidator
+from PyQt5.QtWidgets import QCheckBox, QSplitter
 
-from .gotthard_proc import GotthardProcessor
-from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
-    _SpecialAnalysisBase
-)
-from ..gui.plot_widgets import (
+from extra_foam.gui.plot_widgets import (
     HistMixin, ImageViewF, PlotWidgetF
 )
-from ..gui.misc_widgets import FColor
-from ..gui.ctrl_widgets.smart_widgets import (
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit,
     SmartStringLineEdit
 )
 
+from .gotthard_proc import (
+    GotthardProcessor, _DEFAULT_BIN_RANGE, _DEFAULT_N_BINS
+)
+from .special_analysis_base import (
+    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    _SpecialAnalysisBase
+)
+from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 
-_DEFAULT_N_BINS = "10"
-_DEFAULT_BIN_RANGE = "-inf, inf"
 _MAX_N_BINS = 999
-_MAX_N_PULSES = 120
 
 
 class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
@@ -40,11 +40,8 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self._topic == "MID":
-            default_output_ch = "MID_EXP_DES/DET/GOTTHARD_RECEIVER:daqOutput"
-        else:
-            default_output_ch = "Gotthard:output"
-        self.output_ch_le = SmartStringLineEdit(default_output_ch)
+        self.output_ch_le = SmartStringLineEdit(
+            GOTTHARD_DEVICE.get(self.topic, "Gotthard:output"))
 
         self.ma_window_le = SmartLineEdit("1")
         validator = QIntValidator()
@@ -54,12 +51,20 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.pulse_slicer_le = SmartSliceLineEdit(":")
 
         self.poi_index_le = SmartLineEdit("0")
-        self.poi_index_le.setValidator(QIntValidator(1, _MAX_N_PULSES))
+        self.poi_index_le.setValidator(
+            QIntValidator(0, _MAX_N_GOTTHARD_PULSES - 1))
 
         self.bin_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
-        self.n_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
+        self.n_bins_le = SmartLineEdit(str(_DEFAULT_N_BINS))
         self.n_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
         self.hist_over_ma_cb = QCheckBox("Histogram over M.A. train")
+
+        self.scale_le = SmartLineEdit("0")
+        validator = QDoubleValidator()
+        validator.setBottom(0)
+        self.scale_le.setValidator(validator)
+        self.offset_le = SmartLineEdit("0")
+        self.offset_le.setValidator(QDoubleValidator())
 
         self._non_reconfigurable_widgets = [
             self.output_ch_le
@@ -70,19 +75,17 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
+        layout = self.layout()
 
-        self.addRows(layout, [
-            ("Output channel", self.output_ch_le),
-            ("Pulse slicer ", self.pulse_slicer_le),
-            ("P.O.I. (sliced)", self.poi_index_le),
-            ("M.A. window", self.ma_window_le),
-            ("Bin range", self.bin_range_le),
-            ("# of bins", self.n_bins_le),
-            ("", self.hist_over_ma_cb),
-        ])
-
-        self.setLayout(layout)
+        layout.addRow("Output channel: ", self.output_ch_le)
+        layout.addRow("M.A. window: ", self.ma_window_le)
+        layout.addRow("Pulse slicer: ", self.pulse_slicer_le)
+        layout.addRow("P.O.I. (sliced): ", self.poi_index_le)
+        layout.addRow("Bin range: ", self.bin_range_le)
+        layout.addRow("# of bins: ", self.n_bins_le)
+        layout.addRow("Scale (eV/pixel): ", self.scale_le)
+        layout.addRow("Offset (eV): ", self.offset_le)
+        layout.addRow("", self.hist_over_ma_cb)
 
     def initConnections(self):
         """Override."""
@@ -96,21 +99,28 @@ class GotthardAvgPlot(PlotWidgetF):
     moving average.
     """
     def __init__(self, *, parent=None):
-        """Initialization."""
         super().__init__(parent=parent, show_indicator=True)
 
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
-        self.addLegend(offset=(-40, 20))
+        self.addLegend(offset=(5, 10))
 
-        self._mean = self.plotCurve(name="mean", pen=FColor.mkPen("p"))
-        self._mean_ma = self.plotCurve(
-            name="mean (moving average)", pen=FColor.mkPen("g"))
+        self.setTitle("Averaged spectra over pulses")
+        self._mean = self.plotCurve(name="Current", pen=FColor.mkPen("p"))
+        self._mean_ma = self.plotCurve(name="Moving average",
+                                       pen=FColor.mkPen("g"))
 
     def updateF(self, data):
         """Override."""
-        self._mean.setData(data['mean'])
-        self._mean_ma.setData(data['mean_ma'])
+        x = data["x"]
+        if x is None:
+            self._mean.setData(data['spectrum_mean'])
+            self._mean_ma.setData(data['spectrum_ma_mean'])
+            self.setLabel('bottom', "Pixel")
+        else:
+            self._mean.setData(x, data['spectrum_mean'])
+            self._mean_ma.setData(x, data['spectrum_ma_mean'])
+            self.setLabel('bottom', "eV")
 
 
 class GotthardPulsePlot(PlotWidgetF):
@@ -119,36 +129,38 @@ class GotthardPulsePlot(PlotWidgetF):
     Visualize signals of a single pulse as well as its moving average.
     """
     def __init__(self, *, parent=None):
-        """Initialization."""
         super().__init__(parent=parent, show_indicator=True)
-
-        self.setLabel('left', "ADU")
-        self.setLabel('bottom', "Pixel")
-        self.addLegend(offset=(-40, 20))
 
         self._idx = 0
 
-        self._poi = None
-        self._poi_ma = None
-        self._initPlots()
+        self._updateTitle()
+        self.setLabel('left', "ADU")
+        self.setLabel('bottom', "Pixel")
+        self.addLegend(offset=(5, 10))
 
-    def _initPlots(self):
-        self._poi = self.plotCurve(
-            name=f"Pulse {self._idx}", pen=FColor.mkPen("p"))
-        self._poi_ma = self.plotCurve(
-            name=f"Pulse {self._idx} (moving average)", pen=FColor.mkPen("g"))
+        self._poi = self.plotCurve(name="Current", pen=FColor.mkPen("p"))
+        self._poi_ma = self.plotCurve(name="Moving average",
+                                      pen=FColor.mkPen("g"))
+
+    def _updateTitle(self):
+        self.setTitle(f"Pulse of interest: {self._idx}")
 
     def updateF(self, data):
         """Override."""
         idx = data['poi_index']
         if idx != self._idx:
             self._idx = idx
-            # I don't known an easy way to change the legend
-            self.clear()
-            self._initPlots()
+            self._updateTitle()
 
-        self._poi.setData(data['displayed'][idx])
-        self._poi_ma.setData(data['displayed_ma'][idx])
+        x = data["x"]
+        if x is None:
+            self._poi.setData(data['spectrum'][idx])
+            self._poi_ma.setData(data['spectrum_ma'][idx])
+            self.setLabel('bottom', "Pixel")
+        else:
+            self._poi.setData(x, data['spectrum'][idx])
+            self._poi_ma.setData(x, data['spectrum_ma'][idx])
+            self.setLabel('bottom', "eV")
 
 
 class GotthardImageView(ImageViewF):
@@ -157,8 +169,7 @@ class GotthardImageView(ImageViewF):
     Visualize the heatmap of pulse-resolved Gotthard data in a train.
     """
     def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(has_roi=False, parent=parent)
+        super().__init__(has_roi=True, roi_size=(100, 10), parent=parent)
 
         self.setAspectLocked(False)
 
@@ -168,7 +179,7 @@ class GotthardImageView(ImageViewF):
 
     def updateF(self, data):
         """Override."""
-        self.setImage(data['displayed'])
+        self.setImage(data['spectrum'])
 
 
 class GotthardHist(HistMixin, PlotWidgetF):
@@ -201,6 +212,7 @@ class GotthardHist(HistMixin, PlotWidgetF):
 class GotthardWindow(_SpecialAnalysisBase):
     """Main GUI for Gotthard analysis."""
 
+    icon = "Gotthard.png"
     _title = "Gotthard"
     _long_title = "Gotthard analysis"
 
@@ -225,43 +237,50 @@ class GotthardWindow(_SpecialAnalysisBase):
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._hist)
         right_panel.addWidget(self._heatmap)
-        right_panel.setSizes([0.4 * self._TOTAL_H, 0.6 * self._TOTAL_H])
+        right_panel.setSizes([self._TOTAL_H / 2, self._TOTAL_H / 2])
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(middle_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes(
-            [self._TOTAL_W / 3, self._TOTAL_W / 3, self._TOTAL_W / 3])
+        cw = self.centralWidget()
+        cw.addWidget(middle_panel)
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 3, self._TOTAL_W / 3, self._TOTAL_W / 3])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
         """Override."""
-        self._ctrl_widget.output_ch_le.value_changed_sgn.connect(
-            self._worker.onOutputChannelChanged)
-        self._ctrl_widget.output_ch_le.returnPressed.emit()
+        self._ctrl_widget_st.output_ch_le.value_changed_sgn.connect(
+            self._worker_st.onOutputChannelChanged)
+        self._ctrl_widget_st.output_ch_le.returnPressed.emit()
 
-        self._ctrl_widget.poi_index_le.value_changed_sgn.connect(
-            lambda x: self._worker.onPoiIndexChanged(int(x)))
-        self._ctrl_widget.poi_index_le.returnPressed.emit()
+        self._ctrl_widget_st.poi_index_le.value_changed_sgn.connect(
+            lambda x: self._worker_st.onPoiIndexChanged(int(x)))
+        self._ctrl_widget_st.poi_index_le.returnPressed.emit()
 
-        self._ctrl_widget.pulse_slicer_le.value_changed_sgn.connect(
-            self._worker.onPulseSlicerChanged)
-        self._ctrl_widget.pulse_slicer_le.returnPressed.emit()
+        self._ctrl_widget_st.pulse_slicer_le.value_changed_sgn.connect(
+            self._worker_st.onPulseSlicerChanged)
+        self._ctrl_widget_st.pulse_slicer_le.returnPressed.emit()
 
-        self._ctrl_widget.ma_window_le.value_changed_sgn.connect(
-            self._worker.onMaWindowChanged)
-        self._ctrl_widget.ma_window_le.returnPressed.emit()
+        self._ctrl_widget_st.ma_window_le.value_changed_sgn.connect(
+            self._worker_st.onMaWindowChanged)
+        self._ctrl_widget_st.ma_window_le.returnPressed.emit()
 
-        self._ctrl_widget.bin_range_le.value_changed_sgn.connect(
-            self._worker.onBinRangeChanged)
-        self._ctrl_widget.bin_range_le.returnPressed.emit()
+        self._ctrl_widget_st.scale_le.value_changed_sgn.connect(
+            self._worker_st.onScaleChanged)
+        self._ctrl_widget_st.scale_le.returnPressed.emit()
 
-        self._ctrl_widget.n_bins_le.value_changed_sgn.connect(
-            self._worker.onNoBinsChanged)
-        self._ctrl_widget.n_bins_le.returnPressed.emit()
+        self._ctrl_widget_st.offset_le.value_changed_sgn.connect(
+            self._worker_st.onOffsetChanged)
+        self._ctrl_widget_st.offset_le.returnPressed.emit()
 
-        self._ctrl_widget.hist_over_ma_cb.toggled.connect(
-            self._worker.onHistOverMaChanged)
-        self._ctrl_widget.hist_over_ma_cb.toggled.emit(
-            self._ctrl_widget.hist_over_ma_cb.isChecked())
+        self._ctrl_widget_st.bin_range_le.value_changed_sgn.connect(
+            self._worker_st.onBinRangeChanged)
+        self._ctrl_widget_st.bin_range_le.returnPressed.emit()
+
+        self._ctrl_widget_st.n_bins_le.value_changed_sgn.connect(
+            self._worker_st.onNoBinsChanged)
+        self._ctrl_widget_st.n_bins_le.returnPressed.emit()
+
+        self._ctrl_widget_st.hist_over_ma_cb.toggled.connect(
+            self._worker_st.onHistOverMaChanged)
+        self._ctrl_widget_st.hist_over_ma_cb.toggled.emit(
+            self._ctrl_widget_st.hist_over_ma_cb.isChecked())

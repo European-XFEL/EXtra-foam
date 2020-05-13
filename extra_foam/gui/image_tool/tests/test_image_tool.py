@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 import math
 import os
 import tempfile
@@ -76,14 +76,13 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.image_tool = self.gui._image_tool
 
         self.view = self.image_tool._corrected_view.imageView
-        self.view.setImageData(None)
         self.view._image = None
 
         self.pulse_worker._image_proc = ImageProcessor()
         self.pulse_worker._image_roi = ImageRoiPulse()
 
     def testGeneral(self):
-        self.assertEqual(10, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(11, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._require_geometry)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
@@ -202,36 +201,138 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
     def testImageCtrlWidget(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.pulse_worker._image_proc
-        assembler = self.pulse_worker._assembler
 
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
 
+    def testMaskCtrlWidget(self):
+        win = self.image_tool
+        widget = win._mask_ctrl_widget
+        view = win._corrected_view._corrected
+        proc = self.pulse_worker._image_proc
+        assembler = proc._assembler
+
+        self.assertTrue(config["MASK_TILE_EDGE"])
+        self.assertFalse(config["MASK_ASIC_EDGE"])
         # test default
+        self.assertTrue(widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_asic_cb.isChecked())
         proc.update()
         self.assertEqual((-1e5, 1e5), proc._threshold_mask)
-
-        assembler.update()
-        self.assertEqual(False, assembler._mask_tile)
+        self.assertTrue(assembler._mask_tile)
+        self.assertFalse(assembler._mask_asic)
+        self.assertFalse(view._mask_save_in_modules)
 
         # test set new value
         widget.threshold_mask_le.setText("1, 10")
+        widget.mask_tile_cb.setChecked(False)
+        widget.mask_asic_cb.setChecked(True)
+        widget.mask_save_in_modules_cb.setChecked(True)
         proc.update()
         self.assertEqual((1, 10), proc._threshold_mask)
+        self.assertFalse(assembler._mask_tile)
+        self.assertTrue(assembler._mask_asic)
+        self.assertTrue(view._mask_save_in_modules)
 
-        widget.mask_tile_cb.setChecked(True)
-        assembler.update()
-        self.assertEqual(True, assembler._mask_tile)
+        # test save/load mask
+        with patch.object(win._corrected_view._corrected, "saveImageMask") as patched:
+            QTest.mouseClick(widget.save_btn, Qt.LeftButton)
+            patched.assert_called_once()
+        with patch.object(win._corrected_view._corrected, "loadImageMask") as patched:
+            QTest.mouseClick(widget.load_btn, Qt.LeftButton)
+            patched.assert_called_once()
 
         # test loading meta data
         mediator = widget._mediator
+        mask_tile_state = widget.mask_tile_cb.isChecked()
+        mask_asic_state = widget.mask_asic_cb.isChecked()
+        mask_save_in_modules_state = widget.mask_save_in_modules_cb.isChecked()
         mediator.onImageThresholdMaskChange((-100, 10000))
-        mediator.onImageMaskTileEdgeChange(False)
+        mediator.onImageMaskTileEdgeChange(not mask_tile_state)
+        mediator.onImageMaskAsicEdgeChange(not mask_asic_state)
+        mediator.onImageMaskSaveInModulesToggled(not mask_save_in_modules_state)
         widget.loadMetaData()
         self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
-        self.assertEqual(False, widget.mask_tile_cb.isChecked())
+        self.assertEqual(not mask_tile_state, widget.mask_tile_cb.isChecked())
+        self.assertEqual(mask_asic_state, widget.mask_asic_cb.isChecked())
+        self.assertEqual(not mask_save_in_modules_state, widget.mask_save_in_modules_cb.isChecked())
+
+        with patch.dict(config._data, {"MASK_ASIC_EDGE": "True"}):
+            widget.loadMetaData()
+            self.assertEqual(not mask_asic_state, widget.mask_asic_cb.isChecked())
+
+    @patch("extra_foam.pipeline.processors.ImageProcessor._require_geom",
+           new_callable=PropertyMock, create=True, return_value=False)
+    @patch("extra_foam.pipeline.processors.image_assembler.ImageAssemblerFactory.BaseAssembler.process",
+           side_effect=lambda x: x)
+    def testDrawMask(self, patched_process, require_geometry):
+        # TODO: test by really drawing something on ImageTool
+        from extra_foam.ipc import ImageMaskPub
+
+        pub = ImageMaskPub()
+        widget = self.image_tool._mask_ctrl_widget
+        proc = self.pulse_worker._image_proc
+
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
+
+        # trigger the lazily evaluated subscriber
+        proc.process(data)
+
+        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
+
+        # test default
+        np.testing.assert_array_equal(proc._image_mask, mask_gt)
+
+        # test changing mask
+        pub.draw((0, 0, 2, 3))
+        mask_gt[0:3, 0:2] = True
+
+        # test adding mask
+        n_attempts = 0
+        # repeat to prevent random failure
+        while n_attempts < 10:
+            n_attempts += 1
+
+            proc.process(data)
+            # np.testing.assert_array_equal(mask_gt, proc._image_mask)
+            if (mask_gt == proc._image_mask).all():
+                break
+            time.sleep(0.001)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # add one more mask region
+        pub.draw((1, 1, 2, 3))
+        proc.process(data)
+        mask_gt[1:4, 1:3] = True
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test erasing mask
+        pub.erase((2, 2, 3, 3))
+        proc.process(data)
+        mask_gt[2:5, 2:5] = False
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test removing mask
+        QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
+        proc.process(data)
+        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
+
+        # test set mask
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test set a mask which has a different shape from the image
+        mask_gt = np.ones((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        with self.assertRaises(ImageProcessingError):
+            proc.process(data)
+        # an empty image mask with a different shape will be automatically reset
+        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
 
     def testReferenceCtrlWidget(self):
         view = self.image_tool._reference_view
@@ -295,73 +396,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 updated, ref = proc._ref_sub.update()
                 self.assertTrue(updated)
                 self.assertIsNone(ref)
-
-    def testDrawMask(self):
-        # TODO: test by really drawing something on ImageTool
-        from extra_foam.ipc import ImageMaskPub
-
-        pub = ImageMaskPub()
-        proc = self.pulse_worker._image_proc
-
-        data, _ = self.data_with_assembled(1001, (4, 10, 10))
-
-        # trigger the lazily evaluated subscriber
-        proc.process(data)
-
-        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
-
-        # test default
-        np.testing.assert_array_equal(proc._image_mask, mask_gt)
-
-        # test changing mask
-        pub.add((0, 0, 2, 3))
-        mask_gt[0:3, 0:2] = True
-
-        # test adding mask
-        n_attempts = 0
-        # repeat to prevent random failure
-        while n_attempts < 10:
-            n_attempts += 1
-
-            proc.process(data)
-            # np.testing.assert_array_equal(mask_gt, proc._image_mask)
-            if (mask_gt == proc._image_mask).all():
-                break
-            time.sleep(0.001)
-
-        # add one more mask region
-        pub.add((1, 1, 2, 3))
-        proc.process(data)
-        mask_gt[1:4, 1:3] = True
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test erasing mask
-        pub.erase((2, 2, 3, 3))
-        proc.process(data)
-        mask_gt[2:5, 2:5] = False
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test trashing mask
-        action = self.image_tool._tool_bar.actions()[2]
-        action.trigger()
-        proc.process(data)
-        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
-
-        # test set mask
-        pub.set(mask_gt)
-        proc.process(data)
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test set a mask which has a different shape from the image
-        mask_gt = np.ones((2, 2), dtype=np.bool)
-        pub.set(mask_gt)
-        with self.assertRaises(ImageProcessingError):
-            proc.process(data)
-        # an empty image mask with a different shape will be automatically reset
-        mask_gt = np.zeros((2, 2), dtype=np.bool)
-        pub.set(mask_gt)
-        proc.process(data)
-        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
 
     def testBulletinView(self):
         processed = ProcessedData(1357)
@@ -439,7 +473,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         gain_gt = np.random.randn(2, 2)
         offset_gt = np.random.randn(2, 2)
 
-        def _read_constants_side_effect(fn):
+        def _read_constants_side_effect(fn, **kwargs):
             if fn == "gain/file/path":
                 return gain_gt
             if fn == "offset/file/path":
@@ -447,7 +481,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # caveat: first establish the connection
         proc._cal_sub.update()
-        with patch('extra_foam.ipc.read_cal_constants', side_effect=_read_constants_side_effect):
+        with patch('extra_foam.ipc.read_numpy_array', side_effect=_read_constants_side_effect):
             with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["gain/file/path"]):
                 QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)
@@ -746,45 +780,53 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
-        image_ctrl_widget = self.image_tool._image_ctrl_widget
+        mask_ctrl_widget = self.image_tool._mask_ctrl_widget
 
-        proc = self.pulse_worker._assembler
+        image_proc = self.pulse_worker._image_proc
+        assembler = image_proc._assembler
 
         # test default
-        proc.update()
-        self.assertFalse(proc._stack_only)
-        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
-        self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], proc._quad_position)
+        image_proc.update()
+        self.assertFalse(assembler._stack_only)
+        self.assertEqual(GeomAssembler.OWN, assembler._assembler_type)
+        self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], assembler._coordinates)
 
         # prepare for the following test
         widget._stack_only_cb.setChecked(True)
-        image_ctrl_widget.mask_tile_cb.setChecked(True)
-        proc.update()
-        self.assertTrue(proc._stack_only)
-        self.assertTrue(proc._mask_tile)
+        mask_ctrl_widget.mask_tile_cb.setChecked(True)
+        mask_ctrl_widget.mask_asic_cb.setChecked(True)
+        mask_ctrl_widget.mask_save_in_modules_cb.setChecked(True)
+        image_proc.update()
+        self.assertTrue(assembler._stack_only)
+        self.assertTrue(assembler._mask_tile)
+        self.assertTrue(assembler._mask_asic)
 
         # test setting new values
         assemblers_inv = widget._assemblers_inv
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.EXTRA_GEOM])
         self.assertFalse(widget._stack_only_cb.isEnabled())
         self.assertFalse(widget._stack_only_cb.isChecked())
-        self.assertFalse(image_ctrl_widget.mask_tile_cb.isEnabled())
-        self.assertFalse(image_ctrl_widget.mask_tile_cb.isChecked())
+        self.assertFalse(mask_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertFalse(mask_ctrl_widget.mask_tile_cb.isChecked())
+        self.assertFalse(mask_ctrl_widget.mask_asic_cb.isEnabled())
+        self.assertFalse(mask_ctrl_widget.mask_asic_cb.isChecked())
+        self.assertFalse(mask_ctrl_widget.mask_save_in_modules_cb.isEnabled())
+        self.assertFalse(mask_ctrl_widget.mask_save_in_modules_cb.isChecked())
         widget._geom_file_le.setText("/geometry/file/")
         for i in range(4):
             for j in range(2):
-                widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
-        with patch.object(proc, "_load_geometry"):
-            proc.update()
-        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
-        self.assertFalse(proc._stack_only)
-        self.assertFalse(proc._mask_tile)
-        self.assertEqual("/geometry/file/", proc._geom_file)
-        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
+                widget._coordinates_tb.cellWidget(j, i).setText("0.0")
+
+        with patch.object(assembler, "_load_geometry") as mocked_load_geometry:
+            image_proc.update()
+            mocked_load_geometry.assert_called_once_with(
+                False, "/geometry/file/", [[0., 0.] for i in range(4)], GeomAssembler.EXTRA_GEOM)
+        self.assertFalse(assembler._mask_tile)
 
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
         self.assertTrue(widget._stack_only_cb.isEnabled())
-        self.assertTrue(image_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertTrue(mask_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertTrue(mask_ctrl_widget.mask_save_in_modules_cb.isEnabled())
 
         # test loading meta data
         mediator = widget._mediator
@@ -792,16 +834,17 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onGeomFileChange('geometry/new_file')
         mediator.onGeomStackOnlyChange(False)
         quad_positions = [[1., 2.], [3., 4.], [5., 6.], [7., 8.]]
-        mediator.onGeomQuadPositionsChange(quad_positions)
+        mediator.onGeomCoordinatesChange(quad_positions)
         widget.loadMetaData()
         self.assertEqual("EXtra-geom", widget._assembler_cb.currentText())
         self.assertEqual('geometry/new_file', widget._geom_file_le.text())
         self.assertFalse(widget._stack_only_cb.isChecked())
-        self.assertListEqual(quad_positions, _parse_table_widget((widget._quad_positions_tb)))
+        self.assertListEqual(quad_positions, _parse_table_widget((widget._coordinates_tb)))
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
         self.assertEqual(0, tab.currentIndex())
+        mask_ctrl_widget = self.image_tool._mask_ctrl_widget
 
         TabIndex = self.image_tool.TabIndex
 
@@ -811,6 +854,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         tab.setCurrentIndex(TabIndex.GAIN_OFFSET)
         QTest.mouseClick(record_btn, Qt.LeftButton)  # start recording
         self.assertTrue(record_btn.isChecked())
+        self.assertFalse(mask_ctrl_widget.draw_mask_btn.isEnabled())
+        self.assertFalse(mask_ctrl_widget.erase_mask_btn.isEnabled())
 
         # switch to "reference"
         tab.tabBarClicked.emit(TabIndex.REFERENCE)
@@ -827,6 +872,12 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # switch to "geometry"
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)
         tab.setCurrentIndex(TabIndex.GEOMETRY)
+
+        # switch back to "corrected"
+        tab.tabBarClicked.emit(TabIndex.CORRECTED)
+        tab.setCurrentIndex(TabIndex.CORRECTED)
+        self.assertTrue(mask_ctrl_widget.draw_mask_btn.isEnabled())
+        self.assertTrue(mask_ctrl_widget.erase_mask_btn.isEnabled())
 
 
 class TestImageToolTs(unittest.TestCase):
@@ -875,16 +926,26 @@ class TestImageToolTs(unittest.TestCase):
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
 
-    def testImageCtrlWidget(self):
-        widget = self.image_tool._image_ctrl_widget
-        self.assertEqual(-1, widget.layout().indexOf(widget.mask_tile_cb))
+    def testMaskCtrlWidget(self):
+        widget = self.image_tool._mask_ctrl_widget
+
+        self.assertFalse(config["MASK_TILE_EDGE"])
+        self.assertFalse(config["MASK_ASIC_EDGE"])
+        # test default
+        self.assertFalse(widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_asic_cb.isChecked())
+        self.assertFalse(widget.mask_save_in_modules_cb.isChecked())
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onImageMaskTileEdgeChange(True)
+        mediator.onImageMaskAsicEdgeChange(True)
+        mediator.onImageMaskSaveInModulesToggled(True)
         widget.loadMetaData()
-        self.assertEqual(False, widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_asic_cb.isChecked())
+        self.assertFalse(widget.mask_save_in_modules_cb.isChecked())
 
     def testCalibrationCtrlWidget(self):
         widget = self.image_tool._calibration_view._ctrl_widget

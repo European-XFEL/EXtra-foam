@@ -42,11 +42,6 @@ class PlotWidgetF(pg.GraphicsView):
                  background='default', show_indicator=False, **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
-        try:
-            parent.registerPlotWidget(self)
-        except AttributeError:
-            # if parent is None or parent has no such a method
-            pass
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
@@ -80,6 +75,9 @@ class PlotWidgetF(pg.GraphicsView):
 
         self._plot_item.sigRangeChanged.connect(self.viewRangeChanged)
 
+        if parent is not None and hasattr(parent, 'registerPlotWidget'):
+            parent.registerPlotWidget(self)
+
     def clear(self):
         """Remove all the items in the PlotItem object."""
         plot_item = self._plot_item
@@ -94,6 +92,13 @@ class PlotWidgetF(pg.GraphicsView):
             except TypeError:
                 # FIXME: better solution
                 pass
+
+        if self._vb2 is not None:
+            for item in self._vb2.addedItems:
+                try:
+                    item.setData([], [])
+                except TypeError:
+                    pass
 
     @abc.abstractmethod
     def updateF(self, data):
@@ -117,10 +122,17 @@ class PlotWidgetF(pg.GraphicsView):
     def removeItem(self, *args, **kwargs):
         self._plot_item.removeItem(*args, **kwargs)
 
-    def plotCurve(self, *args, **kwargs):
+    def plotCurve(self, *args, y2=False, **kwargs):
         """Add and return a new curve plot."""
         item = pg.PlotCurveItem(*args, **kwargs)
-        self._plot_item.addItem(item)
+
+        if y2:
+            if self._vb2 is None:
+                self.createY2()
+            self._vb2.addItem(item)
+        else:
+            self._plot_item.addItem(item)
+
         return item
 
     def plotScatter(self, *args, **kwargs):

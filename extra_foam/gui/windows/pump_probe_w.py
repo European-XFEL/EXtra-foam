@@ -29,7 +29,7 @@ class PumpProbeImageView(ImageViewF):
         :param bool on: True for display the on image while False for
             displaying the off image.
         """
-        super().__init__(parent=parent)
+        super().__init__(has_roi=True, parent=parent)
 
         self._on = on
 

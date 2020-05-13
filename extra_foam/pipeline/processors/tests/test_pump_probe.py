@@ -208,12 +208,18 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         shape = (3, 2)
         image_mask = np.zeros(shape, dtype=np.bool)
         image_mask[1, 1] = True
-        return self.data_with_assembled(tid, (4, 3, 2),
-                                        image_mask=image_mask,
-                                        threshold_mask=(-100, 100),
-                                        poi_indices=[0, 0],
-                                        with_xgm=with_xgm,
-                                        with_digitizer=with_digitizer)
+        data, processed = self.data_with_assembled(
+            tid, (4, 3, 2),
+            image_mask=image_mask,
+            threshold_mask=(-100, 100),
+            poi_indices=[0, 0],
+            with_xgm=with_xgm,
+            with_digitizer=with_digitizer)
+        # remove attributes which are supposed to be set in PumpProbeProcessor
+        processed.image.mean = None
+        processed.image.masked_mean = None
+        processed.image.mask = None
+        return data, processed
 
     def testFomPulseFilter(self):
         proc = self._proc
@@ -320,12 +326,25 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
 
         data, processed = self._gen_data(1001)
         proc.process(data)
+        image_mean_gt = np.mean(data['assembled']['sliced'], axis=0)
+        np.testing.assert_array_almost_equal(processed.image.mean, image_mean_gt)
+        image_masked_mean_gt = np.copy(image_mean_gt)
+        image_masked_mean_gt[1, 1] = np.nan
+        mask_gt = np.isnan(image_masked_mean_gt)
+        np.testing.assert_array_almost_equal(processed.image.masked_mean, image_masked_mean_gt)
+        np.testing.assert_array_almost_equal(processed.image.mask, mask_gt)
+
         image_on_gt = np.mean(data['assembled']['sliced'][::2, :, :], axis=0)
         image_on_gt[1, 1] = np.nan
+        mask_on_gt = np.isnan(image_on_gt)
         np.testing.assert_array_almost_equal(processed.pp.image_on, image_on_gt)
+        np.testing.assert_array_almost_equal(processed.pp.on.mask, mask_on_gt)
         image_off_gt = np.mean(data['assembled']['sliced'][1::2, :, :], axis=0)
         image_off_gt[1, 1] = np.nan
+        mask_off_gt = np.isnan(image_off_gt)
         np.testing.assert_array_almost_equal(processed.pp.image_off, image_off_gt)
+        np.testing.assert_array_almost_equal(processed.pp.off.mask, mask_off_gt)
+
         # XGM and digitizer
         self.check_xgm(processed, 'on', [0, 2])
         self.check_xgm(processed, 'off', [1, 3])
@@ -397,10 +416,24 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         data, processed = self._gen_data(1003)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
+
+        image_mean_gt = np.mean(data['assembled']['sliced'], axis=0)
+        np.testing.assert_array_almost_equal(processed.image.mean, image_mean_gt)
+        image_masked_mean_gt = np.copy(image_mean_gt)
+        image_masked_mean_gt[1, 1] = np.nan
+        mask_gt = np.isnan(image_masked_mean_gt)
+        np.testing.assert_array_almost_equal(processed.image.masked_mean, image_masked_mean_gt)
+        np.testing.assert_array_almost_equal(processed.image.mask, mask_gt)
+
+        mask_on_gt = np.isnan(prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
+        np.testing.assert_array_almost_equal(processed.pp.on.mask, mask_on_gt)
         image_off_gt = np.mean(data['assembled']['sliced'][1::2, :, :], axis=0)
         image_off_gt[1, 1] = np.nan
+        mask_off_gt = np.isnan(image_off_gt)
         np.testing.assert_array_almost_equal(processed.pp.image_off, image_off_gt)
+        np.testing.assert_array_almost_equal(processed.pp.off.mask, mask_off_gt)
+
         # XGM and digitizer
         self.assertEqual(processed.pp.on.xgm_intensity, prev_xi_on)
         self.check_xgm(processed, 'off', [1, 3])

@@ -9,14 +9,11 @@ All rights reserved.
 """
 from string import Template
 
-import numpy as np
-
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 )
 
-from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..plot_widgets import HistMixin, ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
@@ -24,7 +21,7 @@ from ..ctrl_widgets import (
     RoiNormCtrlWidget, RoiHistCtrlWidget
 )
 from ..misc_widgets import FColor
-from ...config import AnalysisType, plot_labels
+from ...config import AnalysisType, MaskState, plot_labels
 
 
 class RoiProjPlot(PlotWidgetF):
@@ -142,10 +139,38 @@ class CorrectedView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImage(data.image)
             self._roi_proj_plot.updateF(data)
             self._roi_hist.updateF(data)
 
     @property
     def imageView(self):
         return self._corrected
+
+    @pyqtSlot()
+    def onSaveImage(self):
+        self._corrected.writeImage()
+
+    @pyqtSlot(bool)
+    def onDrawMask(self, state):
+        self._corrected.setMaskingState(MaskState.MASK, state)
+
+    @pyqtSlot(bool)
+    def onEraseMask(self, state):
+        self._corrected.setMaskingState(MaskState.UNMASK, state)
+
+    @pyqtSlot()
+    def onLoadMask(self):
+        self._corrected.loadImageMask()
+
+    @pyqtSlot()
+    def onSaveMask(self):
+        self._corrected.saveImageMask()
+
+    @pyqtSlot()
+    def onRemoveMask(self):
+        self._corrected.removeMask()
+
+    @pyqtSlot(bool)
+    def onMaskSaveInModulesChange(self, state):
+        self._corrected.setMaskSaveInModules(state)

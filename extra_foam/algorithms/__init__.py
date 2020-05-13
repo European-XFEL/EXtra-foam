@@ -23,7 +23,7 @@ from .azimuthal_integ import compute_q, energy2wavelength
 from .helpers import intersection
 
 from .imageproc_py import (
-    nanmean_image_data, correct_image_data, mask_image_data, image_with_mask,
+    nanmean_image_data, correct_image_data, mask_image_data,
     movingAvgImageData
 )
 
@@ -33,5 +33,7 @@ from .datamodel import (
     MovingAverageFloat, MovingAverageDouble
 )
 
-
+from .spectrum import (
+    compute_spectrum_1d
+)
 

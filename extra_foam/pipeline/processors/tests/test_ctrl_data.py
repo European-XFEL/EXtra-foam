@@ -29,7 +29,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
             item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1))
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
-            meta[src] = {'tid': 12346}
+            meta[src] = {'train_id': 12346}
             raw[src] = 0
             proc.process(data)
             raw[src] = 2
@@ -41,7 +41,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
             item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1))
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
-            meta[src] = {'tid': 12346}
+            meta[src] = {'train_id': 12346}
             raw[src] = 2
             # it will not raise for other sources
             proc.process(data)

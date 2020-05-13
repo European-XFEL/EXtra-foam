@@ -1,4 +1,5 @@
 import random
+import time
 
 import numpy as np
 
@@ -147,3 +148,73 @@ class _TestDataMixin:
             pass
 
         return processed
+
+
+class _RawDataMixin:
+    """Generate raw data used in test."""
+    @staticmethod
+    def _update_metadata(meta, src, timestamp, tid):
+        sec, frac = str(timestamp).split('.')
+        meta[src] = {
+            'source': src,
+            'timestamp': timestamp,
+            'timestamp.tid': tid,
+            'timestamp.sec': sec,
+            'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+        }
+        return meta
+
+    def _create_catalog(self, mapping):
+        """Generate source catalog.
+
+        :param dict mapping: a dictionary with keys being the device categories
+            and values being a list of (device ID, property).
+        """
+        catalog = SourceCatalog()
+        for ctg, srcs in mapping.items():
+            for src, ppt in srcs:
+                catalog.add_item(SourceItem(ctg, src, [], ppt, None, None))
+        return catalog
+
+    def _gen_kb_data(self, tid, mapping):
+        """Generate empty data in European XFEL data format.
+
+        :param int tid: train ID.
+        :param dict mapping: a dictionary with keys being the device IDs /
+            output channels and values being a list of (property, value).
+        """
+        meta, data = {}, {}
+
+        for src, ppts in mapping.items():
+            self._update_metadata(meta, src, time.time(), tid)
+
+            data[src] = dict()
+            for ppt, value in ppts:
+                data[src][ppt] = value
+
+        return data, meta
+
+    def _gen_data(self, tid, mapping, *, source_type=None):
+        """Generate empty data in EXtra-foam data format.
+
+        :param int tid: train ID.
+        :param dict mapping: a dictionary with keys being the device IDs /
+            output channels and values being the list of (property, value).
+        """
+        meta, data = {}, {}
+
+        for name, ppts in mapping.items():
+            for ppt, value in ppts:
+                if ".value" in ppt:
+                    # slow data from files
+                    ppt = ppt[:-6]
+                src = f"{name} {ppt}"
+                data[src] = value
+                meta[src] = {"train_id": tid, "source_type": source_type}
+
+        return {
+            "raw": data,
+            "processed": None,
+            "meta": meta,
+            "catalog": None,
+        }

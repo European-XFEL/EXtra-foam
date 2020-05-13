@@ -19,6 +19,7 @@ from extra_foam.special_suite.gotthard_w import (
 from extra_foam.special_suite.special_analysis_base import (
     ProcessingError
 )
+from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 
@@ -28,20 +29,19 @@ logger.setLevel('CRITICAL')
 class TestGotthard(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with patch("extra_foam.special_suite.special_analysis_base._SpecialAnalysisBase.startWorker"):
-            cls._win = GotthardWindow('MID')
+        cls._win = GotthardWindow('MID')
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
 
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(4, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[GotthardImageView])
@@ -49,23 +49,24 @@ class TestGotthard(unittest.TestCase):
         self.assertEqual(1, counter[GotthardPulsePlot])
         self.assertEqual(1, counter[GotthardHist])
 
-        win.updateWidgetsF()
+        win.updateWidgetsST()
 
     def testCtrl(self):
         from extra_foam.special_suite.gotthard_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
 
-        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
-
         win = self._win
-        ctrl_widget = win._ctrl_widget
-        proc = win._worker
+        ctrl_widget = win._ctrl_widget_st
+        proc = win._worker_st
 
         # test default values
         self.assertTrue(proc._output_channel)
         self.assertEqual(slice(None, None), proc._pulse_slicer)
         self.assertEqual(0, proc._poi_index)
         self.assertEqual(1, proc.__class__._raw_ma.window)
-        self.assertTupleEqual(default_bin_range, proc._bin_range)
+        self.assertEqual(0, proc._scale)
+        self.assertEqual(0, proc._offset)
+        self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
+                              proc._bin_range)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
         self.assertFalse(proc._hist_over_ma)
 
@@ -84,19 +85,35 @@ class TestGotthard(unittest.TestCase):
 
         widget = ctrl_widget.poi_index_le
         widget.clear()
-        QTest.keyClicks(widget, "121")
-        QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0, proc._poi_index)  # maximum is 120 and one can still type "121"
-        widget.clear()
         QTest.keyClicks(widget, "120")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(120, proc._poi_index)
+        self.assertEqual(0, proc._poi_index)  # maximum is 119 and one can still type "120"
+        widget.clear()
+        QTest.keyClicks(widget, "119")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(119, proc._poi_index)
 
         widget = ctrl_widget.ma_window_le
         widget.clear()
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual(9, proc.__class__._raw_ma.window)
+
+        widget = ctrl_widget.scale_le
+        widget.clear()
+        QTest.keyClicks(widget, "0.002")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(0.002, proc._scale)
+        widget.clear()
+        QTest.keyClicks(widget, "-1")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(1, proc._scale)  # cannot enter '-'
+
+        widget = ctrl_widget.offset_le
+        widget.clear()
+        QTest.keyClicks(widget, "-0.18")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(-0.18, proc._offset)
 
         widget = ctrl_widget.bin_range_le
         widget.clear()
@@ -118,7 +135,7 @@ class TestGotthard(unittest.TestCase):
         self.assertTrue(proc._hist_over_ma)
 
 
-class TestGotthardProcessor:
+class TestGotthardProcessor(_RawDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = GotthardProcessor(object(), object())
@@ -126,36 +143,21 @@ class TestGotthardProcessor:
         self._proc._output_channel = "gotthard:output"
         self._adc = np.random.randint(0, 100, size=(4, 4), dtype=np.uint16)
 
-    def _get_data(self, times=1):
+    def _get_data(self, tid, times=1):
         # data, meta
-        return (
-            {
-                self._proc._output_channel: {
-                    "metadata": {"timestamp.tid": 12345},
-                    GotthardProcessor._DATA_PROPERTY: self._adc * times,
-                    "data.3d": np.ones((4, 2, 2))
-                },
-            },
-            {}
-        )
+        return self._gen_data(tid, {
+            "gotthard:output": [
+                ("data.adc", times * self._adc),
+                ("data.3d", np.ones((4, 2, 2)))
+            ]})
 
     def testPreProcessing(self):
         proc = self._proc
-        data = self._get_data()
-
-        with pytest.raises(KeyError, match='false:output'):
-            with patch.object(GotthardProcessor, "_output_channel",
-                              new_callable=PropertyMock, create=True, return_value='false:output'):
-                proc.process(data)
-
-        with pytest.raises(ProcessingError, match="must contain property"):
-            with patch.object(GotthardProcessor, "_DATA_PROPERTY",
-                              new_callable=PropertyMock, return_value="false_ppt"):
-                proc.process(data)
+        data = self._get_data(12345)
 
         with pytest.raises(ProcessingError, match="actual 3D"):
-            with patch.object(GotthardProcessor, "_DATA_PROPERTY",
-                              new_callable=PropertyMock, return_value="data.3d"):
+            with patch.object(GotthardProcessor, "_ppt",
+                              new_callable=PropertyMock, create=True, return_value="data.3d"):
                 proc.process(data)
 
         with pytest.raises(ProcessingError, match="out of boundary"):
@@ -170,7 +172,7 @@ class TestGotthardProcessor:
             proc._pulse_slicer = slice(None, None, 2)
             proc.process(data)
 
-    @patch("extra_foam.special_suite.special_analysis_base.QThreadWorker._loadRunDirectory")
+    @patch("extra_foam.special_suite.special_analysis_base.QThreadWorker._loadRunDirectoryST")
     def testLoadDarkRun(self, load_run):
         proc = self._proc
 
@@ -185,6 +187,7 @@ class TestGotthardProcessor:
             data_collection.get_array.return_value = DataArray(np.random.randn(4, 3))
             proc.onLoadDarkRun("run/path")
             error.assert_called_once()
+            assert "Data must be a 3D array" in error.call_args[0][0]
             error.reset_mock()
 
             # get_array returns a correct shape
@@ -192,6 +195,7 @@ class TestGotthardProcessor:
             with patch.object(proc.log, "info") as info:
                 proc.onLoadDarkRun("run/path")
                 info.assert_called_once()
+                assert "Found dark data with shape" in info.call_args[0][0]
                 error.assert_not_called()
 
     def testProcessingWhenRecordingDark(self):
@@ -199,8 +203,8 @@ class TestGotthardProcessor:
 
         proc = self._proc
         assert 2147483647 == proc.__class__._dark_ma.window
-        proc._recording_dark = True
-        proc._subtract_dark = True  # take no effect
+        proc._recording_dark_st = True
+        proc._subtract_dark_st = True  # take no effect
         proc._poi_index = 0
 
         adc_gt = self._adc.astype(_PIXEL_DTYPE)
@@ -208,33 +212,37 @@ class TestGotthardProcessor:
         adc_gt_avg = 1.5 * self._adc
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         np.testing.assert_array_almost_equal(adc_gt, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
-        processed = proc.process(self._get_data(2))
+        processed = proc.process(self._get_data(12346, 2))
         np.testing.assert_array_almost_equal(adc_gt_avg, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), proc._dark_mean_ma)
         assert 0 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt_avg, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt2, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt_avg, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt2) == processed["hist"][2]
 
         # 3nd train
         proc._hist_over_ma = True
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         np.testing.assert_array_almost_equal(adc_gt2, proc._dark_ma)
         np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), proc._dark_mean_ma)
         assert np.mean(adc_gt2) == processed["hist"][2]
+
+        # reset
+        proc.reset()
+        assert proc._dark_ma is None
 
     @pytest.mark.parametrize("subtract_dark", [(True, ), (False,)])
     def testProcessing(self, subtract_dark):
@@ -243,6 +251,8 @@ class TestGotthardProcessor:
         proc = self._proc
         proc._recording_dark = False
         proc._poi_index = 1
+        proc._scale = 0.1
+        proc._offset = 0.2
 
         proc._subtract_dark = subtract_dark
         offset = np.ones(self._adc.shape[1]).astype(np.float32)
@@ -258,28 +268,43 @@ class TestGotthardProcessor:
             adc_gt_avg -= offset
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         assert 1 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt) == processed["hist"][2]
 
         # 2nd train
-        proc._setMaWindow(3)
-        processed = proc.process(self._get_data(2))
+        proc.__class__._raw_ma.window = 3
+        processed = proc.process(self._get_data(12346, 2))
         assert 1 == processed["poi_index"]
-        np.testing.assert_array_almost_equal(adc_gt2, processed["displayed"])
-        np.testing.assert_array_almost_equal(adc_gt_avg, processed["displayed_ma"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["mean"])
-        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["mean_ma"])
+        np.testing.assert_array_almost_equal(adc_gt2, processed["spectrum"])
+        np.testing.assert_array_almost_equal(adc_gt_avg, processed["spectrum_ma"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt2, axis=0), processed["spectrum_mean"])
+        np.testing.assert_array_almost_equal(np.mean(adc_gt_avg, axis=0), processed["spectrum_ma_mean"])
         assert np.mean(adc_gt2) == processed["hist"][2]
 
         # 3nd train
         proc._hist_over_ma = True
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         assert np.mean(adc_gt2) == processed["hist"][2]
+
+        # reset
+        proc.reset()
+        assert proc._raw_ma is None
+
+    def testCalibration(self):
+        proc = self._proc
+
+        processed = proc.process(self._get_data(12345))
+        assert processed["x"] is None
+
+        proc._scale = 0.1
+        proc._offset = 0.2
+        processed = proc.process(self._get_data(12345))
+        np.testing.assert_array_almost_equal(np.arange(len(self._adc)) * 0.1 - 0.2, processed['x'])
 
     def testPulseSlicerChange(self):
         proc = self._proc

@@ -22,20 +22,19 @@ logger.setLevel('CRITICAL')
 class TestModuleScan(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with patch("extra_foam.special_suite.special_analysis_base._SpecialAnalysisBase.startWorker"):
-            cls._win = ModuleScanWindow('DET')
+        cls._win = ModuleScanWindow('DET')
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
 
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(1, len(win._plot_widgets))
+        self.assertEqual(1, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         # self.assertEqual(1, counter[GotthardImageView])
@@ -43,12 +42,12 @@ class TestModuleScan(unittest.TestCase):
         # self.assertEqual(1, counter[GotthardPulsePlot])
         # self.assertEqual(1, counter[GotthardHist])
         #
-        # win.updateWidgetsF()
+        # win.updateWidgetsST()
 
     def testCtrl(self):
         win = self._win
-        widget = win._ctrl_widget
-        proc = win._worker
+        widget = win._ctrl_widget_st
+        proc = win._worker_st
 
 
 class TestModuleScanProcessor:

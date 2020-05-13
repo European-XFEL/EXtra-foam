@@ -12,15 +12,16 @@ import multiprocessing as mp
 from queue import Empty, Full
 import time
 
+from .f_transformer import DataTransformer
 from .f_zmq import BridgeProxy, FoamZmqServer
-from .f_queue import CorrelateQueue, SimpleQueue
+from .f_queue import SimpleQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
 from ..utils import profiler, run_in_thread
 from ..ipc import RedisSubscriber
 from ..ipc import process_logger as logger
 from ..database import (
-    DataTransformer, MetaProxy, MonProxy, SourceCatalog, SourceItem
+    MetaProxy, MonProxy, SourceCatalog
 )
 from ..database import Metadata as mt
 
@@ -121,8 +122,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
         self._catalog = SourceCatalog()
 
-        # override SimpleQueue
-        self._cache = CorrelateQueue(self._catalog, maxsize=1)
+        self._transformer = DataTransformer(self._catalog)
 
     def _update_source_items(self):
         """Updated requested source items."""
@@ -140,15 +140,14 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                 modules = item['modules']
                 slicer = item['slicer']
                 vrange = item['vrange']
-
-                self._catalog.add_item(SourceItem(
+                self._catalog.add_item(
                     category,
                     item['name'],
                     self.str2list(modules, handler=int)
                     if modules else None,
                     item['property'],
                     self.str2slice(slicer) if slicer else None,
-                    self.str2tuple(vrange) if vrange else None))
+                    self.str2tuple(vrange) if vrange else None)
             else:
                 # remove a source item
                 if src not in self._catalog:
@@ -177,15 +176,16 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
     @run_in_thread(daemon=True)
     def run(self):
         """Override."""
-        data_in = None
-        again = False
+        correlated = None
         proxy = BridgeProxy()
+        src_type = DataSource.UNKNOWN
         while not self.closing:
             if self.updating:
                 client, src_type = self._update_connection(proxy)
 
-                data_in = None
+                correlated = None
                 self.clear()
+                self._transformer.reset()
                 self.finish_updating()
 
             # this cannot be in a thread since SourceCatalog is not thread-safe
@@ -198,29 +198,31 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     time.sleep(1)  # sleep a little long
                     continue
 
-                if data_in is None:
+                if correlated is None:
                     try:
                         # always pull the latest data from the bridge
-                        raw, meta = self._recv_imp(proxy.client)
+                        data = self._recv_imp(proxy.client)
 
-                        self._update_available_sources(meta)
+                        self._update_available_sources(data[1])
 
-                        # extract new raw and meta
-                        new_raw, new_meta, _ = DataTransformer.transform_euxfel(
-                            raw, meta, catalog=self._catalog, source_type=src_type)
-
-                        data_in = {"meta": new_meta, "raw": new_raw}
-                        again = False
+                        try:
+                            correlated, dropped = self._transformer.correlate(
+                                data, source_type=src_type)
+                            for tid, err in dropped:
+                                logger.error(err)
+                        except Exception as e:
+                            # To be on the safe side since any Exception here
+                            # will stop the thread
+                            logger.error(str(e))
                     except TimeoutError:
                         pass
 
-                if data_in is not None:
+                if correlated is not None:
                     try:
-                        self._cache.put(data_in, again=again)
-                        data_in = None
-                        again = False
+                        self._cache.put(correlated)
+                        correlated = None
                     except Full:
-                        again = True
+                        pass
 
             time.sleep(0.001)
 

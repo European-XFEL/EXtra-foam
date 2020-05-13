@@ -36,15 +36,32 @@ does not have to set up the streamer again when restarting **EXtra-foam**.
 |                            | it is the same as the port specified in the :ref:`Data source`     |
 |                            | panel in the main GUI.                                             |
 +----------------------------+--------------------------------------------------------------------+
-| ``Start``                  | Press to start streaming.                                          |
+| ``Stream once``            | Press to stream the data in the run folder once.                   |
 +----------------------------+--------------------------------------------------------------------+
-| ``Terminate``              | Press to terminate streaming. If ``Start`` is pressed again,       |
-|                            | the data will be streamed from the beginning                       |
-+----------------------------+--------------------------------------------------------------------+
-| ``Repeat stream``          | When checked, if the stream reaches the end of the data, the       |
+| ``Stream repeatedly``      | Press to stream the data in the run folder repeatedly.             |
+|                            | If the stream reaches the end of the data, the                     |
 |                            | stream will restart from the beginning with a faked *train ID*,    |
 |                            | which ensures that the *train ID* continuously increases in the    |
 |                            | new cycle. This feature is only useful for developers.             |
++----------------------------+--------------------------------------------------------------------+
+| ``Stop stream``            | Press to stop streaming.                                           |
++----------------------------+--------------------------------------------------------------------+
+| ``Mode``                   | Stream mode:                                                       |
+|                            |                                                                    |
+|                            | - ``Normal``:                                                      |
+|                            |                                                                    |
+|                            |   Sources in a train are streamed together.                        |
+|                            |                                                                    |
+|                            | - ``Random shuffle``:                                              |
+|                            |                                                                    |
+|                            |   Sources in a train are streamed one by one and the order is      |
+|                            |   random.                                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``First train ID``         | Slide to change the first train ID to stream.                      |
++----------------------------+--------------------------------------------------------------------+
+| ``Last train ID``          | Slide to change the last train ID to stream.                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Stride``                 | Train ID stride used to slice trains to stream.                    |
 +----------------------------+--------------------------------------------------------------------+
 
 .. note::
@@ -65,21 +82,25 @@ Sample run directories
 +------------+---------------------------------------------------+------------------------------------------+
 |            | Run directory                                     | Description                              |
 +============+===================================================+==========================================+
-| AGIPD      | /gpfs/exfel/d/raw/SPB/201931/p900086/r0009        | 250 pulses                               |
-+------------+---------------------------------------------------+------------------------------------------+
-|            | /gpfs/exfel/exp/SPB/201831/p900039/proc/r0273     | Nice ring, 176 pulses                    |
+| AGIPD      | /gpfs/exfel/exp/SPB/201831/p900039/proc/r0273     | ring; 176 pulses                         |
 +------------+---------------------------------------------------+------------------------------------------+
 | LPD        | /gpfs/exfel/exp/FXE/201802/p002218/raw/r0229      | ring, 100 pulses                         |
 |            +---------------------------------------------------+------------------------------------------+
 |            | /gpfs/exfel/exp/FXE/201802/p002218/proc/r0229     | ring, 100 pulses                         |
 +------------+---------------------------------------------------+------------------------------------------+
-| DSSC       | /gpfs/exfel/exp/SCS/201901/p002212/raw/r0061      | pump-probe, 70 pulses                    |
+| DSSC       | /gpfs/exfel/exp/SCS/201901/p002212/raw/r0061      | pump-probe; 70 pulses                    |
 |            +---------------------------------------------------+------------------------------------------+
-|            | /gpfs/exfel/exp/SCS/201901/p002212/raw/r0059      | pump-probe (dark), 70 pulses             |
+|            | /gpfs/exfel/exp/SCS/201901/p002212/raw/r0059      | pump-probe (dark of r0061)               |
+|            +---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/SCS/201901/p002161/raw/r0093      | tr-XAS, single module, 50 pulses         |
+|            +---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/SCS/201901/p002161/raw/r0095      | tr-XAS (dark of r0093)                   |
 +------------+---------------------------------------------------+------------------------------------------+
 | JungFrau   | /gpfs/exfel/exp/FXE/201930/p900063/proc/r1051     | pump-probe                               |
 |            +---------------------------------------------------+------------------------------------------+
 |            | /gpfs/exfel/exp/FXE/201930/p900063/raw/r1051      | pump-probe                               |
+|            +---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/SPB/201922/p002566/proc/r0061     | Burst mode; ring; 6 modules              |
 +------------+---------------------------------------------------+------------------------------------------+
 | FastCCD    | /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141     |                                          |
 |            +---------------------------------------------------+------------------------------------------+
@@ -88,4 +109,8 @@ Sample run directories
 | Gotthard   | /gpfs/exfel/exp/MID/201931/p900090/raw/r0395      | Test data                                |
 |            +---------------------------------------------------+------------------------------------------+
 |            | /gpfs/exfel/exp/MID/201931/p900090/raw/r0300      | Test data (dark)                         |
+|            +---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/SCS/201931/p900094/raw/r0647      | pump-probe                               |
++------------+---------------------------------------------------+------------------------------------------+
+| XAS-TIM    | /gpfs/exfel/exp/SCS/201931/p900094/raw/r0491      | XMCD, 42 pulses/train, APD stride = 1    |
 +------------+---------------------------------------------------+------------------------------------------+

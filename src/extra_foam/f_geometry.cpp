@@ -21,60 +21,109 @@
 namespace py = pybind11;
 
 
-template<typename Geometry>
-void declare_1MGeometry(py::module &m, std::string&& detector)
+template<typename Detector>
+void declareGeometry(py::module &m, const std::string& detector_name)
 {
-  using GeometryBase = foam::Detector1MGeometryBase<Geometry>;
-  const std::string py_base_class_name = detector + std::string("_Detector1MGeometryBase");
+  const std::string py_class_name = detector_name + std::string("Geometry");
+  using Geometry = foam::DetectorGeometry<Detector>;
 
-  py::class_<GeometryBase> base(m, py_base_class_name.c_str());
+  py::class_<Geometry> cls(m, py_class_name.c_str());
 
-#define FOAM_POSITION_ALL_MODULES_IMP(VALUE_TYPE)                                                         \
-  base.def("positionAllModules",                                                                          \
-  (void (GeometryBase::*)(const xt::pytensor<VALUE_TYPE, 4>&, xt::pytensor<float, 3>&, bool) const)       \
-    &GeometryBase::positionAllModules,                                                                    \
-    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
+  cls.def(py::init<size_t, size_t, foam::GeometryLayout>(),
+          py::arg("n_rows"), py::arg("n_columns"), py::arg("layout") = foam::GeometryLayout::TopRightCW)
+    .def(py::init<size_t, size_t, const std::vector<std::array<double, 3>>&, foam::GeometryLayout>(),
+         py::arg("n_rows"), py::arg("n_columns"), py::arg("positions"),
+         py::arg("layout") = foam::GeometryLayout::TopRightCW)
+    .def("nModules", &Geometry::nModules)
+    .def("assembledShape", &Geometry::assembledShape)
+    .def_readonly_static("pixel_size", &Detector::pixel_size)
+    .def_readonly_static("module_shape", &Detector::module_shape)
+    .def_readonly_static("asic_shape", &Detector::asic_shape)
+    .def_readonly_static("asic_grid_shape", &Detector::asic_grid_shape);
 
-  FOAM_POSITION_ALL_MODULES_IMP(float)
-  FOAM_POSITION_ALL_MODULES_IMP(uint16_t)
+#define FOAM_POSITION_ALL_MODULES_SINGLE_IMP(SRC_TYPE, DST_TYPE)                                      \
+  cls.def("positionAllModules",                                                                       \
+    (void (Geometry::*)(const xt::pytensor<SRC_TYPE, 3>&, xt::pytensor<DST_TYPE, 2>&, bool) const)    \
+    &Geometry::positionAllModules,                                                                    \
+    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_asic_edge") = false);
 
-#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(VALUE_TYPE)                                                        \
-  base.def("positionAllModules",                                                                                    \
-    (void (GeometryBase::*)(const std::vector<xt::pytensor<VALUE_TYPE, 3>>&, xt::pytensor<float, 3>&, bool) const)  \
-    &GeometryBase::positionAllModules,                                                                              \
-    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(int16_t, float) // for ePix100
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool, bool)
 
-  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(float)
-  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t)
+#define FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(SRC_TYPE, DST_TYPE)                                          \
+  cls.def("positionAllModules",                                                                                  \
+    (void (Geometry::*)(const std::vector<xt::pytensor<SRC_TYPE, 2>>&, xt::pytensor<DST_TYPE, 2>&, bool) const)  \
+    &Geometry::positionAllModules,                                                                               \
+    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_asic_edge") = false);
 
-  base.def("assembledShape", &GeometryBase::assembledShape)
-    .def_readonly_static("n_quads", &GeometryBase::n_quads)
-    .def_readonly_static("n_modules", &GeometryBase::n_modules)
-    .def_readonly_static("n_modules_per_quad", &GeometryBase::n_modules_per_quad);
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(int16_t, float) // for ePix100
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_SINGLE_VECTOR_IMP(bool, bool)
 
-  const std::string py_class_name = detector + std::string("_1MGeometry");
+#define FOAM_POSITION_ALL_MODULES_IMP(SRC_TYPE, DST_TYPE)                                                   \
+  cls.def("positionAllModules",                                                                             \
+    (void (Geometry::*)(const xt::pytensor<SRC_TYPE, 4>&, xt::pytensor<DST_TYPE, 3>&, bool) const)          \
+    &Geometry::positionAllModules,                                                                          \
+    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_asic_edge") = false);
 
-  py::class_<Geometry, GeometryBase> cls(m, py_class_name.c_str());
+  FOAM_POSITION_ALL_MODULES_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_IMP(bool, bool)
 
-  cls.def(py::init())
-    .def(py::init<const std::array<std::array<std::array<double, 3>, Geometry::n_tiles_per_module>, Geometry::n_modules> &>())
-    .def_static("pixelSize", []() { return xt::pytensor<double, 1>(Geometry::pixelSize()); } )
-    .def_readonly_static("module_shape", &Geometry::module_shape)
-    .def_readonly_static("tile_shape", &Geometry::tile_shape)
-    .def_readonly_static("n_tiles_per_module", &Geometry::n_tiles_per_module)
-    .def_readonly_static("quad_orientations", &Geometry::quad_orientations);
+#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(SRC_TYPE, DST_TYPE)                                             \
+  cls.def("positionAllModules",                                                                                  \
+    (void (Geometry::*)(const std::vector<xt::pytensor<SRC_TYPE, 3>>&, xt::pytensor<DST_TYPE, 3>&, bool) const)  \
+    &Geometry::positionAllModules,                                                                               \
+    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_asic_edge") = false);
 
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, bool)
+
+#define FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(SRC_TYPE, DST_TYPE)                                  \
+  cls.def("dismantleAllModules",                                                                   \
+  (void (Geometry::*)(const xt::pytensor<SRC_TYPE, 2>&, xt::pytensor<DST_TYPE, 3>&) const)         \
+    &Geometry::dismantleAllModules,                                                                \
+    py::arg("src").noconvert(), py::arg("dst").noconvert());
+
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(float, float)
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(uint16_t, uint16_t)
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(bool, bool)
+
+#define FOAM_DISMANTLE_ALL_MODULES(SRC_TYPE, DST_TYPE)                                             \
+  cls.def("dismantleAllModules",                                                                   \
+  (void (Geometry::*)(const xt::pytensor<SRC_TYPE, 3>&, xt::pytensor<DST_TYPE, 4>&) const)         \
+    &Geometry::dismantleAllModules,                                                                \
+    py::arg("src").noconvert(), py::arg("dst").noconvert());
+
+  FOAM_DISMANTLE_ALL_MODULES(float, float)
+  FOAM_DISMANTLE_ALL_MODULES(uint16_t, uint16_t)
+  FOAM_DISMANTLE_ALL_MODULES(bool, bool)
 }
 
 PYBIND11_MODULE(geometry, m)
 {
   xt::import_numpy();
 
-  m.doc() = "Detector geometry.";
+  m.doc() = "Generalized detector geometry.";
 
-  declare_1MGeometry<foam::AGIPD_1MGeometry>(m, "AGIPD");
+  py::enum_<foam::GeometryLayout>(m, "GeometryLayout", py::arithmetic())
+    .value("TopRightCW", foam::GeometryLayout::TopRightCW)
+    .value("BottomRightCCW", foam::GeometryLayout::BottomRightCCW)
+    .value("BottomLeftCW", foam::GeometryLayout::BottomLeftCW)
+    .value("TopLeftCCW", foam::GeometryLayout::TopLeftCCW);
 
-  declare_1MGeometry<foam::LPD_1MGeometry>(m, "LPD");
-
-  declare_1MGeometry<foam::DSSC_1MGeometry>(m, "DSSC");
+  declareGeometry<foam::JungFrau>(m, "JungFrau");
+  declareGeometry<foam::EPix100>(m, "EPix100");
 }

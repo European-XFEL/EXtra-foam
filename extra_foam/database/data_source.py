@@ -29,6 +29,10 @@ class SourceCatalog(abc.Collection):
 
     Served as a catalog for searching data sources.
     """
+
+    TRAIN_ID = "META timestamp.tid"
+    _meta = (TRAIN_ID,)
+
     def __init__(self):
         super().__init__()
 
@@ -40,9 +44,9 @@ class SourceCatalog(abc.Collection):
         self._main_detector_category = config["DETECTOR"]
         self._main_detector = ''
 
-    def __contains__(self, item):
+    def __contains__(self, src):
         """Override."""
-        return self._items.__contains__(item)
+        return self._items.__contains__(src) or self._meta.__contains__(src)
 
     def __len__(self):
         """Override."""
@@ -67,6 +71,9 @@ class SourceCatalog(abc.Collection):
 
     def get_category(self, src):
         return self._items[src].category
+
+    def get_modules(self, src):
+        return self._items[src].modules
 
     def get_slicer(self, src):
         return self._items[src].slicer
@@ -129,73 +136,3 @@ class SourceCatalog(abc.Collection):
     def __repr__(self):
         return f'SourceCatalog(main_detector={self._main_detector}, ' \
                f'n_items={self.__len__()})'
-
-
-class DataTransformer:
-    """DataTransformer class.
-
-    Transform external data format to EXtra-foam compatible data
-    format for further processing.
-    """
-    @classmethod
-    def transform_euxfel(cls, raw, meta, *, catalog=None, source_type=None):
-        """Transform European XFEL data.
-
-        :param dict raw: raw data.
-        :param dict meta: meta data.
-        :param SourceCatalog catalog: catalog for data source items.
-        :param DataSource source_type: the format of the main detector
-            source.
-
-        :raises: this method should not raise!!!
-        """
-        new_raw, new_meta = dict(), dict()
-        not_found = []
-        for src, item in catalog.items():
-            ctg, src_name, modules, src_ppt = \
-                item.category, item.name, item.modules, item.property
-
-            if modules:
-                prefix, suffix = src_name.split("*")
-                new_raw[src] = dict()
-                module_data = new_raw[src]
-                n_found = 0
-                i_found = None
-                for idx in modules:
-                    module_name = f"{prefix}{idx}{suffix}"
-                    if module_name in raw:
-                        module_data[module_name] = raw[module_name]
-                        n_found += 1
-                        i_found = module_name
-
-                if n_found == 0:
-                    # there is no module data
-                    not_found.append(src)
-                    continue
-                else:
-                    new_meta[src] = {
-                        'tid': meta[i_found]['timestamp.tid'],
-                        'source_type': source_type,
-                    }
-            else:
-                try:
-                    # caveat: the sequence matters because of property
-                    try:
-                        new_raw[src] = raw[src_name][src_ppt]
-                    except KeyError:
-                        new_raw[src] = raw[src_name][f"{src_ppt}.value"]
-                except KeyError:
-                    # if the requested source or property is not in the data
-                    not_found.append(src)
-                    continue
-
-                new_meta[src] = {
-                    'tid': meta[src_name]['timestamp.tid'],
-                    'source_type': source_type,
-                }
-
-        # We keep the source item in catalog even if it was not found in
-        # the data since it is common when the data is arriving from different
-        # endpoints.
-
-        return new_raw, new_meta, not_found

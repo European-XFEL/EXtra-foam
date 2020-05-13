@@ -47,5 +47,8 @@ def create_logger(name):
 logger = create_logger("EXtra-foam")
 logger.setLevel(logging.INFO)
 
+logger_stream = create_logger("EXtra-foam-stream")
+logger_stream.setLevel(logging.INFO)
+
 logger_suite = create_logger("EXtra-foam-special-suite")
 logger_suite.setLevel(logging.INFO)

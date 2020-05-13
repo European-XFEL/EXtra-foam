@@ -3,13 +3,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from extra_foam.offline import (
-    run_info, gather_sources, load_runs, serve_files
+    run_info, gather_sources, load_runs
 )
 
 
 class TestFileServer:
     def testRunInfo(self):
-        assert run_info(None) == ""
+        assert run_info(None) == (0, -1, -1)
 
     def testLoadRuns(self):
         with pytest.raises(ValueError):
@@ -116,6 +116,3 @@ class TestFileServer:
         assert ret[2] == {
             "FXE_SMS_USR/MOTOR/UM01": ['actualPosition.value', '*', 'tolerance.value']
         }
-
-    def testServeFile(self):
-        pass

@@ -32,7 +32,7 @@ class Bin1dHist(TimedPlotWidgetF):
         self._default_y2_label = "Count"
 
         self._count_plot = self.plotBar(
-            y2=True, brush=FColor.mkBrush('w', alpha=50))
+            y2=True, brush=FColor.mkBrush('i', alpha=70))
         self._fom_plot = self.plotStatisticsBar(line=True)
 
         self._source = ""
@@ -71,7 +71,7 @@ class Bin1dHeatmap(TimedImageViewF):
 
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        super().__init__(hide_axis=False, parent=parent)
 
         self.invertY(False)
         self.setAspectLocked(False)
@@ -138,7 +138,7 @@ class Bin2dHeatmap(TimedImageViewF):
 
         :param bool count: True for count plot and False for value plot.
         """
-        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        super().__init__(hide_axis=False, parent=parent)
 
         self._count = count
 

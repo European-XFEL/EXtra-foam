@@ -9,13 +9,14 @@ All rights reserved.
 """
 import numpy as np
 
-from .special_analysis_base import ProcessingError, QThreadWorker
-from ..pipeline.data_model import MovingAverageArray
-from ..utils import profiler
-from ..config import config, _MAX_INT32
+from extra_foam.algorithms import hist_with_stats
+from extra_foam.pipeline.data_model import MovingAverageArray
 
+from .config import _IMAGE_DTYPE, _MAX_INT32
+from .special_analysis_base import profiler, QThreadWorker
 
-_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
+_DEFAULT_N_BINS = 10
+_DEFAULT_BIN_RANGE = "-inf, inf"
 
 
 class CamViewProcessor(QThreadWorker):
@@ -28,6 +29,8 @@ class CamViewProcessor(QThreadWorker):
             Shape=(y, x)
         _dark_ma (numpy.ndarray): moving average of the dark data.
             Shape=(pulses, pixels)
+        _bin_range (tuple): range of the ROI histogram.
+        _n_bins (int): number of bins of the ROI histogram.
     """
 
     _raw_ma = MovingAverageArray()
@@ -39,12 +42,12 @@ class CamViewProcessor(QThreadWorker):
         self._output_channel = ''
         self._ppt = ''
 
-        self._setMaWindow(1)
+        self.__class__._raw_ma.window = 1
+
+        self._bin_range = self.str2range(_DEFAULT_BIN_RANGE)
+        self._n_bins = _DEFAULT_N_BINS
 
         del self._dark_ma
-
-    def _setMaWindow(self, v):
-        self.__class__._raw_ma.window = v
 
     def onOutputChannelChanged(self, value: str):
         self._output_channel = value
@@ -53,15 +56,21 @@ class CamViewProcessor(QThreadWorker):
         self._ppt = value
 
     def onMaWindowChanged(self, value: str):
-        self._setMaWindow(int(value))
+        self.__class__._raw_ma.window = int(value)
 
     def onRemoveDark(self):
         """Override."""
         del self._dark_ma
 
+    def onBinRangeChanged(self, value: tuple):
+        self._bin_range = value
+
+    def onNoBinsChanged(self, value: str):
+        self._n_bins = int(value)
+
     def onLoadDarkRun(self, dirpath):
         """Override."""
-        run = self._loadRunDirectory(dirpath)
+        run = self._loadRunDirectoryST(dirpath)
         if run is not None:
             try:
                 arr = run.get_array(self._output_channel, self._ppt)
@@ -78,27 +87,31 @@ class CamViewProcessor(QThreadWorker):
                 self.log.error(f"Unexpect exception when getting data array: "
                                f"{repr(e)}")
 
-    @profiler("Module scan Processor")
+    def sources(self):
+        """Override."""
+        return [
+            (self._output_channel, self._ppt),
+        ]
+
+    @profiler("Camera view processor")
     def process(self, data):
         """Override."""
-        data, _ = data
+        data, meta = data["raw"], data["meta"]
 
-        data = data[self._output_channel]
-        tid = data['metadata']["timestamp.tid"]
+        tid = self.getTrainId(meta)
 
-        img = data[self._ppt].astype(_IMAGE_DTYPE)
+        img = self.squeezeToImage(
+            tid, self.getPropertyData(data, self._output_channel, self._ppt))
+        if img is None:
+            return
 
-        if img.ndim != 2:
-            raise ProcessingError(f"Image data must be a 2D array: "
-                                  f"actual {img.ndim}D")
-
-        if self._recording_dark:
+        if self.recordingDark():
             self._dark_ma = img
             displayed = self._dark_ma
         else:
             self._raw_ma = img
             displayed = self._raw_ma
-            if self._subtract_dark and self._dark_ma is not None:
+            if self.subtractDark() and self._dark_ma is not None:
                 # caveat: cannot subtract inplace
                 displayed = displayed - self._dark_ma
 
@@ -106,4 +119,11 @@ class CamViewProcessor(QThreadWorker):
 
         return {
             "displayed": displayed,
+            "roi_hist": hist_with_stats(self.getRoiData(displayed),
+                                        self._bin_range, self._n_bins),
         }
+
+    def reset(self):
+        """Override."""
+        del self._raw_ma
+        del self._dark_ma

@@ -20,6 +20,8 @@ from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom
 from extra_foam.pipeline.tests import _TestDataMixin
 
 
+# here we use numpy functions to calculate the ground truth
+
 def _normalized_nanstd(*args, **kwargs):
     return np.nanstd(*args, **kwargs) / np.nanmean(*args, **kwargs)
 
@@ -80,7 +82,8 @@ class TestImageRoiPulse(_TestDataMixin):
         assert list(roi.geom3.geometry) == proc._geom3
         assert list(roi.geom4.geometry) == proc._geom4
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -92,7 +95,7 @@ class TestImageRoiPulse(_TestDataMixin):
                 proc._norm_type = norm_type
                 proc.process(data)
                 s = self._get_roi_slice(getattr(proc, geom))
-                fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
+                fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-2, -1))
                 np.testing.assert_array_almost_equal_nulp(fom_gt, processed.pulse.roi.norm)
 
             for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
@@ -101,9 +104,9 @@ class TestImageRoiPulse(_TestDataMixin):
                 proc._norm_type = norm_type
                 proc.process(data)
                 s3 = self._get_roi_slice(proc._geom3)
-                fom3_gt = fom_handler(data['assembled']['sliced'][:, s3[0], s3[1]], axis=(-1, -2))
+                fom3_gt = fom_handler(data['assembled']['sliced'][:, s3[0], s3[1]], axis=(-2, -1))
                 s4 = self._get_roi_slice(proc._geom4)
-                fom4_gt = fom_handler(data['assembled']['sliced'][:, s4[0], s4[1]], axis=(-1, -2))
+                fom4_gt = fom_handler(data['assembled']['sliced'][:, s4[0], s4[1]], axis=(-2, -1))
                 if norm_combo == RoiCombo.ROI3_SUB_ROI4:
                     np.testing.assert_array_almost_equal(fom3_gt - fom4_gt, processed.pulse.roi.norm, decimal=4)
                 else:
@@ -114,7 +117,8 @@ class TestImageRoiPulse(_TestDataMixin):
             proc.process(data)
             assert processed.pulse.roi.norm is None
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFom(self, fom_type, fom_handler):
         proc = self._proc
         proc._fom_norm = Normalizer.UNDEFINED
@@ -277,8 +281,8 @@ class TestImageRoiTrain(_TestDataMixin):
         # set processed.roi.geom{1, 2, 3, 4}
         proc._process_hist = MagicMock()  # it does not affect train-resolved analysis
         proc.process(data)
-        processed.pp.image_on = np.random.randn(*shape).astype(np.float32)
-        processed.pp.image_off = np.random.randn(*shape).astype(np.float32)
+        processed.pp.image_on = 100 * np.random.randn(*shape).astype(np.float32) + 1.
+        processed.pp.image_off = 100 * np.random.randn(*shape).astype(np.float32)
         return data, processed
 
     def _get_roi_slice(self, geom):
@@ -307,7 +311,8 @@ class TestImageRoiTrain(_TestDataMixin):
                     proc.process(data)
                     mocked_p_norm_pp.assert_called_once()
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -317,7 +322,8 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._norm_type = norm_type
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            assert fom_handler(processed.image.masked_mean[s[0], s[1]]) == pytest.approx(processed.roi.norm)
+            assert fom_handler(processed.image.masked_mean[s[0], s[1]]) == \
+                   pytest.approx(processed.roi.norm)
 
         for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
             data, processed = self._get_data()
@@ -329,11 +335,12 @@ class TestImageRoiTrain(_TestDataMixin):
             s4 = self._get_roi_slice(processed.roi.geom4.geometry)
             fom4_gt = fom_handler(processed.image.masked_mean[s4[0], s4[1]])
             if norm_combo == RoiCombo.ROI3_SUB_ROI4:
-                assert fom3_gt - fom4_gt == pytest.approx(processed.roi.norm)
+                assert fom3_gt - fom4_gt == pytest.approx(processed.roi.norm, rel=1e-4)
             else:
-                assert fom3_gt + fom4_gt == pytest.approx(processed.roi.norm)
+                assert fom3_gt + fom4_gt == pytest.approx(processed.roi.norm, rel=1e-4)
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     @pytest.mark.parametrize("normalizer, norm", [(Normalizer.UNDEFINED, 1),
                                                   (Normalizer.ROI, 2.),
                                                   (Normalizer.XGM, 4.),
@@ -360,7 +367,7 @@ class TestImageRoiTrain(_TestDataMixin):
                 proc.process(data)
                 s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
                 assert fom_handler(processed.image.masked_mean[s[0], s[1]])/norm == \
-                       pytest.approx(processed.roi.fom)
+                       pytest.approx(processed.roi.fom, rel=1e-4)
 
             for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
                 data, processed = self._get_data()
@@ -524,7 +531,8 @@ class TestImageRoiTrain(_TestDataMixin):
         proc._process_fom_pump_probe.assert_not_called()
         proc._process_proj_pump_probe.assert_not_called()
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNormPumpProbe(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -536,9 +544,9 @@ class TestImageRoiTrain(_TestDataMixin):
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
             assert fom_handler(processed.pp.image_on[s[0], s[1]]) == \
-                   pytest.approx(processed.pp.on.roi_norm)
+                   pytest.approx(processed.pp.on.roi_norm, rel=1e-4)
             assert fom_handler(processed.pp.image_off[s[0], s[1]]) == \
-                   pytest.approx(processed.pp.off.roi_norm)
+                   pytest.approx(processed.pp.off.roi_norm, rel=1e-4)
 
         for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
             data, processed = self._get_data()
@@ -558,10 +566,11 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 fom_on_gt = fom3_on_gt + fom4_on_gt
                 fom_off_gt = fom3_off_gt + fom4_off_gt
-            assert fom_on_gt == pytest.approx(processed.pp.on.roi_norm)
-            assert fom_off_gt == pytest.approx(processed.pp.off.roi_norm)
+            assert fom_on_gt == pytest.approx(processed.pp.on.roi_norm, rel=1e-4)
+            assert fom_off_gt == pytest.approx(processed.pp.off.roi_norm, rel=1e-4)
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler",
+                             [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFomPumpProbe(self, fom_type, fom_handler):
         proc = self._proc
 
@@ -574,7 +583,7 @@ class TestImageRoiTrain(_TestDataMixin):
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
             fom_on_gt = fom_handler(processed.pp.image_on[s[0], s[1]])
             fom_off_gt = fom_handler(processed.pp.image_off[s[0], s[1]])
-            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom)
+            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-4)
 
         for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
             data, processed = self._get_data()
@@ -597,7 +606,7 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 fom_on_gt = fom1_on_gt / fom2_on_gt
                 fom_off_gt = fom1_off_gt / fom2_off_gt
-            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom)
+            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-4)
 
             if fom_combo == RoiCombo.ROI1_DIV_ROI2:
                 with np.warnings.catch_warnings():
@@ -670,10 +679,10 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 y_on_gt = y1_on_gt + y2_on_gt
                 y_off_gt = y1_off_gt + y2_off_gt
-            np.testing.assert_array_almost_equal(y_on_gt, processed.pp.y_on)
-            np.testing.assert_array_almost_equal(y_off_gt, processed.pp.y_off)
-            np.testing.assert_array_almost_equal(y_on_gt - y_off_gt, processed.pp.y)
-            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-3)
+            np.testing.assert_array_almost_equal(y_on_gt, processed.pp.y_on, decimal=4)
+            np.testing.assert_array_almost_equal(y_off_gt, processed.pp.y_off, decimal=4)
+            np.testing.assert_array_almost_equal(y_on_gt - y_off_gt, processed.pp.y, decimal=4)
+            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-4)
             # test abs_difference == False
             processed.pp.abs_difference = False
             proc.process(data)

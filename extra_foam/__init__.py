@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".EXtra-foam")

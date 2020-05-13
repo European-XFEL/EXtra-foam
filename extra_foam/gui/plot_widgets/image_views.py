@@ -11,13 +11,15 @@ import os.path as osp
 
 import numpy as np
 
-from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
-from .plot_items import ImageItem, MaskItem
-from ...file_io import write_image
+from .plot_items import MaskItem
+from ..items import GeometryItem
+from ...config import config
+from ...file_io import write_image, read_numpy_array
 from ...logger import logger
+from ...pipeline.data_model import ImageData
 
 
 class ImageAnalysis(ImageViewF):
@@ -29,9 +31,11 @@ class ImageAnalysis(ImageViewF):
 
     IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, has_roi=True, **kwargs):
         """Initialization."""
-        super().__init__(*args, **kwargs)
+        super().__init__(has_roi=has_roi, **kwargs)
+
+        self._geom_item = GeometryItem()
 
         self._mask_item = MaskItem(self._image_item)
 
@@ -43,25 +47,38 @@ class ImageAnalysis(ImageViewF):
             roi.setLocked(False)
             self._plot_widget.addItem(roi)
 
-        self.invertY(True)
-        self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
-        self._image_data = None
+        self._require_geometry = config["REQUIRE_GEOMETRY"]
+        self._mask_in_modules = None
+        self._mask_save_in_modules = False
 
-    def setImage(self, *args, **kwargs):
+    def setImage(self, image_data, **kwargs):
         """Overload."""
-        super().setImage(*args, **kwargs)
-        self._mask_item.onSetImage()
+        if not isinstance(image_data, ImageData):
+            raise TypeError(
+                "The first argument must be an ImageData instance!")
 
-    def setImageData(self, image_data, **kwargs):
-        """Set the ImageData.
+        # It will be None for detectors without a geometry and detector
+        # with a geometry but has no masking operation yet.
+        self._mask_in_modules = image_data.image_mask_in_modules
 
-        :param _SimpleImageData image_data: _SimpleImageData instance.
-        """
-        self._image_data = image_data
-        if image_data is not None:
-            self.setImage(image_data.masked)
+        image = image_data.masked_mean
+
+        # re-assemble a mask if image shape changes
+        # caveat: the image shape checked must be done before updating image
+        if self._mask_in_modules is not None \
+                and image is not None \
+                and self._image is not None \
+                and image.shape != self._image.shape:
+            geom = self._geom_item.geometry
+            assembled = geom.output_array_for_position_fast(dtype=bool)
+            geom.position_all_modules(self._mask_in_modules, out=assembled)
+            self._mask_item.setMask(assembled)
+
+        self._updateImage(image, **kwargs)
+        if image is not None:
+            self._mask_item.maybeInitializeMask(image.shape)
 
     def writeImage(self):
         """Write the current detector image to file.
@@ -78,77 +95,110 @@ class ImageAnalysis(ImageViewF):
             filter=self.IMAGE_FILE_FILTER)[0]
 
         try:
-            write_image(self._image, filepath)
+            write_image(filepath, self._image)
             logger.info(f"[Image tool] Image saved in {filepath}")
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 
-    @pyqtSlot(float)
-    def onBkgChange(self, bkg):
-        if self._image_data is None:
-            return
-
-        self._image_data.background = bkg
-        self.setImage(self._image_data.masked)
-
-    @pyqtSlot(object)
-    def onThresholdMaskChange(self, mask_range):
-        if self._image_data is None:
-            return
-
-        self._image_data.threshold_mask = mask_range
-        self.setImage(self._image_data.masked)
-
-    @pyqtSlot(bool)
-    def onDrawToggled(self, state, checked):
+    def setMaskingState(self, state, checked):
         self._mask_item.state = state
         self._image_item.drawing = checked
 
-    @pyqtSlot()
-    def onClearImageMask(self):
+    def removeMask(self):
         self._mask_item.removeMask()
 
+    def setMaskSaveInModules(self, state):
+        self._mask_save_in_modules = state
+
     def saveImageMask(self):
+        if self._image is None:
+            logger.error("Image mask does not exist without an image!")
+            return
+
         filepath = QFileDialog.getSaveFileName()[0]
         if not filepath:
-            logger.error("Please specify the image mask file!")
             return
 
-        self._saveImageMaskImp(filepath)
+        image_mask = self._mask_item.mask()
+        if self._mask_save_in_modules:
+            try:
+                geom = self._geom_item.geometry
+            except Exception as e:
+                logger.error(
+                    f"Failed to create geometry to dismantle image mask: "
+                    f"{str(e)}")
+                return
 
-    def _saveImageMaskImp(self, filepath):
-        if self._image_data is None:
-            logger.error("Image is not found!")
-            return
+            # We do not use self._mask_in_modules in order to allow users
+            # to save mask which has not been applied and send back by the
+            # pipeline.
+            modules = geom.output_array_for_dismantle_fast(dtype=np.bool)
+            try:
+                geom.dismantle_all_modules(image_mask, out=modules)
+            except ValueError as e:
+                logger.error(f"{str(e)}. "
+                             f"Geometry does not match the assembled "
+                             f"image! Change the geometry back or wait "
+                             f"until update of new assembled image.")
+                return
 
-        np.save(filepath, self._mask_item.toNDArray())
-        logger.info(f"Image mask saved in {filepath}.npy")
+            image_mask = modules
+
+        np.save(filepath, image_mask)
+
+        if not filepath.endswith('.npy'):
+            filepath += '.npy'
+
+        if self._mask_save_in_modules:
+            logger.info(f"Image mask saved in modules in {filepath}")
+        else:
+            logger.info(f"Image mask saved in {filepath}")
 
     def loadImageMask(self):
-        filepath = QFileDialog.getOpenFileName()[0]
-        if not filepath:
-            logger.error("Please specify the image mask file!")
-            return
-
-        self._loadImageMaskImp(filepath)
-
-    def _loadImageMaskImp(self, filepath):
         if self._image is None:
             logger.error("Cannot load image mask without image!")
             return
 
+        filepath = QFileDialog.getOpenFileName()[0]
+        if not filepath:
+            return
+
         try:
-            image_mask = np.load(filepath)
-            if image_mask.shape != self._image.shape:
-                logger.error(f"The shape of image mask {image_mask.shape} is "
-                             f"different from the image {self._image.shape}!")
+            image_mask = read_numpy_array(filepath, dimensions=(2, 3))
+        except ValueError as e:
+            logger.error(f"Cannot load mask from {filepath}: {str(e)}")
+            return
+
+        logger.info(f"Loaded mask data with shape = {image_mask.shape}, "
+                    f"dtype = {image_mask.dtype}")
+
+        if image_mask.ndim == 3:
+            if not self._require_geometry:
+                logger.error(f"Only detectors with a geometry can have image "
+                             f"mask in modules!")
                 return
 
-            logger.info(f"Image mask loaded from {filepath}!")
-            self._mask_item.loadMask(image_mask)
+            try:
+                geom = self._geom_item.geometry
+            except Exception as e:
+                logger.error(f"Failed to create geometry to assemble image mask: "
+                             f"{str(e)}")
+                return
 
-        except (IOError, OSError) as e:
-            logger.error(f"Cannot load mask from {filepath}")
+            try:
+                assembled = geom.output_array_for_position_fast(dtype=bool)
+                geom.position_all_modules(image_mask, out=assembled)
+                image_mask = assembled
+            except Exception as e:
+                logger.error(f"Failed to assemble mask in modules: {str(e)}")
+                return
+
+        if image_mask.shape != self._image.shape:
+            logger.error(f"Shape of the image mask {image_mask.shape} is "
+                         f"different from the image {self._image.shape}!")
+            return
+
+        self._mask_item.setMask(image_mask)
 
 
 class RoiImageView(ImageViewF):
@@ -158,7 +208,7 @@ class RoiImageView(ImageViewF):
     """
     def __init__(self, idx, **kwargs):
         """Initialization."""
-        super().__init__(has_roi=False, **kwargs)
+        super().__init__(**kwargs)
 
         self._index = idx
         self.setTitle(f"ROI{idx}")
