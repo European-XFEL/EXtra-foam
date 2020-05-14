@@ -22,6 +22,8 @@ from .special_analysis_base import (
 
 
 _N_CAMERAS = 4
+# default is for Basler camera
+_DEFAULT_PROPERTY = "data.image.data"
 
 
 class MultiCamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
@@ -33,11 +35,15 @@ class MultiCamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.output_channels = []
         self.properties = []
         for i in range(_N_CAMERAS):
-            # TODO: remove the default value in the future
-            # Here the output channel is allowed to be empty.
-            self.output_channels.append(
-                SmartLineEdit("FXE_OGT1_BIU/CAM/CAMERA:daqOutput"))
-            self.properties.append(SmartLineEdit("data.image.pixels"))
+            if i < 2:
+                default_output = f"camera{i+1}:output"
+                default_ppt = _DEFAULT_PROPERTY
+            else:
+                # Here the output channel is allowed to be empty.
+                default_output = ""
+                default_ppt = ""
+            self.output_channels.append(SmartLineEdit(default_output))
+            self.properties.append(SmartLineEdit(default_ppt))
 
         self._non_reconfigurable_widgets = [
             *self.output_channels,

@@ -31,6 +31,7 @@ class CtrlDataProcessor(_BaseProcessor):
         raw = data['raw']
         catalog = data['catalog']
 
+        # FIXME: XGM can also have control data
         # parse sources
         for ctg in ["Magnet", "Monochromator", "Motor",
                     self._user_defined_key]:

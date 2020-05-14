@@ -31,7 +31,7 @@ _MAX_N_BINS = 999
 # a non-empty place holder
 _DEFAULT_OUTPUT_CHANNEL = "camera:output"
 # default is for Basler camera
-_DEFAULT_PROPERTY = "data.image.pixels"
+_DEFAULT_PROPERTY = "data.image.data"
 
 
 class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):

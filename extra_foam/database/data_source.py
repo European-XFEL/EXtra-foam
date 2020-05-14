@@ -19,9 +19,10 @@ from ..config import config
 # modules: a list of module indices
 # slicer: pulse slicer for pulse-resolved data
 # vrange: value range
+# ktype: Karabo data type, 1 for pipeline data and 0 for control data
 SourceItem = namedtuple(
     'SourceItem',
-    ['category', 'name', 'modules', 'property', 'slicer', 'vrange'])
+    ['category', 'name', 'modules', 'property', 'slicer', 'vrange', 'ktype'])
 
 
 class SourceCatalog(abc.Collection):
@@ -80,6 +81,9 @@ class SourceCatalog(abc.Collection):
 
     def get_vrange(self, src):
         return self._items[src].vrange
+
+    def get_type(self, src):
+        return self._items[src].ktype
 
     def from_category(self, ctg):
         return self._categories.get(ctg, OrderedSet())

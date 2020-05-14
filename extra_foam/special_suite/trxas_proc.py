@@ -147,8 +147,8 @@ class TrXasProcessor(QThreadWorker, _BinMixin):
     def sources(self):
         """Override."""
         return [
-            (self._device_id1, self._ppt1),
-            (self._device_id2, self._ppt2),
+            (self._device_id1, self._ppt1, 0),
+            (self._device_id2, self._ppt2, 0),
         ]
 
     @profiler("tr-XAS Processor")

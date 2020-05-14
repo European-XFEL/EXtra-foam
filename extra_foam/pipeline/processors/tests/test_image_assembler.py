@@ -87,7 +87,7 @@ class TestAgipdAssembler:
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None))
+        catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None, 1))
         return src, catalog
 
     def testInvalidGeometryFile(self):
@@ -238,7 +238,7 @@ class TestLpdAssembler:
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None))
+        catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None, 1))
         return src, catalog
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
@@ -510,7 +510,7 @@ class TestDSSCAssembler:
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('DSSC', src_name, [], key_name, slice(None, None), None))
+        catalog.add_item(SourceItem('DSSC', src_name, [], key_name, slice(None, None), None, 1))
         return src, catalog
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
@@ -701,7 +701,7 @@ class TestJungfrauAssembler(unittest.TestCase):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
         modules = [] if n_modules == 1 else list(range(1, n_modules+1))
-        catalog.add_item(SourceItem('JungFrau', src_name, modules, key_name, None, None))
+        catalog.add_item(SourceItem('JungFrau', src_name, modules, key_name, None, None, 1))
         return src, catalog
 
     def _check6ModuleResult(self, data, src):
@@ -928,7 +928,7 @@ class TestFastccdAssembler(unittest.TestCase):
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('FastCCD', src_name, [], key_name, None, None))
+        catalog.add_item(SourceItem('FastCCD', src_name, [], key_name, None, None, 1))
         return src, catalog
 
     def testAssembleFile(self):
@@ -1001,7 +1001,7 @@ class TestEPix100Assembler(unittest.TestCase):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
         modules = [] if n_modules == 1 else list(range(1, n_modules+1))
-        catalog.add_item(SourceItem('ePix100', src_name, modules, key_name, None, None))
+        catalog.add_item(SourceItem('ePix100', src_name, modules, key_name, None, None, 1))
         return src, catalog
 
     def _check4ModuleResult(self, data, src):
@@ -1196,7 +1196,7 @@ class TestBaslerCameraAssembler(unittest.TestCase):
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem('BaslerCamera', src_name, [], key_name, None, None))
+        catalog.add_item(SourceItem('BaslerCamera', src_name, [], key_name, None, None, 1))
         return src, catalog
 
     def testAssembleBridge(self):

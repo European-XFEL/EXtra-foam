@@ -26,7 +26,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
         catalog = data['catalog']
 
         for ctg in ['Motor', 'Monochromator', 'Magnet', config["SOURCE_USER_DEFINED_CATEGORY"]]:
-            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1))
+            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), 0)
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'train_id': 12346}
@@ -38,7 +38,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
 
         catalog.clear()
         for ctg in ['XGM', 'DSSC', 'JungFrau']:
-            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1))
+            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), 1)
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'train_id': 12346}

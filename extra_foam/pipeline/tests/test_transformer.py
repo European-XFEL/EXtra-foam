@@ -11,7 +11,7 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         transformer = DataTransformer.transform_euxfel
         src_type = DataSource.BRIDGE
 
-        catalog = self._create_catalog({'ABC': [('abc', 'ppt')]})
+        catalog = self._create_catalog({'ABC': [('abc', 'ppt', 0)]})
 
         # no data is available
         data = (dict(), dict())  # raw, meta
@@ -51,8 +51,8 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
             'xyz_1:xtdf': [('ppt', 2)], 'xyz_2:xtdf': [('ppt', 3)]
         })
         catalog = self._create_catalog(
-            {'ABC': [('abc', 'ppt2')]})
-        catalog.add_item(SourceItem('XYZ', 'xyz_*:xtdf', [1, 2], 'ppt', slice(None, None), [0, 100]))
+            {'ABC': [('abc', 'ppt2', 0)]})
+        catalog.add_item(SourceItem('XYZ', 'xyz_*:xtdf', [1, 2], 'ppt', slice(None, None), [0, 100], 1))
         raw, meta, tid = transformer(data, catalog=catalog, source_type=src_type)
         self.assertDictEqual({
             'abc ppt2': 2,
@@ -69,7 +69,7 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
             'xyz_1:xtdf': [('ppt', 2)], 'xyz_2:xtdf': [('ppt', 3)], 'xyz_3:xtdf': [('ppt', 4)]
         })
         catalog.remove_item('xyz_*:xtdf ppt')
-        catalog.add_item(SourceItem('XYZ', 'xyz_*:xtdf', [0, 1, 3, 4], 'ppt', slice(None, None), [0, 100]))
+        catalog.add_item(SourceItem('XYZ', 'xyz_*:xtdf', [0, 1, 3, 4], 'ppt', slice(None, None), [0, 100], 1))
         raw, meta, tid = transformer(data, catalog=catalog, source_type=src_type)
         self.assertDictEqual({
             'abc ppt2': 2,
@@ -81,7 +81,7 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         }, meta)
 
     def testCorrelationSingle(self):
-        catalog = self._create_catalog({"ABC": [("abc", "ppt")]})
+        catalog = self._create_catalog({"ABC": [("abc", "ppt", 1)]})
 
         trans = DataTransformer(catalog)
 
@@ -113,7 +113,8 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
                              dropped)
 
     def testCorrelationMultiple(self):
-        catalog = self._create_catalog({"ABC": [("abc", "ppt")], "EFG": [("efg", "ppt")]})
+        catalog = self._create_catalog({"ABC": [("abc", "ppt", 1)],
+                                        "EFG": [("efg", "ppt", 1)]})
 
         trans = DataTransformer(catalog)
 
@@ -133,7 +134,8 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         self.assertListEqual([1003], list(trans._cached.keys()))
 
     def testCacheIsFull(self):
-        catalog = self._create_catalog({"ABC": [("abc", "ppt")], "Motor": [("efg", "ppt")]})
+        catalog = self._create_catalog({"ABC": [("abc", "ppt", 1)],
+                                        "Motor": [("efg", "ppt", 0)]})
         cache_size = 5
         trans = DataTransformer(catalog, cache_size=5)
 

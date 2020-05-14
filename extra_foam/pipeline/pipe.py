@@ -136,18 +136,23 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
             item = self._meta.hget_all(src)
             if item:
                 # add a new source item
-                category = item['category']
+                ctg = item['category']
+                name = item['name']
                 modules = item['modules']
+                ppt = item['property']
                 slicer = item['slicer']
                 vrange = item['vrange']
                 self._catalog.add_item(
-                    category,
-                    item['name'],
+                    ctg,
+                    name,
                     self.str2list(modules, handler=int)
                     if modules else None,
-                    item['property'],
+                    ppt,
                     self.str2slice(slicer) if slicer else None,
-                    self.str2tuple(vrange) if vrange else None)
+                    self.str2tuple(vrange) if vrange else None,
+                    int(item['ktype'])
+                )
+                logger.debug(f"Source item registered: {name} {ppt} ({ctg})")
             else:
                 # remove a source item
                 if src not in self._catalog:
@@ -158,6 +163,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     logger.error("Duplicated data source items")
                     continue
                 self._catalog.remove_item(src)
+                logger.debug(f"Source item unregistered: {src}")
 
     def _update_connection(self, proxy):
         cons = self._meta.hget_all(mt.CONNECTION)

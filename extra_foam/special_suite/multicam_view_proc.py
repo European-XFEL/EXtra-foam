@@ -36,7 +36,7 @@ class MultiCamViewProcessor(QThreadWorker):
         srcs = []
         for ch, ppt in zip(self._output_channels, self._properties):
             if ch and ppt:
-                srcs.append((ch, ppt))
+                srcs.append((ch, ppt, 1))
         return srcs
 
     @profiler("Multi-camera views Processor")

@@ -188,6 +188,7 @@ class TestDataSourceWidget(unittest.TestCase):
         self.assertEqual('a', model.index(0, 1, dssc_ctg).data())
         self.assertEqual(':', model.index(0, 2, dssc_ctg).data())
         self.assertEqual('', model.index(0, 3, dssc_ctg).data())
+        self.assertEqual(1, model.index(0, 4, dssc_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # first check since it is not allowed to modify in unchecked state
@@ -200,10 +201,10 @@ class TestDataSourceWidget(unittest.TestCase):
         self.assertEqual(2, len(spy))
         # delete old source
         self.assertFalse(spy[0][0])
-        self.assertEqual('A', spy[0][1].name)
+        self.assertEqual('A a', spy[0][1])
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('A+', spy[1][1].name)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change property
@@ -211,10 +212,10 @@ class TestDataSourceWidget(unittest.TestCase):
         self.assertEqual(2, len(spy))
         # delete old source
         self.assertFalse(spy[0][0])
-        self.assertEqual('a', spy[0][1].property)
+        self.assertEqual('A+ a', spy[0][1])
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('a-', spy[1][1].property)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
@@ -225,7 +226,7 @@ class TestDataSourceWidget(unittest.TestCase):
         # deleting does not check slicer
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('[None, None, 2]', spy[1][1].slicer)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None, 2]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change a DSSC source
@@ -233,10 +234,18 @@ class TestDataSourceWidget(unittest.TestCase):
         self.assertEqual(2, len(spy))
         # delete old source ('DSSC' is an exclusive category)
         self.assertFalse(spy[0][0])
-        self.assertEqual('A+', spy[0][1].name)
+        self.assertEqual('A+ a-', spy[0][1])
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('B', spy[1][1].name)
+        self.assertTupleEqual(('DSSC', 'B', '[]', 'b', '[None, None]', '', 1), spy[1][1])
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # uncheck a DSSC source
+        model.setData(model.index(1, 0, dssc_ctg), False, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+        # delete old source
+        self.assertFalse(spy[0][0])
+        self.assertEqual('B b', spy[0][1])
 
         # ---------------------
         # test mixed category
@@ -246,14 +255,17 @@ class TestDataSourceWidget(unittest.TestCase):
         self.assertEqual('intensity', model.index(0, 1, xgm_ctg).data())
         self.assertEqual(':', model.index(0, 2, xgm_ctg).data())
         self.assertEqual('-inf, inf', model.index(0, 3, xgm_ctg).data())
+        self.assertEqual(1, model.index(0, 4, xgm_ctg).data())
         self.assertEqual('XA', model.index(1, 0, xgm_ctg).data())
         self.assertEqual('flux', model.index(1, 1, xgm_ctg).data())
         self.assertEqual('', model.index(1, 2, xgm_ctg).data())
         self.assertEqual('-inf, inf', model.index(1, 3, xgm_ctg).data())
+        self.assertEqual(0, model.index(1, 4, xgm_ctg).data())
         self.assertEqual('XA', model.index(2, 0, xgm_ctg).data())
         self.assertEqual('xpos', model.index(2, 1, xgm_ctg).data())
         self.assertEqual('', model.index(2, 2, xgm_ctg).data())
         self.assertEqual('-inf, inf', model.index(2, 3, xgm_ctg).data())
+        self.assertEqual(0, model.index(2, 4, xgm_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         model.setData(model.index(2, 0, xgm_ctg), True, Qt.CheckStateRole)
@@ -279,7 +291,7 @@ class TestDataSourceWidget(unittest.TestCase):
         # deleting does not check range
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('(-1.0, 1.0)', spy[1][1].vrange)
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-1.0, 1.0)', 0), spy[1][1])
 
     @patch.dict(config._data, {"PULSE_RESOLVED": False})
     @patch.object(ConfigWrapper, "pipeline_sources", new_callable=PropertyMock)
@@ -304,3 +316,4 @@ class TestDataSourceWidget(unittest.TestCase):
         # no slicer for train-resolved detectors
         self.assertEqual('', model.index(0, 2, jf_ctg).data())
         self.assertEqual('', model.index(0, 3, jf_ctg).data())
+        self.assertEqual(1, model.index(0, 4, jf_ctg).data())

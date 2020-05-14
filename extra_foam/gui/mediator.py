@@ -71,7 +71,7 @@ class Mediator(QObject):
 
         self.connection_change_sgn.emit(connections)
 
-    def onSourceItemToggled(self, checked: bool, item: object):
+    def onSourceItemToggled(self, checked: bool, item):
         if checked:
             self._meta.add_data_source(item)
         else:

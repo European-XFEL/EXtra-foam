@@ -19,9 +19,11 @@ def application():
     parser = argparse.ArgumentParser(prog="extra-foam-special-suite")
     parser.add_argument('-V', '--version', action='version',
                         version="%(prog)s " + __version__)
-    parser.add_argument("topic", help="Name of the instrument",
+    parser.add_argument("topic", help="Name of the topic",
                         choices=config.topics,
                         type=lambda s: s.upper())
+    parser.add_argument("--use-gate", action='store_true',
+                        help="Use Karabo gate client (experimental feature)")
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
 
@@ -34,6 +36,8 @@ def application():
     faulthandler.enable(all_threads=False)
 
     topic = args.topic
+
+    config.load(topic, USE_KARABO_GATE_CLIENT=args.use_gate)
 
     app = mkQApp()
     app.setStyleSheet(

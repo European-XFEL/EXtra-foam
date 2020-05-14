@@ -70,7 +70,7 @@ class GotthardPpProcessor(QThreadWorker):
     def sources(self):
         """Override."""
         return [
-            (self._output_channel, self._ppt),
+            (self._output_channel, self._ppt, 1),
         ]
 
     @profiler("Gotthard Processor (pump-probe)")
