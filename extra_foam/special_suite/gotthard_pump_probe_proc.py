@@ -11,8 +11,8 @@ import numpy as np
 
 from extra_foam.pipeline.data_model import MovingAverageArray
 
-from .special_analysis_base import profiler, ProcessingError, QThreadWorker
 from .config import _PIXEL_DTYPE
+from .special_analysis_base import profiler, ProcessingError, QThreadWorker
 
 
 class GotthardPpProcessor(QThreadWorker):

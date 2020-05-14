@@ -279,7 +279,7 @@ setup(
     entry_points={
         'console_scripts': [
             'extra-foam=extra_foam.services:application',
-            'extra-foam-special-suite=extra_foam.special_services:application',
+            'extra-foam-special-suite=extra_foam.special_suite.services:application',
             'extra-foam-kill=extra_foam.services:kill_application',
             'extra-foam-stream=extra_foam.services:stream_file',
             'extra-foam-redis-cli=extra_foam.services:start_redis_client',

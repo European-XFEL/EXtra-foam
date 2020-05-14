@@ -10,11 +10,9 @@ All rights reserved.
 import argparse
 import faulthandler
 
-from . import __version__
+from . import logger, mkQApp, __version__
 from .config import config
-from .logger import logger_suite as logger
-from .gui import mkQApp
-from .special_suite import SpecialSuiteController
+from .facade import SpecialSuiteController
 
 
 def application():
@@ -22,7 +20,7 @@ def application():
     parser.add_argument('-V', '--version', action='version',
                         version="%(prog)s " + __version__)
     parser.add_argument("topic", help="Name of the instrument",
-                        choices=config.topics + ('DET',),
+                        choices=config.topics,
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")

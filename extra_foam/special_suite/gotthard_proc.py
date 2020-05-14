@@ -12,8 +12,8 @@ import numpy as np
 from extra_foam.algorithms import hist_with_stats
 from extra_foam.pipeline.data_model import MovingAverageArray
 
-from .special_analysis_base import ProcessingError, profiler, QThreadWorker
 from .config import _MAX_INT32, _PIXEL_DTYPE
+from .special_analysis_base import ProcessingError, profiler, QThreadWorker
 
 _DEFAULT_N_BINS = 10
 _DEFAULT_BIN_RANGE = "-inf, inf"

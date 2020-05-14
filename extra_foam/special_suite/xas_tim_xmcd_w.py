@@ -17,10 +17,10 @@ from extra_foam.gui.ctrl_widgets import SmartLineEdit, SmartStringLineEdit
 from extra_foam.gui.plot_widgets import TimedPlotWidgetF
 from extra_foam.gui.misc_widgets import FColor
 
-from .xas_tim_xmcd_proc import XasTimXmcdProcessor, _DEFAULT_CURRENT_THRESHOLD
 from .special_analysis_base import (
     create_special, QThreadKbClient, _SpecialAnalysisBase
 )
+from .xas_tim_xmcd_proc import XasTimXmcdProcessor, _DEFAULT_CURRENT_THRESHOLD
 from .xas_tim_w import (
     XasTimCtrlWidget, XasTimCorrelationPlot, XasTimXgmPulsePlot,
     XasTimDigitizerPulsePlot, XasTimXgmSpectrumPlot

@@ -11,18 +11,18 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QSplitter
 
-from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
-from extra_foam.gui.misc_widgets import FColor
 from extra_foam.gui.ctrl_widgets import (
     SmartLineEdit, SmartSliceLineEdit, SmartStringLineEdit
 )
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 
+from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 from .gotthard_pump_probe_proc import GotthardPpProcessor
 from .special_analysis_base import (
     create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 
 
 class GotthardPpCtrlWidget(_BaseAnalysisCtrlWidgetS):

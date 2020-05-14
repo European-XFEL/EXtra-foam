@@ -11,22 +11,21 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QPushButton, QSplitter
 
-from extra_foam.gui.plot_widgets import (
-    ImageViewF, TimedImageViewF, TimedPlotWidgetF
-)
-from extra_foam.gui.misc_widgets import FColor
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
 )
-
-from .trxas_proc import (
-    TrXasProcessor, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.plot_widgets import (
+    ImageViewF, TimedImageViewF, TimedPlotWidgetF
 )
+
 from .special_analysis_base import (
     create_special, QThreadFoamClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-
+from .trxas_proc import (
+    TrXasProcessor, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+)
 
 _MAX_N_BINS = 999
 

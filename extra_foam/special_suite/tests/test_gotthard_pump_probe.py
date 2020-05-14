@@ -8,15 +8,15 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.gotthard_pump_probe_proc import GotthardPpProcessor
 from extra_foam.special_suite.gotthard_pump_probe_w import (
     GotthardPumpProbeWindow, GotthardPpImageView, GotthardPpFomMeanPlot,
     GotthardPpFomPulsePlot, GotthardPpRawPulsePlot, GotthardPpDarkPulsePlot
 )
 from extra_foam.special_suite.special_analysis_base import ProcessingError
-from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 

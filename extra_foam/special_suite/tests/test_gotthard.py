@@ -9,8 +9,9 @@ from xarray import DataArray
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.gotthard_proc import GotthardProcessor
 from extra_foam.special_suite.gotthard_w import (
     GotthardWindow, GotthardImageView, GotthardAvgPlot, GotthardPulsePlot,
@@ -19,7 +20,6 @@ from extra_foam.special_suite.gotthard_w import (
 from extra_foam.special_suite.special_analysis_base import (
     ProcessingError
 )
-from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 

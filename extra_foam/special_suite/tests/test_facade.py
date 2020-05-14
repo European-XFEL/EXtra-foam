@@ -1,7 +1,6 @@
 import unittest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.facade import _SpecialSuiteFacadeBase
 
 

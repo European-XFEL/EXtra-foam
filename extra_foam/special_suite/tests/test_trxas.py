@@ -7,13 +7,13 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _TestDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.trxas_proc import TrXasProcessor
 from extra_foam.special_suite.trxas_w import (
     TrXasWindow, TrXasSpectraPlot, TrXasRoiImageView, TrXasHeatmap
 )
-from extra_foam.pipeline.tests import _TestDataMixin
 
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
