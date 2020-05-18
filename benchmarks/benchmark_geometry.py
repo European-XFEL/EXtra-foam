@@ -12,8 +12,12 @@ import time
 
 import numpy as np
 
+from extra_foam.config import config
 
-_data_sources = [(np.uint16, 'raw'), (np.float32, 'calibrated')]
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
+_RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
+
+_data_sources = [(_RAW_IMAGE_DTYPE, 'raw'), (_IMAGE_DTYPE, 'calibrated')]
 
 _geom_path = osp.join(osp.dirname(osp.abspath(__file__)), "../extra_foam/geometries")
 
@@ -27,12 +31,23 @@ def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions=None):
                            geom_fast_cls.module_shape[0],
                            geom_fast_cls.module_shape[1]), dtype=from_dtype)
 
+        # assemble with geometry and quad position in EXtra-geom
+
+        if quad_positions is not None:
+            geom = geom_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
+        else:
+            geom = geom_cls.from_crystfel_geom(geom_file)
+        assembled = geom.output_array_for_position_fast((n_pulses,), dtype=_IMAGE_DTYPE)
+        t0 = time.perf_counter()
+        geom.position_all_modules(modules, out=assembled)
+        dt_geom = time.perf_counter() - t0
+
         # stack only
 
         geom = geom_fast_cls()
-        out = np.full((n_pulses, *geom.assembledShape()), np.nan, dtype=np.float32)
+        assembled = np.full((n_pulses, *geom.assembledShape()), np.nan, dtype=_IMAGE_DTYPE)
         t0 = time.perf_counter()
-        geom.position_all_modules(modules, out)
+        geom.position_all_modules(modules, assembled)
         dt_foam_stack = time.perf_counter() - t0
 
         # assemble with geometry and quad position
@@ -41,25 +56,22 @@ def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions=None):
             geom = geom_fast_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
         else:
             geom = geom_fast_cls.from_crystfel_geom(geom_file)
-        out = np.full((n_pulses, *geom.assembledShape()), np.nan, dtype=np.float32)
+        assembled = np.full((n_pulses, *geom.assembledShape()), np.nan, dtype=_IMAGE_DTYPE)
         t0 = time.perf_counter()
-        geom.position_all_modules(modules, out)
+        geom.position_all_modules(modules, assembled)
         dt_foam = time.perf_counter() - t0
-
-        # assemble with geometry and quad position in EXtra-geom
-
-        if quad_positions is not None:
-            geom = geom_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
-        else:
-            geom = geom_cls.from_crystfel_geom(geom_file)
-        out = geom.output_array_for_position_fast((n_pulses,))
-        t0 = time.perf_counter()
-        geom.position_all_modules(modules, out=out)
-        dt_geom = time.perf_counter() - t0
 
         print(f"\nposition all modules for {geom_cls.__name__} (from {from_str} data) - \n"
               f"  dt (foam stack only): {dt_foam_stack:.4f}, dt (foam): {dt_foam:.4f}, "
               f"dt (geom): {dt_geom:.4f}")
+
+        if modules.dtype == _IMAGE_DTYPE:
+            t0 = time.perf_counter()
+            geom.dismantle_all_modules(assembled, modules)
+            dt_foam_dismantle = time.perf_counter() - t0
+
+            print(f"\ndismantle all modules for {geom_cls.__name__} (from {from_str} data) - \n"
+                  f"  dt (foam): {dt_foam_dismantle:.4f}")
 
 
 def benchmark_dssc_1m():
@@ -101,6 +113,33 @@ def benchmark_agipd_1m():
     _benchmark_1m_imp(AGIPD_1MGeometryFast, AGIPD_1MGeometry, geom_file)
 
 
+def benchmark_jungfrau():
+    from extra_foam.geometries import JungFrauGeometryFast
+
+    for from_dtype, from_str in _data_sources:
+        n_row, n_col = 3, 2
+        geom = JungFrauGeometryFast(n_row, n_col)
+        n_pulses = 16
+        modules = np.ones((n_pulses, n_row * n_col, *geom.module_shape), dtype=from_dtype)
+
+        assembled = geom.output_array_for_position_fast((n_pulses,), _IMAGE_DTYPE)
+
+        t0 = time.perf_counter()
+        geom.position_all_modules(modules, assembled)
+        dt_assemble = time.perf_counter() - t0
+
+        print(f"\nposition all modules for JungFrauGeometry (from {from_str} data) - \n"
+              f"  dt (foam stack only): {dt_assemble:.4f}")
+
+        if modules.dtype == _IMAGE_DTYPE:
+            t0 = time.perf_counter()
+            geom.dismantle_all_modules(assembled, modules)
+            dt_dismantle = time.perf_counter() - t0
+
+            print(f"\ndismantle all modules for JungFrauGeometry (from {from_str} data) - \n"
+                  f"  dt (foam stack only): {dt_dismantle:.4f}")
+
+
 if __name__ == "__main__":
     print("*" * 80)
     print("Benchmark geometry")
@@ -111,3 +150,5 @@ if __name__ == "__main__":
     benchmark_lpd_1m()
 
     benchmark_agipd_1m()
+
+    benchmark_jungfrau()
