@@ -13,14 +13,8 @@ from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
 from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
-from extra_foam.gui.windows import (
-    BinningWindow, CorrelationWindow, HistogramWindow,
-    PulseOfInterestWindow, PumpProbeWindow,
-    FileStreamWindow, AboutWindow,
-)
-from extra_foam.config import (
-    config, AnalysisType, BinMode, PumpProbeMode,
-)
+from extra_foam.gui.windows import PulseOfInterestWindow
+from extra_foam.config import config, AnalysisType, PumpProbeMode
 from extra_foam.processes import wait_until_redis_shutdown
 
 app = mkQApp()
@@ -43,7 +37,7 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestMainGuiCtrl(unittest.TestCase):
+class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config.load(*random.choice([('LPD', 'FXE'), ('DSSC', 'SCS')]))
@@ -260,303 +254,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual("-10, 10", widget._fom_range_le.text())
         self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
-    def testCorrelationCtrlWidget(self):
-        from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
-            _N_PARAMS, _DEFAULT_RESOLUTION)
-        from extra_foam.pipeline.processors.base_processor import (
-            SimplePairSequence, OneWayAccuPairSequence
-        )
-        USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
-
-        widget = self.gui.correlation_ctrl_widget
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
-
-        for i in range(_N_PARAMS):
-            # test category list
-            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
-                         for j in range(widget._table.cellWidget(i, 0).count())]
-            self.assertListEqual(["", "Metadata"]
-                                 + [k for k, v in config.control_sources.items() if v]
-                                 + [USER_DEFINED_KEY],
-                                 combo_lst)
-
-        train_worker = self.train_worker
-        processors = [train_worker._correlation1_proc, train_worker._correlation2_proc]
-
-        # test default
-        for proc in processors:
-            proc.update()
-            self.assertEqual(AnalysisType(0), proc.analysis_type)
-            self.assertEqual("", proc._source)
-            self.assertEqual(_DEFAULT_RESOLUTION, proc._resolution)
-
-        # set new FOM
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
-        for proc in processors:
-            proc._reset = False
-            proc.update()
-            self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
-            self.assertTrue(proc._reset)
-
-        for idx, proc in enumerate(processors):
-            # change source
-            proc._reset = False
-            ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
-            widget._table.cellWidget(idx, 0).setCurrentText(ctg)
-            self.assertEqual(device_id, widget._table.cellWidget(idx, 1).currentText())
-            self.assertEqual(ppt, widget._table.cellWidget(idx, 2).currentText())
-            proc.update()
-            src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, proc._source)
-            self.assertTrue(proc._reset)
-
-            # just test we can set a motor source
-            proc._reset = False
-            widget._table.cellWidget(idx, 0).setCurrentText("Motor")
-            proc.update()
-            self.assertTrue(proc._reset)
-
-            proc._reset = False
-            ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
-            widget._table.cellWidget(idx, 0).setCurrentText(ctg)
-            self.assertEqual('', widget._table.cellWidget(idx, 1).text())
-            self.assertEqual('', widget._table.cellWidget(idx, 2).text())
-            widget._table.cellWidget(idx, 1).setText(device_id)
-            widget._table.cellWidget(idx, 2).setText(ppt)
-            self.assertEqual(device_id, widget._table.cellWidget(0, 1).text())
-            self.assertEqual(ppt, widget._table.cellWidget(0, 2).text())
-            proc.update()
-            src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, proc._source)
-            self.assertTrue(proc._reset)
-
-            # change resolution
-            proc._reset = False
-            self.assertIsInstance(proc._correlation, SimplePairSequence)
-            self.assertIsInstance(proc._correlation_slave, SimplePairSequence)
-            widget._table.cellWidget(idx, 3).setText(str(1.0))
-            proc.update()
-            self.assertEqual(1.0, proc._resolution)
-            self.assertIsInstance(proc._correlation, OneWayAccuPairSequence)
-            self.assertIsInstance(proc._correlation_slave, OneWayAccuPairSequence)
-            # sequence type change will not have 'reset'
-            self.assertFalse(proc._reset)
-            widget._table.cellWidget(idx, 3).setText(str(2.0))
-            proc.update()
-            self.assertEqual(2.0, proc._resolution)
-            self.assertTrue(proc._reset)
-
-            # test reset button
-            proc._reset = False
-            widget._reset_btn.clicked.emit()
-            proc.update()
-            self.assertTrue(proc._reset)
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onCorrelationAnalysisTypeChange(AnalysisType.UNDEFINED)
-        if config["TOPIC"] == "FXE":
-            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
-        else:
-            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
-        mediator.onCorrelationParamChange((1, f'{motor_id} actualPosition', 0.0))
-        mediator.onCorrelationParamChange((2, 'ABC abc', 2.0))
-        widget.loadMetaData()
-        self.assertEqual("", widget._analysis_type_cb.currentText())
-        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
-        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
-        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
-        self.assertEqual('0.0', widget._table.cellWidget(0, 3).text())
-        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
-        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
-        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
-        self.assertEqual('2.0', widget._table.cellWidget(1, 3).text())
-
-        mediator.onCorrelationParamChange((1, f'', 0.0))
-        widget.loadMetaData()
-        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
-        self.assertEqual('', widget._table.cellWidget(0, 1).text())
-        self.assertEqual('', widget._table.cellWidget(0, 2).text())
-
-    def testBinCtrlWidget(self):
-        from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
-            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
-        )
-        _DEFAULT_BIN_RANGE = tuple([float(v) for v in _DEFAULT_BIN_RANGE.split(",")])
-        USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
-
-        widget = self.gui.bin_ctrl_widget
-
-        analysis_types_inv = widget._analysis_types_inv
-        bin_modes_inv = widget._bin_modes_inv
-
-        for i in range(_N_PARAMS):
-            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
-                         for j in range(widget._table.cellWidget(i, 0).count())]
-            self.assertListEqual(["", "Metadata"]
-                                 + [k for k, v in config.control_sources.items() if v]
-                                 + [USER_DEFINED_KEY],
-                                 combo_lst)
-
-        train_worker = self.train_worker
-        proc = train_worker._binning_proc
-        proc.update()
-
-        # test default
-        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
-        self.assertEqual(BinMode.AVERAGE, proc._mode)
-        self.assertEqual("", proc._source1)
-        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range1)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
-        self.assertEqual("", proc._source2)
-        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range2)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
-
-        # test analysis type and mode change
-        widget._analysis_type_cb.setCurrentText(analysis_types_inv[AnalysisType.PUMP_PROBE])
-        widget._mode_cb.setCurrentText(bin_modes_inv[BinMode.ACCUMULATE])
-        proc.update()
-        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
-        self.assertEqual(BinMode.ACCUMULATE, proc._mode)
-
-        # test source change
-        for i in range(_N_PARAMS):
-            ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
-            widget._table.cellWidget(i, 0).setCurrentText(ctg)
-            self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
-            self.assertEqual(ppt, widget._table.cellWidget(i, 2).currentText())
-            proc.update()
-            src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-
-            # just test we can set a motor source
-            widget._table.cellWidget(i, 0).setCurrentText("Motor")
-            proc.update()
-
-            ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
-            widget._table.cellWidget(i, 0).setCurrentText(ctg)
-            self.assertEqual('', widget._table.cellWidget(i, 1).text())
-            self.assertEqual('', widget._table.cellWidget(i, 2).text())
-            widget._table.cellWidget(i, 1).setText(device_id)
-            widget._table.cellWidget(i, 2).setText(ppt)
-            self.assertEqual(device_id, widget._table.cellWidget(0, 1).text())
-            self.assertEqual(ppt, widget._table.cellWidget(0, 2).text())
-            proc.update()
-            src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-
-        # test bin range and number of bins change
-
-        # bin parameter 1
-        widget._table.cellWidget(0, 3).setText("0, 10")  # range
-        widget._table.cellWidget(0, 4).setText("5")  # n_bins
-        widget._table.cellWidget(1, 3).setText("-4, inf")  # range
-        widget._table.cellWidget(1, 4).setText("2")  # n_bins
-        proc.update()
-        self.assertEqual(5, proc._n_bins1)
-        self.assertTupleEqual((0, 10), proc._bin_range1)
-        self.assertEqual(2, proc._n_bins2)
-        self.assertTupleEqual((-4, np.inf), proc._bin_range2)
-
-        # test "reset" button
-        proc._reset = False
-        widget._reset_btn.clicked.emit()
-        proc.update()
-        self.assertTrue(proc._reset)
-
-        # test "Auto level" button
-        binning_action = self.gui._tool_bar.actions()[8]
-        self.assertEqual("Binning", binning_action.text())
-        binning_action.trigger()
-        win = list(self.gui._plot_windows.keys())[-1]
-        win._bin1d_vfom._auto_level = False
-        win._bin2d_value._auto_level = False
-        win._bin2d_count._auto_level = False
-        QTest.mouseClick(widget._auto_level_btn, Qt.LeftButton)
-        self.assertTrue(win._bin1d_vfom._auto_level)
-        self.assertTrue(win._bin2d_value._auto_level)
-        self.assertTrue(win._bin2d_count._auto_level)
-        win.close()
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onBinAnalysisTypeChange(AnalysisType.UNDEFINED)
-        mediator.onBinModeChange(BinMode.AVERAGE)
-        if config["TOPIC"] == "FXE":
-            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
-        else:
-            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
-        mediator.onBinParamChange((1, f'{motor_id} actualPosition', (-9, 9), 5))
-        mediator.onBinParamChange((2, 'ABC abc', (-19, 19), 15))
-        widget.loadMetaData()
-        self.assertEqual("", widget._analysis_type_cb.currentText())
-        self.assertEqual("average", widget._mode_cb.currentText())
-        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
-        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
-        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
-        self.assertEqual('-9, 9', widget._table.cellWidget(0, 3).text())
-        self.assertEqual('5', widget._table.cellWidget(0, 4).text())
-        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
-        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
-        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
-        self.assertEqual('-19, 19', widget._table.cellWidget(1, 3).text())
-        self.assertEqual('15', widget._table.cellWidget(1, 4).text())
-
-        mediator.onBinParamChange((1, f'', (-9, 9), 5))
-        widget.loadMetaData()
-        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
-        self.assertEqual('', widget._table.cellWidget(0, 1).text())
-        self.assertEqual('', widget._table.cellWidget(0, 2).text())
-
-    def testHistogramCtrlWidget(self):
-        widget = self.gui.histogram_ctrl_widget
-        train_worker = self.train_worker
-        proc = train_worker._histogram
-        proc.update()
-
-        analysis_types = {value: key for key, value in
-                          widget._analysis_types.items()}
-
-        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
-        self.assertTrue(proc._pulse_resolved)
-        self.assertEqual(10, proc._n_bins)
-        self.assertEqual((-np.inf, np.inf), proc._bin_range)
-
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.ROI_FOM_PULSE, proc.analysis_type)
-
-        proc._reset = False
-        widget._pulse_resolved_cb.setChecked(False)  # switch to train-resolved
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.ROI_FOM, proc.analysis_type)
-
-        widget._n_bins_le.setText("100")
-        widget._bin_range_le.setText("-1, 2")
-        proc.update()
-        self.assertEqual((-1, 2), proc._bin_range)
-        self.assertEqual(100, proc._n_bins)
-
-        proc._reset = False
-        widget._reset_btn.clicked.emit()
-        proc.update()
-        self.assertTrue(proc._reset)
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onHistAnalysisTypeChange(AnalysisType.UNDEFINED)
-        mediator.onHistBinRangeChange((-10, 10))
-        mediator.onHistNumBinsChange(55)
-        mediator.onHistPulseResolvedChange(True)
-        widget.loadMetaData()
-        self.assertEqual("", widget._analysis_type_cb.currentText())
-        self.assertEqual("-10, 10", widget._bin_range_le.text())
-        self.assertEqual("55", widget._n_bins_le.text())
-        self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
-
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
     @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.'
@@ -579,8 +276,15 @@ class TestMainGuiCtrl(unittest.TestCase):
         # test when the start action button is clicked
         # -------------------------------------------------------------
 
-        start_action = self.gui._tool_bar.actions()[0]
-        stop_action = self.gui._tool_bar.actions()[1]
+        actions = self.gui._tool_bar.actions()
+        start_action = actions[0]
+        stop_action = actions[1]
+
+        histogram_action = actions[7]
+        self.assertEqual("Histogram", histogram_action.text())
+        histogram_action.trigger()
+        histogram_ctrl_widget = list(self.gui._plot_windows.keys())[-1]._ctrl_widgets[0]
+        histogram_ctrl_widget.updateMetaData.reset_mock()
 
         start_action.trigger()
 
@@ -588,7 +292,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         azimuthal_integ_ctrl_widget = self.gui._image_tool._azimuthal_integ_1d_view._ctrl_widget
         geometry_ctrl_widget = self.gui._image_tool._geometry_view._ctrl_widget
         pump_probe_ctrl_widget = self.gui.pump_probe_ctrl_widget
-        histogram_ctrl_widget = self.gui.histogram_ctrl_widget
         source_ctrl_widget = self.gui._source_cw
 
         azimuthal_integ_ctrl_widget.updateMetaData.assert_called_once()
@@ -630,119 +333,11 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertFalse(self.train_worker.running)
         self.assertFalse(self.pulse_worker.running)
 
-    def testOpenCloseWindows(self):
-        actions = self.gui._tool_bar.actions()
 
-        poi_action = actions[4]
-        self.assertEqual("Pulse-of-interest", poi_action.text())
-        pp_action = actions[5]
-        self.assertEqual("Pump-probe", pp_action.text())
-        correlation_action = actions[6]
-        self.assertEqual("Correlation", correlation_action.text())
-        histogram_action = actions[7]
-        self.assertEqual("Histogram", histogram_action.text())
-        binning_action = actions[8]
-        self.assertEqual("Binning", binning_action.text())
-
-        pp_window = self._check_open_window(pp_action)
-        self.assertIsInstance(pp_window, PumpProbeWindow)
-
-        correlation_window = self._check_open_window(correlation_action)
-        self.assertIsInstance(correlation_window, CorrelationWindow)
-
-        binning_window = self._check_open_window(binning_action)
-        self.assertIsInstance(binning_window, BinningWindow)
-
-        histogram_window = self._check_open_window(histogram_action)
-        self.assertIsInstance(histogram_window, HistogramWindow)
-
-        poi_window = self._check_open_window(poi_action)
-        self.assertIsInstance(poi_window, PulseOfInterestWindow)
-        # open one window twice
-        self._check_open_window(poi_action, registered=False)
-
-        self._check_close_window(pp_window)
-        self._check_close_window(correlation_window)
-        self._check_close_window(binning_window)
-        self._check_close_window(histogram_window)
-        self._check_close_window(poi_window)
-
-        # if a plot window is closed, it can be re-openned and a new instance
-        # will be created
-        pp_window_new = self._check_open_window(pp_action)
-        self.assertIsInstance(pp_window_new, PumpProbeWindow)
-        self.assertIsNot(pp_window_new, pp_window)
-
-    def testOpenCloseSatelliteWindows(self):
-        actions = self.gui._tool_bar.actions()
-        about_action = actions[-1]
-        streamer_action = actions[-2]
-
-        about_window = self._check_open_satellite_window(about_action)
-        self.assertIsInstance(about_window, AboutWindow)
-
-        streamer_window = self._check_open_satellite_window(streamer_action)
-        self.assertIsInstance(streamer_window, FileStreamWindow)
-
-        # open one window twice
-        self._check_open_satellite_window(about_action, registered=False)
-
-        self._check_close_satellite_window(about_window)
-        self._check_close_satellite_window(streamer_window)
-
-        # if a window is closed, it can be re-opened and a new instance
-        # will be created
-        about_window_new = self._check_open_satellite_window(about_action)
-        self.assertIsInstance(about_window_new, AboutWindow)
-        self.assertIsNot(about_window_new, about_window)
-
-    def _check_open_window(self, action, registered=True):
-        """Check triggering action about opening a window.
-
-        :param bool registered: True for the new window is expected to be
-            registered; False for the old window will be activate and thus
-            no new window will be registered.
-        """
-        n_registered = len(self.gui._plot_windows)
-        action.trigger()
-        if registered:
-            window = list(self.gui._plot_windows.keys())[-1]
-            self.assertEqual(n_registered+1, len(self.gui._plot_windows))
-            return window
-
-        self.assertEqual(n_registered, len(self.gui._plot_windows))
-
-    def _check_close_window(self, window):
-        n_registered = len(self.gui._plot_windows)
-        window.close()
-        self.assertEqual(n_registered-1, len(self.gui._plot_windows))
-
-    def _check_open_satellite_window(self, action, registered=True):
-        """Check triggering action about opening a satellite window.
-
-        :param bool registered: True for the new window is expected to be
-            registered; False for the old window will be activate and thus
-            no new window will be registered.
-        """
-        n_registered = len(self.gui._satellite_windows)
-        action.trigger()
-        if registered:
-            window = list(self.gui._satellite_windows.keys())[-1]
-            self.assertEqual(n_registered+1, len(self.gui._satellite_windows))
-            return window
-
-        self.assertEqual(n_registered, len(self.gui._satellite_windows))
-
-    def _check_close_satellite_window(self, window):
-        n_registered = len(self.gui._satellite_windows)
-        window.close()
-        self.assertEqual(n_registered-1, len(self.gui._satellite_windows))
-
-
-class TestJungFrauMainGuiCtrl(unittest.TestCase):
+class TestMainGuiTs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config.load('JungFrau', 'FXE')
+        config.load('ePix100', 'MID')
 
         cls.foam = Foam().init()
 
@@ -859,20 +454,5 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onFomFilterPulseResolvedChange(True)
-        widget.loadMetaData()
-        self.assertEqual(False, widget._pulse_resolved_cb.isChecked())
-
-    def testHistogramCtrlWidget(self):
-        widget = self.gui.histogram_ctrl_widget
-
-        # test default
-
-        self.assertFalse(widget._pulse_resolved_cb.isChecked())
-        self.assertFalse(widget._pulse_resolved_cb.isEnabled())
-
-        # test loading meta data
-        # test if the meta data is invalid
-        mediator = widget._mediator
-        mediator.onHistPulseResolvedChange(True)
         widget.loadMetaData()
         self.assertEqual(False, widget._pulse_resolved_cb.isChecked())

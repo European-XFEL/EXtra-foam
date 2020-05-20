@@ -8,9 +8,10 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow
+from ..ctrl_widgets import CorrelationCtrlWidget
 from ..misc_widgets import FColor
 from ..plot_widgets import TimedPlotWidgetF
 from ...config import config
@@ -113,16 +114,20 @@ class CorrelationWindow(_AbstractPlotWindow):
     _title = "Correlation"
 
     _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
-    _TOTAL_H /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
+        self._ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
+
         self._corr1 = CorrelationPlot(0, parent=self)
         self._corr2 = CorrelationPlot(1, parent=self)
 
         self.initUI()
+        self.initConnections()
+        self.loadMetaData()
+        self.updateMetaData()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
@@ -131,13 +136,24 @@ class CorrelationWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QSplitter()
-        self._cw.addWidget(self._corr1)
-        self._cw.addWidget(self._corr2)
-        self._cw.setSizes([1, 1])
+        plots = QSplitter()
+        plots.addWidget(self._corr1)
+        plots.addWidget(self._corr2)
+        plots.setSizes([1, 1])
 
+        self._cw = QFrame()
+        layout = QVBoxLayout()
+        layout.addWidget(plots)
+        layout.addWidget(self._ctrl_widget)
+        self._ctrl_widget.setFixedHeight(
+            self._ctrl_widget.minimumSizeHint().height())
+        self._cw.setLayout(layout)
         self.setCentralWidget(self._cw)
 
     def initConnections(self):
         """Override."""
         pass
+
+    def closeEvent(self, QCloseEvent):
+        self._ctrl_widget.resetAnalysisType()
+        super().closeEvent(QCloseEvent)

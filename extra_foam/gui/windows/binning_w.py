@@ -8,9 +8,10 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow
+from ..ctrl_widgets import BinCtrlWidget
 from ..plot_widgets import TimedPlotWidgetF, TimedImageViewF
 from ..misc_widgets import FColor
 from ...config import config
@@ -230,6 +231,8 @@ class BinningWindow(_AbstractPlotWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
+        self._ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
+
         self._bin1d_vfom = Bin1dHeatmap(parent=self)
         self._bin1d = Bin1dHist(parent=self)
 
@@ -238,6 +241,8 @@ class BinningWindow(_AbstractPlotWindow):
 
         self.initUI()
         self.initConnections()
+        self.loadMetaData()
+        self.updateMetaData()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
@@ -246,12 +251,11 @@ class BinningWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QSplitter()
+        plots = QSplitter()
         left_panel = QSplitter(Qt.Vertical)
         right_panel = QSplitter(Qt.Vertical)
-        self._cw.addWidget(left_panel)
-        self._cw.addWidget(right_panel)
-        self.setCentralWidget(self._cw)
+        plots.addWidget(left_panel)
+        plots.addWidget(right_panel)
 
         left_panel.addWidget(self._bin1d_vfom)
         left_panel.addWidget(self._bin1d)
@@ -260,6 +264,15 @@ class BinningWindow(_AbstractPlotWindow):
         right_panel.addWidget(self._bin2d_value)
         right_panel.addWidget(self._bin2d_count)
         right_panel.setSizes([1, 1])
+
+        self._cw = QFrame()
+        layout = QVBoxLayout()
+        layout.addWidget(plots)
+        layout.addWidget(self._ctrl_widget)
+        self._ctrl_widget.setFixedHeight(
+            self._ctrl_widget.minimumSizeHint().height())
+        self._cw.setLayout(layout)
+        self.setCentralWidget(self._cw)
 
     def initConnections(self):
         """Override."""
@@ -271,3 +284,7 @@ class BinningWindow(_AbstractPlotWindow):
             self._bin2d_value.onAutoLevel)
         mediator.bin_heatmap_autolevel_sgn.connect(
             self._bin2d_count.onAutoLevel)
+
+    def closeEvent(self, QCloseEvent):
+        self._ctrl_widget.resetAnalysisType()
+        super().closeEvent(QCloseEvent)

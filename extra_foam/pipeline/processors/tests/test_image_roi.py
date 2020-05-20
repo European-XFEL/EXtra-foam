@@ -335,7 +335,7 @@ class TestImageRoiTrain(_TestDataMixin):
             s4 = self._get_roi_slice(processed.roi.geom4.geometry)
             fom4_gt = fom_handler(processed.image.masked_mean[s4[0], s4[1]])
             if norm_combo == RoiCombo.ROI3_SUB_ROI4:
-                assert fom3_gt - fom4_gt == pytest.approx(processed.roi.norm, rel=1e-4)
+                assert fom3_gt - fom4_gt == pytest.approx(processed.roi.norm, rel=1e-3)
             else:
                 assert fom3_gt + fom4_gt == pytest.approx(processed.roi.norm, rel=1e-4)
 
@@ -583,7 +583,7 @@ class TestImageRoiTrain(_TestDataMixin):
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
             fom_on_gt = fom_handler(processed.pp.image_on[s[0], s[1]])
             fom_off_gt = fom_handler(processed.pp.image_off[s[0], s[1]])
-            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-4)
+            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-3)
 
         for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
             data, processed = self._get_data()
@@ -606,7 +606,7 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 fom_on_gt = fom1_on_gt / fom2_on_gt
                 fom_off_gt = fom1_off_gt / fom2_off_gt
-            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-4)
+            assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-3)
 
             if fom_combo == RoiCombo.ROI1_DIV_ROI2:
                 with np.warnings.catch_warnings():
@@ -682,7 +682,7 @@ class TestImageRoiTrain(_TestDataMixin):
             np.testing.assert_array_almost_equal(y_on_gt, processed.pp.y_on, decimal=4)
             np.testing.assert_array_almost_equal(y_off_gt, processed.pp.y_off, decimal=4)
             np.testing.assert_array_almost_equal(y_on_gt - y_off_gt, processed.pp.y, decimal=4)
-            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-4)
+            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-3)
             # test abs_difference == False
             processed.pp.abs_difference = False
             proc.process(data)
