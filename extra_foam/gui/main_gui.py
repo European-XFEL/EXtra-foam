@@ -146,7 +146,7 @@ class MainGUI(QMainWindow):
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
         # make icon a bit larger
-        self._tool_bar.setIconSize(1.25 * self._tool_bar.iconSize())
+        self._tool_bar.setIconSize(2 * self._tool_bar.iconSize())
 
         self._start_at = self._addAction("Start bridge", "start.png")
         self._start_at.triggered.connect(self.onStart)
