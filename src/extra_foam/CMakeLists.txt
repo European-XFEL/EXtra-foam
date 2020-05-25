@@ -11,6 +11,8 @@ set(extra-foam_MODULE_FILES
         f_geometry.cpp
         f_geometry_1m.cpp
         f_statistics.cpp
+        f_smooth.cpp
+        f_canny.cpp
 )
 
 if(UNIX)

@@ -32,8 +32,9 @@ class ReferenceView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageViewF()
-        self._reference = ImageViewF()
+        self._corrected = ImageViewF(hide_axis=False)
+        self._corrected.setTitle("Current")
+        self._reference = ImageViewF(hide_axis=False)
         self._reference.setTitle("Reference")
 
         self._pub = ReferencePub()

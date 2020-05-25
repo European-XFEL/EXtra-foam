@@ -7,6 +7,7 @@ from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .ref_image_ctrl_widget import RefImageCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .image_ctrl_widget import ImageCtrlWidget
+from .image_transform_ctrl_widget import ImageTransformCtrlWidget
 from .mask_ctrl_widget import MaskCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .histogram_ctrl_widget import HistogramCtrlWidget

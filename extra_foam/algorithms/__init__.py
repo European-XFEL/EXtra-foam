@@ -37,3 +37,6 @@ from .spectrum import (
     compute_spectrum_1d
 )
 
+from .computer_vision import (
+    edge_detect, fourier_transform_2d
+)

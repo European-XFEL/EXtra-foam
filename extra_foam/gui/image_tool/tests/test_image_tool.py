@@ -11,7 +11,7 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, Normalizer, RoiCombo, RoiFom, RoiProjType
+    AnalysisType, config, ImageTransformType, Normalizer, RoiCombo, RoiFom, RoiProjType
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
@@ -82,7 +82,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.pulse_worker._image_roi = ImageRoiPulse()
 
     def testGeneral(self):
-        self.assertEqual(11, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._require_geometry)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
@@ -841,6 +840,79 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertFalse(widget._stack_only_cb.isChecked())
         self.assertListEqual(quad_positions, _parse_table_widget((widget._coordinates_tb)))
 
+    def testImageTransformCtrlWidget(self):
+        tab = self.image_tool._views_tab
+        TabIndex = self.image_tool.TabIndex
+        tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
+        tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+
+        ctrl_widget = self.image_tool._transform_view._ctrl_widget
+        fft_widget = ctrl_widget._fourier_transform
+        ed_widget = ctrl_widget._edge_detection
+
+        proc = self.pulse_worker._image_transform_proc
+        fft = proc._fft
+        ed = proc._ed
+
+        # test default
+        # also test only parameters of the activated transform type are updated
+        proc.update()
+        self.assertEqual(1, proc._ma_window)
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
+        self.assertIsNone(ed.kernel_size)
+        # fourier transform
+        self.assertTrue(fft.logrithmic)
+        # edge detection
+        ctrl_widget._opt_tab.setCurrentIndex(1)
+        proc.update()
+        self.assertEqual(ImageTransformType.EDGE_DETECTION, proc._transform_type)
+        self.assertEqual(5, ed.kernel_size)
+        self.assertEqual(1.1, ed.sigma)
+        self.assertEqual((50, 100), ed.threshold)
+
+        # test setting new values
+        ctrl_widget._ma_window_le.setText("10")
+        fft_widget.logrithmic_cb.setChecked(False)
+        ed_widget.kernel_size_sp.setValue(3)
+        ed_widget.sigma_sp.setValue(0.5)
+        ed_widget.threshold_le.setText("-1, 1")
+        proc.update()
+        self.assertEqual(10, proc._ma_window)
+        self.assertTrue(fft.logrithmic)
+        self.assertEqual(3, ed.kernel_size)
+        self.assertEqual(0.5, ed.sigma)
+        self.assertEqual((-1, 1), ed.threshold)
+        ctrl_widget._opt_tab.setCurrentIndex(0)
+        proc.update()
+        self.assertFalse(fft.logrithmic)
+
+        # switch back to "overview"
+        tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+        proc.update()
+        # test unregistration
+        self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)
+        tab.setCurrentIndex(TabIndex.OVERVIEW)
+
+        # test loading meta data
+        mediator = ctrl_widget._mediator
+        mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM)
+        mediator.onItMaWindowChange("100")
+        mediator.onItFftLogrithmicScaleChange(True)
+        mediator.onItEdKernelSizeChange("3")
+        mediator.onItEdSigmaChange("2.1")
+        mediator.onItEdThresholdChange((20, 40))
+        ctrl_widget.loadMetaData()
+        self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)  # unchanged
+        self.assertEqual("100", ctrl_widget._ma_window_le.text())
+        self.assertTrue(fft_widget.logrithmic_cb.isChecked())
+        self.assertEqual("3", ed_widget.kernel_size_sp.text())
+        self.assertEqual("2.10", ed_widget.sigma_sp.text())
+        self.assertEqual("20, 40", ed_widget.threshold_le.text())
+
+        with patch.object(mediator, "onItTransformTypeChange") as mocked:
+            ctrl_widget.updateMetaData()
+            mocked.assert_not_called()
+
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
         self.assertEqual(0, tab.currentIndex())
@@ -873,9 +945,13 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)
         tab.setCurrentIndex(TabIndex.GEOMETRY)
 
-        # switch back to "corrected"
-        tab.tabBarClicked.emit(TabIndex.CORRECTED)
-        tab.setCurrentIndex(TabIndex.CORRECTED)
+        # switch to "image transform"
+        tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
+        tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+
+        # switch back to "overview"
+        tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+        tab.setCurrentIndex(TabIndex.OVERVIEW)
         self.assertTrue(mask_ctrl_widget.draw_mask_btn.isEnabled())
         self.assertTrue(mask_ctrl_widget.erase_mask_btn.isEnabled())
 

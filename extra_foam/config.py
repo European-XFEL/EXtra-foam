@@ -89,6 +89,12 @@ class GeomAssembler(IntEnum):
     EXTRA_GEOM = 2  # use Extra-geom geometry assembler
 
 
+class ImageTransformType(IntEnum):
+    UNDEFINED = 0
+    FOURIER_TRANSFORM = 1
+    EDGE_DETECTION = 2
+
+
 class PipelineSlowPolicy(IntEnum):
     DROP = 0
     WAIT = 1
