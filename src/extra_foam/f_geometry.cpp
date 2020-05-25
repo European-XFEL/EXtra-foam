@@ -66,6 +66,16 @@ void declareGeometry(py::module &m, const std::string& detector_name)
   FOAM_POSITION_ALL_MODULES(uint16_t, uint16_t)
   FOAM_POSITION_ALL_MODULES(bool, bool)
 
+#define FOAM_MASK_MODULE(SRC_TYPE)                                                                 \
+  cls.def_static("maskModule",                                                                     \
+  static_cast<void (*)(xt::pytensor<SRC_TYPE, 2>&)>(&Geometry::maskModule),                        \
+    py::arg("src").noconvert());                                                                   \
+  cls.def_static("maskModule",                                                                     \
+  static_cast<void (*)(xt::pytensor<SRC_TYPE, 3>&)>(&Geometry::maskModule),                        \
+    py::arg("src").noconvert());
+
+  FOAM_MASK_MODULE(float)
+
 #define FOAM_DISMANTLE_ALL_MODULES(SRC_TYPE, DST_TYPE)                                             \
   cls.def("dismantleAllModules",                                                                   \
   (void (Geometry::*)(const xt::pytensor<SRC_TYPE, 2>&, xt::pytensor<DST_TYPE, 3>&) const)         \

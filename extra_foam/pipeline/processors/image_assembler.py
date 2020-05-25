@@ -19,7 +19,7 @@ from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, GeomAssembler, DataSource
 from ...database import SourceCatalog
-from ...geometries import load_geometry
+from ...geometries import load_geometry, maybe_mask_asic_edges
 from ...ipc import process_logger as logger
 
 
@@ -233,7 +233,10 @@ class ImageAssemblerFactory(ABC):
             if modules.ndim == 4:
                 # single module operation (for all 1M detectors and JungFrau)
                 if modules.shape[1] == 1:
-                    return modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
+                    sm = modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
+                    if self._mask_asic:
+                        maybe_mask_asic_edges(sm, self._detector)
+                    return sm
 
                 n_pulses = modules.shape[0]
                 if self._out_array is None or self._out_array.shape[0] != n_pulses:
@@ -259,7 +262,7 @@ class ImageAssemblerFactory(ABC):
                     n_pulses = modules.shape[0]
                     self._out_array = self._geom.output_array_for_position_fast(
                             extra_shape=(n_pulses, ), dtype=_IMAGE_DTYPE)
-                else: # modules.ndim == 3
+                else:  # modules.ndim == 3
                     self._out_array = self._geom.output_array_for_position_fast(
                         dtype=_IMAGE_DTYPE)
 
@@ -269,6 +272,23 @@ class ImageAssemblerFactory(ABC):
                                                 ignore_asic_edge=self._mask_asic)
 
             return self._out_array
+
+        def _preprocess(self, image):
+            """Preprocess single image data.
+
+            :param array-like image: image data. shape = (y, x).
+
+            :return numpy.ndarray: processed image data
+            """
+            # For train-resolved detector, assembled is a reference
+            # to the array data received from the pyzmq. This array data
+            # is only readable since the data is owned by a pointer in
+            # the zmq message (it is not copied). However, other data
+            # like data['metadata'] is writeable.
+            image = image.astype(_IMAGE_DTYPE)
+            if self._mask_asic:
+                maybe_mask_asic_edges(image, detector=self._detector)
+            return image
 
         def process(self, data):
             """Override."""
@@ -316,12 +336,7 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(f"Number of memory cells is zero!")
 
             if ndim == 2:
-                # For train-resolved detector, assembled is a reference
-                # to the array data received from the pyzmq. This array data
-                # is only readable since the data is owned by a pointer in
-                # the zmq message (it is not copied). However, other data
-                # like data['metadata'] is writeable.
-                data['assembled'] = {'data': modules_data.astype(_IMAGE_DTYPE)}
+                data['assembled'] = {'data': self._preprocess(modules_data)}
             else:
                 data['assembled'] = {'data': self._assemble(modules_data)}
 

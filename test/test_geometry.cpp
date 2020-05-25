@@ -29,6 +29,8 @@ using ::testing::FloatEq;
 template<typename T>
 class Geometry : public ::testing::Test
 {
+public:
+  using GeometryType = T;
 
 protected:
   Geometry() : geom_(std::make_unique<T>(3, 2)) {}
@@ -136,7 +138,7 @@ TYPED_TEST(Geometry, testIgnoreTileEdge)
 
   EXPECT_THAT(xt::view(dst, 0, 0, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
 
-  for (int bottom=0, top=this->ah_ - 1; bottom < this->shape[0]; top += this->ah_, bottom += this->ah_)
+  for (int bottom=0, top = this->ah_ - 1; bottom < this->shape[0]; top += this->ah_, bottom += this->ah_)
   {
     EXPECT_THAT(xt::view(dst, xt::all(), bottom, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
     EXPECT_THAT(xt::view(dst, xt::all(), top, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
@@ -146,6 +148,53 @@ TYPED_TEST(Geometry, testIgnoreTileEdge)
   {
     EXPECT_THAT(xt::view(dst, xt::all(), xt::all(), left), ::testing::Each(NanSensitiveFloatEq(this->nan)));
     EXPECT_THAT(xt::view(dst, xt::all(), xt::all(), right), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+  }
+}
+
+TYPED_TEST(Geometry, testMaskModule)
+{
+  using GeometryType = typename TestFixture::GeometryType;
+
+  xt::xtensor<float, 2> src_w {xt::ones<float>({3, 4})};
+  EXPECT_THROW(GeometryType::maskModule(src_w), std::invalid_argument);
+
+  xt::xtensor<float, 2> src {
+  xt::ones<float>({static_cast<int>(this->mh_), static_cast<int>(this->mw_)}) };
+  GeometryType::maskModule(src);
+
+  for (int bottom=0, top = this->ah_ - 1; bottom < this->mh_; top += this->ah_, bottom += this->ah_)
+  {
+    EXPECT_THAT(xt::view(src, bottom, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+    EXPECT_THAT(xt::view(src, top, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+  }
+  for (int left = 0, right = this->aw_ - 1; right < this->mw_; left += this->aw_, right += this->aw_)
+  {
+    EXPECT_THAT(xt::view(src, xt::all(), left), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+    EXPECT_THAT(xt::view(src, xt::all(), right), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+  }
+}
+
+TYPED_TEST(Geometry, testMaskModuleArray)
+{
+  using GeometryType = typename TestFixture::GeometryType;
+  int n_pulses = 2;
+
+  xt::xtensor<float, 3> src_w {xt::ones<float>({n_pulses, 3, 4})};
+  EXPECT_THROW(GeometryType::maskModule(src_w), std::invalid_argument);
+
+  xt::xtensor<float, 3> src {
+    xt::ones<float>({n_pulses, static_cast<int>(this->mh_), static_cast<int>(this->mw_)}) };
+  GeometryType::maskModule(src);
+
+  for (int bottom=0, top = this->ah_ - 1; bottom < this->mh_; top += this->ah_, bottom += this->ah_)
+  {
+    EXPECT_THAT(xt::view(src, xt::all(), bottom, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+    EXPECT_THAT(xt::view(src, xt::all(), top, xt::all()), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+  }
+  for (int left = 0, right = this->aw_ - 1; right < this->mw_; left += this->aw_, right += this->aw_)
+  {
+    EXPECT_THAT(xt::view(src, xt::all(), xt::all(), left), ::testing::Each(NanSensitiveFloatEq(this->nan)));
+    EXPECT_THAT(xt::view(src, xt::all(), xt::all(), right), ::testing::Each(NanSensitiveFloatEq(this->nan)));
   }
 }
 

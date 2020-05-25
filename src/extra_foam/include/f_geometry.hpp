@@ -205,6 +205,12 @@ public:
     EnableIf<std::decay_t<M>, IsModulesVector> = false, EnableIf<E, IsImageArray> = false>
   void positionAllModules(M&& src, E& dst, bool ignore_asic_edge=false) const;
 
+  template<typename M, EnableIf<M, IsImage> = false>
+  static void maskModule(M& src);
+
+  template<typename M, EnableIf<M, IsImageArray> = false>
+  static void maskModule(M& src);
+
   /**
    * Dismantle an assembled image into modules.
    *
@@ -288,6 +294,9 @@ private:
    */
   template<typename M,  typename N, typename T>
   void positionModule(M&& src, N& dst, T&& p0, T&& p1, bool ignore_asic_edge) const;
+
+  template<typename M>
+  static void maskModuleImp(M& src);
 
   /**
    * Check the src and dst shapes used for dismantling..
@@ -732,6 +741,51 @@ void DetectorGeometry<Detector>::positionModule(M&& src, N& dst, T&& p0, T&& p1,
       }
     }
   }
+}
+
+template<typename Detector>
+template<typename M>
+void DetectorGeometry<Detector>::maskModuleImp(M& src)
+{
+  auto ss = src.shape();
+  if (ss[1] != Detector::module_shape[0] || ss[2] != Detector::module_shape[1])
+  {
+    std::stringstream fmt;
+    fmt << "Expected module with shape (" << Detector::module_shape[0] << ", " << Detector::module_shape[1]
+        << ") modules, get (" << ss[1] << ", " << ss[2] << ")!";
+    throw std::invalid_argument(fmt.str());
+  }
+
+  int wa = Detector::asic_shape[1];
+  int ha = Detector::asic_shape[0];
+
+  auto nan = std::numeric_limits<typename M::value_type>::quiet_NaN();
+
+  for (int i_row = 0; i_row < Detector::asic_grid_shape[0]; ++i_row)
+  {
+    xt::view(src, xt::all(), i_row * ha, xt::all()) = nan;
+    xt::view(src, xt::all(), (i_row + 1) * ha - 1, xt::all()) = nan;
+  }
+  for (int i_col = 0; i_col < Detector::asic_grid_shape[1]; ++i_col)
+  {
+    xt::view(src, xt::all(), xt::all(), i_col * wa) = nan;
+    xt::view(src, xt::all(), xt::all(), (i_col + 1) * wa - 1) = nan;
+  }
+}
+
+template<typename Detector>
+template<typename M, EnableIf<M, IsImageArray>>
+void DetectorGeometry<Detector>::maskModule(M& src)
+{
+  maskModuleImp(src);
+}
+
+template<typename Detector>
+template<typename M, EnableIf<M, IsImage>>
+void DetectorGeometry<Detector>::maskModule(M& src)
+{
+  auto&& expanded = xt::view(src, xt::newaxis(), xt::all(), xt::all());
+  maskModuleImp(expanded);
 }
 
 template<typename Detector>

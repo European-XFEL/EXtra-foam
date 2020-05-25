@@ -6,7 +6,7 @@ import numpy as np
 
 from extra_data.stacking import StackView
 
-from extra_foam.geometries import load_geometry
+from extra_foam.geometries import EPix100GeometryFast, JungFrauGeometryFast, load_geometry
 from extra_foam.config import config
 
 
@@ -37,8 +37,6 @@ class TestJungFrauGeometryFast:
         try:
             cls.geom_32_cfel = load_geometry("JungFrau", filepath=geom_file, n_modules=6)
         except FileNotFoundError:
-            from extra_foam.geometries import JungFrauGeometryFast
-
             module_coordinates = [
                 np.array([ 0.08452896,  0.07981445, 0.]),
                 np.array([ 0.08409096,  0.03890507, 0.]),
@@ -94,6 +92,14 @@ class TestJungFrauGeometryFast:
             assert 0 == np.count_nonzero(~np.isnan(assembled[:, :, aw - 1::aw]))
             assert 0 == np.count_nonzero(~np.isnan(assembled[:, 0::ah, :]))
             assert 0 == np.count_nonzero(~np.isnan(assembled[:, ah - 1::ah, :]))
+
+    def testMaskModule(self):
+        module1 = np.ones((self.n_pulses, *self.module_shape), dtype=_IMAGE_DTYPE)
+        JungFrauGeometryFast.maskModule(module1)
+        module2 = np.copy(module1)
+        JungFrauGeometryFast.mask_module_py(module2)
+
+        np.testing.assert_array_equal(module1, module2)
 
 
 class TestEpix100GeometryFast:
@@ -153,3 +159,11 @@ class TestEpix100GeometryFast:
             assert 0 == np.count_nonzero(~np.isnan(assembled[:, aw - 1::aw]))
             assert 0 == np.count_nonzero(~np.isnan(assembled[0::ah, :]))
             assert 0 == np.count_nonzero(~np.isnan(assembled[ah - 1::ah, :]))
+
+    def testMaskModule(self):
+        module1 = np.ones(self.module_shape, dtype=_IMAGE_DTYPE)
+        EPix100GeometryFast.maskModule(module1)
+        module2 = np.copy(module1)
+        EPix100GeometryFast.mask_module_py(module2)
+
+        np.testing.assert_array_equal(module1, module2)
