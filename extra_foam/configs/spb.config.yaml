@@ -9,7 +9,7 @@ SOURCE:
                 SPB_DET_AGIPD1M-1/DET/*CH0:xtdf:
                     - image.data
 
-        JungFrauPR:
+        JungFrau:
             PIPELINE:
                 SPB_IRDA_JNGFR/DET/MODULE_*:daqOutput:
                     - data.adc

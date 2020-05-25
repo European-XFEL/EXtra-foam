@@ -37,7 +37,9 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestMainGui(unittest.TestCase):
+class TestMainGuiCtrl(unittest.TestCase):
+    """Test with a pulse-resolved detector."""
+
     @classmethod
     def setUpClass(cls):
         config.load(*random.choice([('LPD', 'FXE'), ('DSSC', 'SCS')]))
@@ -334,10 +336,11 @@ class TestMainGui(unittest.TestCase):
         self.assertFalse(self.pulse_worker.running)
 
 
-class TestMainGuiTs(unittest.TestCase):
+class TestEpix100MainGuiCtrl(unittest.TestCase):
+    """Test with a train-resolved detector."""
     @classmethod
     def setUpClass(cls):
-        config.load('ePix100', 'MID')
+        config.load(*random.choice([('ePix100', 'MID'), ('FastCCD', 'SCS')]))
 
         cls.foam = Foam().init()
 

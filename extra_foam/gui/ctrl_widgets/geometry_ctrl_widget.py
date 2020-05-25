@@ -57,7 +57,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         self._coordinates_tb = QTableWidget()
 
-        if self._detector in ("JungFrauPR", "ePix100"):
+        if self._detector in ("JungFrau", "ePix100"):
             self._coordinates_tb.setEnabled(False)
             self._assembler_cb.removeItem(1)  # no EXtra-geom
         elif self._detector == "AGIPD":
@@ -93,7 +93,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         i_row += 1
         self.initCoordinatesTable()
-        if self._detector in ("JungFrauPR", "ePix100"):
+        if self._detector in ("JungFrau", "ePix100"):
             label = QLabel("Module positions:")
         else:
             label = QLabel("Quadrant positions:")
@@ -121,7 +121,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
     def initCoordinatesTable(self):
         n_modules = config["NUMBER_OF_MODULES"]
-        if self._detector in ("JungFrauPR", "ePix100"):
+        if self._detector in ("JungFrau", "ePix100"):
             coordinates = config["MODULE_POSITIONS"][:n_modules]
         else:
             coordinates = config["QUAD_POSITIONS"]
@@ -145,7 +145,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         table.move(0, 0)
         table.setVerticalHeaderLabels(['x', 'y'])
-        if self._detector == "JungFrauPR":
+        if self._detector == "JungFrau":
             table.setHorizontalHeaderLabels(
                 [str(i) for i in module_indices(n_modules,
                                                 detector=self._detector)])
@@ -218,7 +218,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._stack_only_cb.setChecked(cfg["stack_only"] == 'True')
         self._geom_file_le.setText(cfg["geometry_file"])
 
-        # TODO: check number of modules for JungFrauPR
+        # TODO: check number of modules for JungFrau
         coordinates = json.loads(cfg["coordinates"], encoding='utf8')
         table = self._coordinates_tb
         n_rows = table.rowCount()

@@ -959,7 +959,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 class TestImageToolTs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config.load('JungFrau', 'FXE')
+        config.load('ePix100', 'MID')
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
@@ -1006,17 +1006,17 @@ class TestImageToolTs(unittest.TestCase):
         widget = self.image_tool._mask_ctrl_widget
 
         self.assertFalse(config["MASK_TILE_EDGE"])
-        self.assertFalse(config["MASK_ASIC_EDGE"])
+        mask_asic_state = config["MASK_ASIC_EDGE"]
         # test default
         self.assertFalse(widget.mask_tile_cb.isChecked())
-        self.assertFalse(widget.mask_asic_cb.isChecked())
+        self.assertEqual(mask_asic_state, widget.mask_asic_cb.isChecked())
         self.assertFalse(widget.mask_save_in_modules_cb.isChecked())
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onImageMaskTileEdgeChange(True)
-        mediator.onImageMaskAsicEdgeChange(True)
+        mediator.onImageMaskAsicEdgeChange(not mask_asic_state)
         mediator.onImageMaskSaveInModulesToggled(True)
         widget.loadMetaData()
         self.assertFalse(widget.mask_tile_cb.isChecked())

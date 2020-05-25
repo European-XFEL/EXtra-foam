@@ -33,7 +33,7 @@ def module_indices(n_modules, *, detector=None, topic=None):
     :param str detector: detector name
     :param str topic: topic
     """
-    if detector == "JungFrauPR":
+    if detector == "JungFrau":
         if n_modules == 6:
             return [1, 2, 3, 6, 7, 8]
         return [*range(1, n_modules + 1)]
@@ -294,7 +294,7 @@ class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
 
         geom_dict = load_crystfel_geometry(filename)
         modules = []
-        for i_p in module_indices(n_rows * n_columns, detector="JungFrauPR"):
+        for i_p in module_indices(n_rows * n_columns, detector="JungFrau"):
             i_a = 1 if i_p > 4 else 8
             d = geom_dict['panels'][f'p{i_p}a{i_a}']
             modules.append(GeometryFragment.from_panel_dict(d).corner_pos)
@@ -364,7 +364,7 @@ def load_geometry(detector, *,
             return DSSC_1MGeometry.from_h5_file_and_quad_positions(
                 filepath, coordinates)
 
-    if detector == "JungFrauPR":
+    if detector == "JungFrau":
         shape = module_grid_shape(n_modules, detector=detector)
         if stack_only:
             return JungFrauGeometryFast(*shape)
