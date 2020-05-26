@@ -139,6 +139,19 @@ def benchmark_jungfrau():
             print(f"\ndismantle all modules for JungFrauGeometry (from {from_str} data) - \n"
                   f"  dt (foam stack only): {dt_dismantle:.4f}")
 
+    module = np.ones((n_pulses, *geom.module_shape), dtype=_IMAGE_DTYPE)
+    t0 = time.perf_counter()
+    JungFrauGeometryFast.maskModule(module)
+    dt_mask_cpp = time.perf_counter() - t0
+
+    module = np.ones((n_pulses, *geom.module_shape), dtype=_IMAGE_DTYPE)
+    t0 = time.perf_counter()
+    JungFrauGeometryFast.mask_module_py(module)
+    dt_mask_py = time.perf_counter() - t0
+
+    print(f"\nMask single module for JungFrauGeometry - \n"
+          f"  dt (cpp): {dt_mask_cpp:.4f}, dt (py): {dt_mask_py:.4f}")
+
 
 if __name__ == "__main__":
     print("*" * 80)
