@@ -95,8 +95,9 @@ class TestJungFrauGeometryFast:
 
     def testMaskModule(self):
         module1 = np.ones((self.n_pulses, *self.module_shape), dtype=_IMAGE_DTYPE)
-        JungFrauGeometryFast.maskModule(module1)
         module2 = np.copy(module1)
+
+        JungFrauGeometryFast.maskModule(module1)
         JungFrauGeometryFast.mask_module_py(module2)
 
         np.testing.assert_array_equal(module1, module2)
@@ -147,23 +148,21 @@ class TestEpix100GeometryFast:
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, np.int16])
     def testAssemblingWithAsicEdgeIgnored(self, dtype):
-        ah, aw = self.asic_shape[0], self.asic_shape[1]
-
+        mh, mw = self.module_shape[0], self.module_shape[1]
         for geom, n_modules, assembled_shape_gt in self.cases:
             modules = np.ones((n_modules, *self.module_shape), dtype=dtype)
 
             assembled = geom.output_array_for_position_fast(dtype=_IMAGE_DTYPE)
             geom.position_all_modules(modules, assembled, ignore_asic_edge=True)
-
-            assert 0 == np.count_nonzero(~np.isnan(assembled[:, 0::aw]))
-            assert 0 == np.count_nonzero(~np.isnan(assembled[:, aw - 1::aw]))
-            assert 0 == np.count_nonzero(~np.isnan(assembled[0::ah, :]))
-            assert 0 == np.count_nonzero(~np.isnan(assembled[ah - 1::ah, :]))
+            assert n_modules * mw * 2 == np.count_nonzero(np.isnan(assembled))
+            assert 0 == np.count_nonzero(~np.isnan(assembled[0::mh, :]))
+            assert 0 == np.count_nonzero(~np.isnan(assembled[mh - 1::mh, :]))
 
     def testMaskModule(self):
         module1 = np.ones(self.module_shape, dtype=_IMAGE_DTYPE)
-        EPix100GeometryFast.maskModule(module1)
         module2 = np.copy(module1)
+
+        EPix100GeometryFast.maskModule(module1)
         EPix100GeometryFast.mask_module_py(module2)
 
         np.testing.assert_array_equal(module1, module2)

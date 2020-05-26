@@ -287,7 +287,7 @@ class ImageAssemblerFactory(ABC):
             # like data['metadata'] is writeable.
             image = image.astype(_IMAGE_DTYPE)
             if self._mask_asic:
-                maybe_mask_asic_edges(image, detector=self._detector)
+                maybe_mask_asic_edges(image, self._detector)
             return image
 
         def process(self, data):

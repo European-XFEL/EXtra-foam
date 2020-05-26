@@ -695,6 +695,7 @@ class TestJungfrauAssembler(unittest.TestCase):
 
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrau")
+        self._assembler._mask_asic = True
 
     def _create_catalog(self, src_name, key_name, n_modules=1):
         catalog = SourceCatalog()
@@ -994,6 +995,7 @@ class TestEPix100Assembler(unittest.TestCase):
 
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("ePix100")
+        self._assembler._mask_asic = True
 
     def _create_catalog(self, src_name, key_name, n_modules=1):
         catalog = SourceCatalog()

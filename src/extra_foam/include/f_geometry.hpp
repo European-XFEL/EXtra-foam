@@ -743,6 +743,39 @@ void DetectorGeometry<Detector>::positionModule(M&& src, N& dst, T&& p0, T&& p1,
   }
 }
 
+template<>
+template<typename M, typename N, typename T>
+void DetectorGeometry<EPix100>::positionModule(M&& src, N& dst, T&& p0, T&& p1, bool ignore_asic_edge) const
+{
+  int wm = EPix100::module_shape[1];
+  int hm = EPix100::module_shape[0];
+
+  int edge = 0;
+  if (ignore_asic_edge) edge = 1;
+
+  auto x0 = p0(0);
+  auto y0 = p0(1);
+
+  int ix_dir = (p1(0) - x0 > 0) ? 1 : -1;
+  int iy_dir = (p1(1) - y0 > 0) ? 1 : -1;
+
+  int ix0 = 0;
+  int iy0 = 0;
+
+  auto ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                            : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+  auto iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                            : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
+
+  for (size_t iy = edge, iy_dst = iy0_dst + edge * iy_dir; iy < hm - edge; ++iy, iy_dst += iy_dir)
+  {
+    for (size_t ix = 0, ix_dst = ix0_dst; ix < wm; ++ix, ix_dst += ix_dir)
+    {
+      dst(iy_dst, ix_dst) = src(iy, ix);
+    }
+  }
+}
+
 template<typename Detector>
 template<typename M>
 void DetectorGeometry<Detector>::maskModuleImp(M& src)
@@ -771,6 +804,25 @@ void DetectorGeometry<Detector>::maskModuleImp(M& src)
     xt::view(src, xt::all(), xt::all(), i_col * wa) = nan;
     xt::view(src, xt::all(), xt::all(), (i_col + 1) * wa - 1) = nan;
   }
+}
+
+template<>
+template<typename M>
+void DetectorGeometry<EPix100>::maskModuleImp(M& src)
+{
+  auto ss = src.shape();
+  if (ss[1] != EPix100::module_shape[0] || ss[2] != EPix100::module_shape[1])
+  {
+    std::stringstream fmt;
+    fmt << "Expected module with shape (" << EPix100::module_shape[0] << ", " << EPix100::module_shape[1]
+        << ") modules, get (" << ss[1] << ", " << ss[2] << ")!";
+    throw std::invalid_argument(fmt.str());
+  }
+
+  auto nan = std::numeric_limits<typename M::value_type>::quiet_NaN();
+
+  xt::view(src, xt::all(), 0, xt::all()) = nan;
+  xt::view(src, xt::all(), EPix100::module_shape[0] - 1, xt::all()) = nan;
 }
 
 template<typename Detector>

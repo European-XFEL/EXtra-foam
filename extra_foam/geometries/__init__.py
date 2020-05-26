@@ -286,7 +286,7 @@ class _GeometryPyMixin:
         """Mask the ASIC edges of a single module.
 
         :param numpy.ndarray image: image data of a single module.
-            Shape = (y, x)
+            Shape = (y, x) or (pulses, y, x)
         """
         ah, aw = cls.asic_shape
         ny, nx = cls.asic_grid_shape
@@ -322,6 +322,15 @@ class EPix100GeometryFast(EPix100Geometry, _GeometryPyMixin):
 
     Extend the functionality of EPix100Geometry implementation in C++.
     """
+    @classmethod
+    def mask_module_py(cls, image):
+        """Override.
+
+        :param numpy.ndarray image: image data of a single module.
+            Shape = (y, x)
+        """
+        image[0, :] = np.nan
+        image[-1, :] = np.nan
 
 
 def load_geometry(detector, *,
@@ -400,6 +409,7 @@ def load_geometry(detector, *,
 
 
 def maybe_mask_asic_edges(image, detector):
+    """Helper function to mask the edges of ASICs of a single module."""
     if detector == "JungFrau":
         JungFrauGeometryFast.mask_module_py(image)
         return

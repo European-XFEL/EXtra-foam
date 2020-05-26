@@ -13,9 +13,13 @@ SOURCE:
             PIPELINE:
                 FXE_XAD_JF1M/CAL/APPEND:
                     - data.adc
+                FXE_XAD_JF1M/DET/RECEIVER-*:display:
+                    - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-1:display:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-2:display:
+                    - data.adc
+                FXE_XAD_JF1M/DET/RECEIVER-*:daqOutput:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput:
                     - data.adc
