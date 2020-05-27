@@ -43,13 +43,18 @@ find_package(Threads REQUIRED)
 
 set(FOAM_TESTS
     test_tbb.cpp
+    test_blas.cpp
     test_imageproc.cpp
     test_geometry.cpp
     test_geometry_1m.cpp
     test_statistics.cpp
     test_smooth.cpp
-    test_canny.cpp
-)
+    test_canny.cpp)
+
+set(FOAM_TARGETS_WITH_BLAS
+    test_blas)
+
+set(CMAKE_INSTALL_RPATH "${target_install_rpath}/../;${CMAKE_PREFIX_PATH}/lib")
 
 foreach(filename IN LISTS FOAM_TESTS)
     string(REPLACE ".cpp" "" targetname ${filename})
@@ -57,7 +62,7 @@ foreach(filename IN LISTS FOAM_TESTS)
     if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
         target_compile_definitions(${targetname} PRIVATE FOAM_WITH_TBB)
         target_include_directories(${targetname} PRIVATE ${TBB_INCLUDE_DIRS})
-        target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARIES})
+        target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARY})
     endif()
     target_include_directories(${targetname}
         PRIVATE
@@ -66,6 +71,15 @@ foreach(filename IN LISTS FOAM_TESTS)
             ${GMOCK_INCLUDE_DIRS}
     )
     target_link_libraries(${targetname} PRIVATE gtest pthread xtensor)
+
+    if (${targetname} IN_LIST FOAM_TARGETS_WITH_BLAS)
+        target_link_libraries(${targetname}
+            PRIVATE
+                xtensor-blas
+                ${BLAS_LIBRARIES}
+                ${LAPACK_LIBRARIES})
+    endif()
+
     add_custom_target(
         f${targetname}
         COMMAND ${targetname}
@@ -82,12 +96,19 @@ target_include_directories(test_foam_cpp
         ${GMOCK_INCLUDE_DIRS}
 )
 
-target_link_libraries(test_foam_cpp PRIVATE gtest pthread xtensor)
+target_link_libraries(test_foam_cpp
+    PRIVATE
+        gtest
+        pthread
+        xtensor
+        xtensor-blas
+        ${BLAS_LIBRARIES}
+        ${LAPACK_LIBRARIES})
 
 if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
     target_compile_definitions(test_foam_cpp PRIVATE FOAM_WITH_TBB)
     target_include_directories(test_foam_cpp PRIVATE ${TBB_INCLUDE_DIRS})
-    target_link_libraries(test_foam_cpp PRIVATE ${TBB_LIBRARIES})
+    target_link_libraries(test_foam_cpp PRIVATE ${TBB_LIBRARY})
 endif()
 
 add_custom_target(

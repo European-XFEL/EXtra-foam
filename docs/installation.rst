@@ -45,4 +45,5 @@ Install **EXtra-foam**
     #       environmental parameters.
     $ python setup.py clean  # alternatively "rm -r build"
 
+    $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
     $ pip install .

@@ -132,6 +132,7 @@ class BuildExt(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/algorithms')}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
+            f"-DCMAKE_PREFIX_PATH={os.getenv('CMAKE_PREFIX_PATH')}",
         ]
 
         if self.with_tbb:
@@ -210,7 +211,7 @@ class BuildExt(build_ext):
         if sys.platform == 'darwin':
             lib_pattern = f"lib{lib_name}*.dylib"
         else:
-            lib_pattern = f"lib{lib_name}.so*"
+            lib_pattern = f"lib{lib_name}*.so*"
 
         libs = glob.glob(lib_pattern)
 

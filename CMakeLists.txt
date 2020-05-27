@@ -26,10 +26,18 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 OPTION(FOAM_WITH_TBB "Build extra-foam (xtensor is not included) with intel TBB" ON)
-
 OPTION(FOAM_WITH_XSIMD "Build extra-foam (xtensor is not included) with XSIMD" ON)
-
 OPTION(BUILD_FOAM_TESTS "Build c++ unit test" OFF)
+
+if(APPLE)
+    set(target_install_rpath "@loader_path/")
+else()
+    set(target_install_rpath "\$ORIGIN")
+endif()
+
+if(UNIX)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
 
 set(thirdparty_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/thirdparty)
 
@@ -69,10 +77,13 @@ if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
     message(STATUS "Found TBB: ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR}")
 
     get_target_property(TBB_INCLUDE_DIRS TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
-    get_target_property(TBB_LIBRARIES TBB::tbb IMPORTED_LOCATION_RELEASE)
-
-    get_filename_component(TBB_LIB_NAME ${TBB_LIBRARIES} NAME)
-    configure_file(${TBB_LIBRARIES} ${CMAKE_CURRENT_BINARY_DIR}/${TBB_LIB_NAME} COPYONLY)
+    get_target_property(TBB_LIBRARY TBB::tbb IMPORTED_LOCATION_RELEASE)
+    get_target_property(TBB_LIBRARY_MALLOC TBB::tbbmalloc IMPORTED_LOCATION_RELEASE)
+    set(_TBB_LIBRARIES ${TBB_LIBRARY} ${TBB_LIBRARY_MALLOC})
+    foreach(_TBB_LIB ${_TBB_LIBRARIES})
+        get_filename_component(_TBB_LIB_NAME ${_TBB_LIB} NAME)
+        configure_file(${_TBB_LIB} ${CMAKE_CURRENT_BINARY_DIR}/${_TBB_LIB_NAME} COPYONLY)
+    endforeach()
 
     if(FOAM_WITH_TBB)
         message(STATUS "Build extra-foam with intel TBB")
@@ -104,6 +115,16 @@ set(xtl_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtl)
 # xtensor
 add_subdirectory(thirdparty/xtensor)
 set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
+
+# BLAS
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+message(STATUS "BLAS VENDOR:    " ${BLA_VENDOR})
+message(STATUS "BLAS LIBRARIES: " ${BLAS_LIBRARIES})
+
+# xtensor-blas
+add_subdirectory(thirdparty/xtensor-blas)
+set(xtensor-blas_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor-blas)
 
 # xtensor-python
 add_subdirectory(thirdparty/xtensor-python)

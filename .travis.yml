@@ -86,19 +86,20 @@ before_install:
 install:
   - conda install -y python=$PYTHON_VERSION
   - echo $PYTHON_VERSION
-  - conda install -y cmake -c conda-forge
+  - conda install -y cmake numpy -c anaconda
+  - export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
   - pip install -e .[test]
 before_script:
   - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1400x900x24
   - sleep 3
 script:
   # test parallel version
-  - python setup.py build_ext --with-tests
+  - python setup.py build_ext --inplace --with-tests
   - python setup.py test -v
   - python setup.py benchmark -v
 
   # test series version
   - export BUILD_SERIAL_FOAM=1
-  - python setup.py build_ext --with-tests
+  - python setup.py build_ext --inplace --with-tests
   - python setup.py test -v
   - python setup.py benchmark -v
