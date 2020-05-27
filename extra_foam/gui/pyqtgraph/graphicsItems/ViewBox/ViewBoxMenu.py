@@ -67,17 +67,15 @@ class ViewBoxMenu(QtGui.QMenu):
         self.leftMenu = QtGui.QMenu("Mouse Mode")
         group = QtGui.QActionGroup(self)
         
-        # This does not work! QAction _must_ be initialized with a permanent 
-        # object as the parent or else it may be collected prematurely.
-        #pan = self.leftMenu.addAction("3 button", self.set3ButtonMode)
-        #zoom = self.leftMenu.addAction("1 button", self.set1ButtonMode)
-        pan = QtGui.QAction("3 button", self.leftMenu)
-        zoom = QtGui.QAction("1 button", self.leftMenu)
+        # FIXME: patch in EXtra-foam
+        pan = QtGui.QAction("Pan", self.leftMenu)
+        zoom = QtGui.QAction("Zoom", self.leftMenu)
         self.leftMenu.addAction(pan)
         self.leftMenu.addAction(zoom)
-        pan.triggered.connect(self.set3ButtonMode)
-        zoom.triggered.connect(self.set1ButtonMode)
-        
+        pan.triggered.connect(self.setPanMode)
+        zoom.triggered.connect(self.setZoomMode)
+        # FIXME
+
         pan.setCheckable(True)
         zoom.setCheckable(True)
         pan.setActionGroup(group)
@@ -218,12 +216,14 @@ class ViewBoxMenu(QtGui.QMenu):
         act = self.sender()
         self.exportMethods[str(act.text())]()
 
-    def set3ButtonMode(self):
+    # FIXME: patch in EXtra-foam
+    def setPanMode(self):
         self.view().setLeftButtonAction('pan')
         
-    def set1ButtonMode(self):
+    def setZoomMode(self):
         self.view().setLeftButtonAction('rect')
-        
+    # FIXME
+
     def setViewList(self, views):
         names = ['']
         self.viewMap.clear()
