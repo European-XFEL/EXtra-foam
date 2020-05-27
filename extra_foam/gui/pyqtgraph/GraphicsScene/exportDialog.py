@@ -4,14 +4,10 @@ from .. import functions as fn
 from ..graphicsItems.ViewBox import ViewBox
 from ..graphicsItems.PlotItem import PlotItem
 
-if QT_LIB == 'PySide':
-    from . import exportDialogTemplate_pyside as exportDialogTemplate
-elif QT_LIB == 'PySide2':
+if QT_LIB == 'PySide2':
     from . import exportDialogTemplate_pyside2 as exportDialogTemplate
 elif QT_LIB == 'PyQt5':
     from . import exportDialogTemplate_pyqt5 as exportDialogTemplate
-else:
-    from . import exportDialogTemplate_pyqt as exportDialogTemplate
 
 
 class ExportDialog(QtGui.QWidget):
@@ -23,6 +19,8 @@ class ExportDialog(QtGui.QWidget):
         self.currentExporter = None
         self.scene = scene
             
+        self.exporterParameters = {}
+
         self.selectBox = QtGui.QGraphicsRectItem()
         self.selectBox.setPen(fn.mkPen('y', width=3, style=QtCore.Qt.DashLine))
         self.selectBox.hide()
@@ -121,7 +119,18 @@ class ExportDialog(QtGui.QWidget):
             return
         expClass = self.exporterClasses[str(item.text())]
         exp = expClass(item=self.ui.itemTree.currentItem().gitem)
-        params = exp.parameters()
+
+        if prev:
+            oldtext = str(prev.text())
+            self.exporterParameters[oldtext] = self.currentExporter.parameters()
+        newtext = str(item.text())
+        if newtext in self.exporterParameters.keys():
+            params = self.exporterParameters[newtext]
+            exp.params = params
+        else:
+            params = exp.parameters()
+            self.exporterParameters[newtext] = params
+
         if params is None:
             self.ui.paramTree.clear()
         else:

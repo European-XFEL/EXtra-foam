@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from .Qt import QtGui
+from .Qt import QtCore, QtGui
 from .Point import Point
+import numpy as np
 
 
 class SRTTransform(QtGui.QTransform):
@@ -234,7 +235,7 @@ if __name__ == '__main__':
     tr4.rotate(30)
     print("tr1 * tr4 = ", tr1*tr4)
     
-    w1 = widgets.TestROI((19, 19), (22, 22), invertible=True)
+    w1 = widgets.TestROI((19,19), (22, 22), invertible=True)
     #w2 = widgets.TestROI((0,0), (150, 150))
     w1.setZValue(10)
     s.addItem(w1)
@@ -255,5 +256,3 @@ if __name__ == '__main__':
         
     w1.sigRegionChanged.connect(update)
     #w2.sigRegionChanged.connect(update2)
-    
-from .SRTTransform3D import SRTTransform3D

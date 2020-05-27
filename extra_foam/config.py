@@ -297,8 +297,9 @@ class _Config(dict):
         # initial (width, height) of a large plot window
         "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
         # color map in contour plots, valid options are: thermal, flame,
-        # yellowy, bipolar, spectrum, cyclic, greyclip, grey
-        "GUI_COLOR_MAP": 'thermal',
+        # yellowy, bipolar, spectrum, cyclic, greyclip, grey, viridis,
+        # inferno, plasma, magma
+        "GUI_COLOR_MAP": 'plasma',
         # foreground/background color (r, g, b, alpha)
         "GUI_FOREGROUND_COLOR": (0, 0, 0, 255),
         "GUI_BACKGROUND_COLOR": (225, 225, 225, 255),
