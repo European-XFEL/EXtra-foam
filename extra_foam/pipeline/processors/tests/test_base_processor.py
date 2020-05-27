@@ -118,7 +118,7 @@ class TestBaseProcessor(unittest.TestCase):
 
 class TestSequenceData(unittest.TestCase):
     def testSimpleSequence(self):
-        MAX_LENGTH = 10000
+        MAX_LENGTH = 100
 
         hist = SimpleSequence(max_len=MAX_LENGTH)
         self.assertEqual(0, len(hist))
@@ -136,6 +136,11 @@ class TestSequenceData(unittest.TestCase):
             hist[4]
         self.assertEqual(4, len(hist))
 
+        # more test on extend
+        hist.extend([3] * (MAX_LENGTH - 2))
+        np.testing.assert_array_almost_equal([1, 2] + [3] * (MAX_LENGTH - 2), hist.data())
+        self.assertEqual(100, len(hist))
+
         # test reset
         hist.reset()
         np.testing.assert_array_almost_equal([], hist.data())
@@ -152,8 +157,14 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(overflow, ax[0])
         self.assertEqual(MAX_LENGTH + overflow - 1, ax[-1])
 
+        # ----------------------------
+        # test constructing from array
+        # ----------------------------
+        hist = SimpleSequence.from_array([1, 2, 3])
+        self.assertEqual(3, len(hist))
+
     def testSimpleVectorSequence(self):
-        MAX_LENGTH = 1000
+        MAX_LENGTH = 100
 
         hist = SimpleVectorSequence(2, max_len=MAX_LENGTH)
         self.assertEqual(0, len(hist))
@@ -199,8 +210,17 @@ class TestSequenceData(unittest.TestCase):
         np.testing.assert_array_almost_equal([MAX_LENGTH + overflow - 1,
                                               MAX_LENGTH + overflow - 1], ax[-1])
 
+        # ----------------------------
+        # test constructing from array
+        # ----------------------------
+        with self.assertRaises(ValueError):
+            SimpleVectorSequence.from_array([[1, 2, 3], [2, 3], [3, 4]], 2)
+
+        hist = SimpleVectorSequence.from_array([[1, 2], [2, 3], [3, 4]], 2)
+        self.assertEqual(3, len(hist))
+
     def testSimplePairSequence(self):
-        MAX_LENGTH = 10000
+        MAX_LENGTH = 100
 
         hist = SimplePairSequence(max_len=MAX_LENGTH)
         self.assertEqual(0, len(hist))
@@ -239,8 +259,18 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(MAX_LENGTH + overflow - 1, ax[-1])
         self.assertEqual(MAX_LENGTH + overflow - 1, ay[-1])
 
+        # ----------------------------
+        # test constructing from array
+        # ----------------------------
+
+        with self.assertRaises(ValueError):
+            SimplePairSequence.from_array([], [1, 2])
+
+        hist = SimplePairSequence.from_array([0, 1, 2], [1, 2, 3])
+        self.assertEqual(3, len(hist))
+
     def testOneWayAccuPairSequence(self):
-        MAX_LENGTH = 600
+        MAX_LENGTH = 100
 
         # resolution is missing
         with self.assertRaises(TypeError):
@@ -325,3 +355,13 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(2 * overflow + 0.5, ay.avg[0])
         self.assertEqual(0.2 * (MAX_LENGTH + overflow - 1) + 0.1 * 0.5, ax[-1])
         self.assertEqual(2 * (MAX_LENGTH + overflow - 1) + 0.5, ay.avg[-1])
+
+        # ----------------------------
+        # test constructing from array
+        # ----------------------------
+
+        with self.assertRaises(ValueError):
+            OneWayAccuPairSequence.from_array([], [1, 2])
+
+        hist = OneWayAccuPairSequence.from_array([0, 1, 2], [1, 2, 3], resolution=1)
+        self.assertEqual(2, len(hist))

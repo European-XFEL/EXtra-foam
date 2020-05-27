@@ -401,7 +401,10 @@ class _BaseProcessor(_BaseProcessorMixin, _RedisParserMixin,
 
 
 class _AbstractSequence(Sequence):
-    """Base class for 'Sequence' data."""
+    """Abstract class for 'Sequence' data.
+
+    It cannot be instantiated without subclassing.
+    """
     _OVER_CAPACITY = 2
 
     def __init__(self, max_len=3000):
@@ -420,14 +423,24 @@ class _AbstractSequence(Sequence):
         pass
 
     @abstractmethod
+    def reset(self):
+        """Reset the data history."""
+        pass
+
+    @abstractmethod
     def append(self, item):
         """Add a new data point."""
         pass
 
     @abstractmethod
-    def reset(self):
-        """Reset the data history."""
+    def extend(self, items):
+        """Add a list of data points."""
         pass
+
+    @classmethod
+    def from_array(cls, *args, **kwargs):
+        """Construct from array(s)."""
+        raise NotImplementedError
 
 
 class SimpleSequence(_AbstractSequence):
@@ -458,16 +471,22 @@ class SimpleSequence(_AbstractSequence):
                 self._i0 = 0
                 self._x[:max_len] = self._x[max_len:]
 
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
     def reset(self):
         """Override."""
         self._i0 = 0
         self._len = 0
         self._x.fill(0)
 
-    def extend(self, v_lst):
-        # TODO: improve
-        for v in v_lst:
-            self.append(v)
+    @classmethod
+    def from_array(cls, ax, *args, **kwargs):
+        instance = cls(*args, **kwargs)
+        for x in ax:
+            instance.append(x)
+        return instance
 
 
 class SimpleVectorSequence(_AbstractSequence):
@@ -512,11 +531,23 @@ class SimpleVectorSequence(_AbstractSequence):
                 self._i0 = 0
                 self._x[:max_len, :] = self._x[max_len:, :]
 
+    def extend(self, items):
+        """Override."""
+        for item in items:
+            self.append(item)
+
     def reset(self):
         """Override."""
         self._i0 = 0
         self._len = 0
         self._x.fill(0)
+
+    @classmethod
+    def from_array(cls, ax, *args, **kwargs):
+        instance = cls(*args, **kwargs)
+        for x in ax:
+            instance.append(x)
+        return instance
 
 
 class SimplePairSequence(_AbstractSequence):
@@ -556,12 +587,28 @@ class SimplePairSequence(_AbstractSequence):
                 self._x[:max_len] = self._x[max_len:]
                 self._y[:max_len] = self._y[max_len:]
 
+    def extend(self, items):
+        """Override."""
+        for item in items:
+            self.append(item)
+
     def reset(self):
         """Override."""
         self._i0 = 0
         self._len = 0
         self._x.fill(0)
         self._y.fill(0)
+
+    @classmethod
+    def from_array(cls, ax, ay, *args, **kwargs):
+        if len(ax) != len(ay):
+            raise ValueError(f"ax and ay must have the same length. "
+                             f"Actual: {len(ax)}, {len(ay)}")
+
+        instance = cls(*args, **kwargs)
+        for x, y in zip(ax, ay):
+            instance.append((x, y))
+        return instance
 
 
 _StatDataItem = namedtuple('_StatDataItem', ['avg', 'min', 'max', 'count'])
@@ -586,7 +633,7 @@ class OneWayAccuPairSequence(_AbstractSequence):
         self._epsilon = np.abs(epsilon)
 
         if resolution <= 0:
-            raise ValueError("'resolution must be positive!")
+            raise ValueError("resolution must be positive!")
         self._resolution = resolution
 
         self._x_avg = np.zeros(self._OVER_CAPACITY * max_len, dtype=dtype)
@@ -687,6 +734,11 @@ class OneWayAccuPairSequence(_AbstractSequence):
                     self._y_max[:max_len] = self._y_max[max_len:]
                     self._y_std[:max_len] = self._y_std[max_len:]
 
+    def extend(self, items):
+        """Override."""
+        for item in items:
+            self.append(item)
+
     def reset(self):
         """Overload."""
         self._i0 = 0
@@ -697,3 +749,14 @@ class OneWayAccuPairSequence(_AbstractSequence):
         self._y_min.fill(0)
         self._y_max.fill(0)
         self._y_std.fill(0)
+
+    @classmethod
+    def from_array(cls, ax, ay, *args, **kwargs):
+        if len(ax) != len(ay):
+            raise ValueError(f"ax and ay must have the same length. "
+                             f"Actual: {len(ax)}, {len(ay)}")
+
+        instance = cls(*args, **kwargs)
+        for x, y in zip(ax, ay):
+            instance.append((x, y))
+        return instance
