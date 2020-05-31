@@ -101,8 +101,8 @@ inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
 template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
 inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
 {
-#if defined(FOAM_WITH_TBB)
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
+#if defined(FOAM_WITH_TBB)
   return detail::nanmeanImageArrayImp(std::forward<E>(src), keep);
 #else
   using value_type = typename std::decay_t<E>::value_type;
