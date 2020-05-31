@@ -1,5 +1,4 @@
 import time
-import pytest
 
 import numpy as np
 
@@ -20,7 +19,7 @@ def benchmark_nan_without_axis(f_cpp, f_py, shape, dtype):
     ret_py = f_py(data)
     dt_py = time.perf_counter() - t0
 
-    assert ret_cpp == pytest.approx(ret_py, rel=1e-4)
+    np.testing.assert_allclose(ret_cpp, ret_py, rtol=1e-4)
 
     print(f"\nwithout axis, dtype = {dtype} - \n"
           f"dt (cpp): {dt_cpp:.4f}, "
@@ -39,7 +38,7 @@ def benchmark_nan_keep_zero_axis(f_cpp, f_py, shape, dtype):
     ret_py = f_py(data, axis=(-2, -1))
     dt_py = time.perf_counter() - t0
 
-    assert ret_cpp == pytest.approx(ret_py, rel=1e-4)
+    np.testing.assert_allclose(ret_cpp, ret_py, rtol=1e-4)
 
     print(f"\nkeep zero axis, dtype = {dtype} - \n"
           f"dt (cpp): {dt_cpp:.4f}, "
