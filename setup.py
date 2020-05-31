@@ -9,6 +9,7 @@ All rights reserved.
 """
 import contextlib
 import glob
+import multiprocessing as mp
 import os
 import os.path as osp
 import re
@@ -163,8 +164,8 @@ class BuildExt(build_ext):
         else:
             cmake_options.append('-DBUILD_FOAM_TESTS=OFF')
 
-        # FIXME
-        build_options = ['--', '-j4']
+        max_jobs = os.environ.get('BUILD_FOAM_MAX_JOBS', str(mp.cpu_count()))
+        build_options = ['--', '-j', max_jobs]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
