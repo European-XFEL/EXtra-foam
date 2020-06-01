@@ -9,6 +9,7 @@ All rights reserved.
 """
 import contextlib
 import glob
+import multiprocessing as mp
 import os
 import os.path as osp
 import re
@@ -83,18 +84,16 @@ class BuildExt(build_ext):
     def initialize_options(self):
         super().initialize_options()
 
-        self.serial_only = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
-
-        if self.serial_only:
-            self.with_tbb = False
-            self.xtensor_with_tbb = False
-            self.with_xsimd = False
-            self.xtensor_with_xsimd = False
-        else:
-            self.with_tbb = strtobool(os.environ.get('FOAM_WITH_TBB', '1'))
-            self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
-            self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
-            self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
+        build_serial = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
+        build_para = '0' if build_serial else '1'
+        self.with_tbb = strtobool(
+            os.environ.get('FOAM_WITH_TBB', build_para))
+        self.xtensor_with_tbb = strtobool(
+            os.environ.get('XTENSOR_WITH_TBB', build_para))
+        self.with_xsimd = strtobool(
+            os.environ.get('FOAM_WITH_XSIMD', build_para))
+        self.xtensor_with_xsimd = strtobool(
+            os.environ.get('XTENSOR_WITH_XSIMD', build_para))
 
         self.with_tests = strtobool(os.environ.get('BUILD_FOAM_TESTS', '0'))
 
@@ -135,36 +134,24 @@ class BuildExt(build_ext):
             f"-DCMAKE_PREFIX_PATH={os.getenv('CMAKE_PREFIX_PATH')}",
         ]
 
-        if self.with_tbb:
-            cmake_options.append('-DFOAM_WITH_TBB=ON')
-        else:
-            # necessary to switch from ON to OFF
-            cmake_options.append('-DFOAM_WITH_TBB=OFF')
+        def _opt_switch(x):
+            return 'ON' if x else 'OFF'
 
-        if self.xtensor_with_tbb:
-            # cmake option in thirdparty/xtensor
-            cmake_options.append('-DXTENSOR_USE_TBB=ON')
-        else:
-            cmake_options.append('-DXTENSOR_USE_TBB=OFF')
+        cmake_options.append(
+            f'-DFOAM_WITH_TBB={_opt_switch(self.with_tbb)}')
+        cmake_options.append(
+            f'-DXTENSOR_USE_TBB={_opt_switch(self.xtensor_with_tbb)}')
 
-        if self.with_xsimd:
-            cmake_options.append('-DFOAM_WITH_XSIMD=ON')
-        else:
-            cmake_options.append('-DFOAM_WITH_XSIMD=OFF')
+        cmake_options.append(
+            f'-DFOAM_WITH_XSIMD={_opt_switch(self.with_xsimd)}')
+        cmake_options.append(
+            f'-DXTENSOR_USE_XSIMD={_opt_switch(self.xtensor_with_xsimd)}')
 
-        if self.xtensor_with_xsimd:
-            # cmake option in thirdparty/xtensor
-            cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
-        else:
-            cmake_options.append('-DXTENSOR_USE_XSIMD=OFF')
+        cmake_options.append(
+            f'-DBUILD_FOAM_TESTS={_opt_switch(self.with_tests)}')
 
-        if self.with_tests:
-            cmake_options.append('-DBUILD_FOAM_TESTS=ON')
-        else:
-            cmake_options.append('-DBUILD_FOAM_TESTS=OFF')
-
-        # FIXME
-        build_options = ['--', '-j4']
+        max_jobs = os.environ.get('BUILD_FOAM_MAX_JOBS', str(mp.cpu_count()))
+        build_options = ['--', '-j', max_jobs]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -311,8 +298,8 @@ setup(
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
-        'pyFAI>=0.15.0',
-        'PyQt5>=5.12.0',
+        'pyFAI>=0.17.0',
+        'PyQt5==5.13.2',
         'EXtra-data>=1.0.0',
         'EXtra-geom>=0.8.0',
         'karabo-bridge>=0.3.0',
