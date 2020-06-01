@@ -13,12 +13,12 @@
 #include "xtensor/xtensor.hpp"
 #include "xtensor-blas/xlinalg.hpp"
 
-using ::testing::ElementsAre;
-
 namespace foam
 {
 namespace test
 {
+
+using ::testing::ElementsAre;
 
 TEST(TestMatrixEigenValues, TestGeneral)
 {

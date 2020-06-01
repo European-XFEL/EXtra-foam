@@ -19,9 +19,9 @@ In your Anaconda_ environment, run the following commands:
 
 .. code-block:: bash
 
-    $ conda install -c anaconda cmake numpy
+    $ conda install -c anaconda cmake libstdcxx-ng numpy
     $ conda install -c omgarcia gcc-6
-
+    $ conda install -c conda-forge tbb
 
 Install **EXtra-foam**
 ----------------------
@@ -36,10 +36,10 @@ Install **EXtra-foam**
     $ cd EXtra-foam
 
     # optional
-    $ export FOAM_WITH_TBB=0  # turn off intel TBB in extra-foam
-    $ export XTENSOR_WITH_TBB=0  # turn off intel TBB in xtensor
-    $ export FOAM_WITH_XSIMD=0  # turn off XSIMD in extra-foam
-    $ export XTENSOR_WITH_XSIMD=0  # turn off XSIMD in xtensor
+    $ export FOAM_USE_TBB=0  # turn off intel TBB in extra-foam
+    $ export XTENSOR_USE_TBB=0  # turn off intel TBB in xtensor
+    $ export FOAM_USE_XSIMD=0  # turn off XSIMD in extra-foam
+    $ export XTENSOR_USE_XSIMD=0  # turn off XSIMD in xtensor
 
     # Note: This step is also required if one wants to change the above
     #       environmental parameters.
@@ -47,3 +47,15 @@ Install **EXtra-foam**
 
     $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
     $ pip install .
+
+
+Install C++ API of **EXtra-foam** only
+--------------------------------------
+
+.. code-block:: bash
+
+    $ mkdir build && cd build
+    $ cmake -DFOAM_USE_TBB=ON -DXTENSOR_USE_TBB=ON
+            -DFOAM_USE_XSIMD=ON -DXTENSOR_USE_XSIMD=ON -march=native
+            -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
+    $ make && make install

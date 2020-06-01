@@ -21,7 +21,7 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xindex_view.hpp"
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
 #include "tbb/blocked_range3d.h"
@@ -433,7 +433,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -456,7 +456,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
             ignore_asic_edge);
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -477,7 +477,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -500,7 +500,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
             ignore_asic_edge);
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -540,7 +540,7 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -562,7 +562,7 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
             xt::view(p1, im, xt::all(), xt::all()));
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif

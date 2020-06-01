@@ -14,15 +14,15 @@
 
 #include "f_smooth.hpp"
 
-using ::testing::Each;
-using ::testing::Eq;
-using ::testing::ElementsAre;
-using ::testing::FloatNear;
-
 namespace foam
 {
 namespace test
 {
+
+using ::testing::Each;
+using ::testing::Eq;
+using ::testing::ElementsAre;
+using ::testing::FloatNear;
 
 TEST(TestGetGaussianKernel, TestGeneral)
 {
