@@ -26,16 +26,16 @@ class CorrelationProcessor(_BaseProcessor):
         _raw (SimplePairSequence): sequence which stores the history of
             (slow, FOM).
         _corr (_AbstractSequence): SimplePairSequence/OneWayAccuPairSequence
-            which stores the correlation data.
+            which stores the master correlation data.
         _raw_slave (SimplePairSequence): sequence which stores the
             history of (slow, FOM slave).
         _corr_slave (_AbstractSequence): SimplePairSequence/OneWayAccuPairSequence
-            which stores the correlation data.
+            which stores the slave correlation data.
         _source: source of slow data.
         _resolution: resolution of correlation.
         _reset: reset flag for correlation data.
         _corr_pp (SimplePairSequence): sequence which stores the history of
-            (slow, FOM) which is displayed in PumpProbeWindow.
+            (slow, pump-probe FOM).
         _pp_fail_flag (int): a flag used to check whether pump-probe FOM is
             available
     """

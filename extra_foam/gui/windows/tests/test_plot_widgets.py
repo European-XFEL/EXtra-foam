@@ -138,6 +138,13 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
         plot_item, plot_item_slave = widget._plot, widget._plot_slave
         self.assertIsInstance(plot_item, StatisticsBarItem)
         self.assertIsInstance(plot_item_slave, StatisticsBarItem)
+        self.assertEqual(2, plot_item._beam)
+        self.assertEqual(2, plot_item_slave._beam)
+        # beam size changes with resolution
+        widget._data.corr[1].resolution = 4
+        widget.refresh()
+        self.assertEqual(4, plot_item._beam)
+        self.assertEqual(4, plot_item_slave._beam)
 
         widget._idx = 0  # a trick
         widget.refresh()

@@ -274,7 +274,6 @@ class TestPlotWindows(unittest.TestCase):
     def _checkCorrelationCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
             _N_PARAMS, _DEFAULT_RESOLUTION)
-        from extra_foam.algorithms import SimplePairSequence, OneWayAccuPairSequence
 
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
@@ -326,6 +325,7 @@ class TestPlotWindows(unittest.TestCase):
             proc.update()
             self.assertTrue(proc._reset)
 
+            # set user defined
             proc._reset = False
             ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
             widget._table.cellWidget(0, idx).setCurrentText(ctg)
@@ -340,20 +340,10 @@ class TestPlotWindows(unittest.TestCase):
             self.assertEqual(src, proc._source)
             self.assertTrue(proc._reset)
 
-            # change resolution
-            proc._reset = False
-            self.assertIsInstance(proc._corr, SimplePairSequence)
-            self.assertIsInstance(proc._corr_slave, SimplePairSequence)
+            # set resolution
             widget._table.cellWidget(3, idx).setText(str(1.0))
             proc.update()
             self.assertEqual(1.0, proc._resolution)
-            self.assertIsInstance(proc._corr, OneWayAccuPairSequence)
-            self.assertIsInstance(proc._corr_slave, OneWayAccuPairSequence)
-            # sequence type change will not have 'reset'
-            self.assertFalse(proc._reset)
-            widget._table.cellWidget(3, idx).setText(str(2.0))
-            proc.update()
-            self.assertEqual(2.0, proc._resolution)
 
             # test reset button
             proc._reset = False
