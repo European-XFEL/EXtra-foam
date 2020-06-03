@@ -7,11 +7,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import (
-    _BaseProcessor, SimplePairSequence, OneWayAccuPairSequence
-)
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError, UnknownParameterError
 from ...ipc import process_logger as logger
+from ...algorithms import SimplePairSequence, OneWayAccuPairSequence
 from ...config import AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler

@@ -17,7 +17,10 @@ from .miscellaneous import (
     normalize_auc
 )
 from .sampling import down_sample, slice_curve, up_sample
-from .data_structures import OrderedSet, Stack
+from .data_structures import (
+    OrderedSet, Stack, SimpleSequence, SimpleVectorSequence,
+    SimplePairSequence, OneWayAccuPairSequence,
+)
 from .azimuthal_integ import compute_q, energy2wavelength
 
 from .helpers import intersection

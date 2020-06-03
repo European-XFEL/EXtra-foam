@@ -274,9 +274,8 @@ class TestPlotWindows(unittest.TestCase):
     def _checkCorrelationCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
             _N_PARAMS, _DEFAULT_RESOLUTION)
-        from extra_foam.pipeline.processors.base_processor import (
-            SimplePairSequence, OneWayAccuPairSequence
-        )
+        from extra_foam.algorithms import SimplePairSequence, OneWayAccuPairSequence
+
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = win._ctrl_widget

@@ -5,7 +5,7 @@ import numpy as np
 
 from extra_foam.database import SourceCatalog, SourceItem
 from extra_foam.pipeline.data_model import ImageData, ProcessedData
-from extra_foam.pipeline.processors.base_processor import (
+from extra_foam.algorithms import (
     SimplePairSequence, OneWayAccuPairSequence)
 from extra_foam.config import config, DataSource
 

@@ -7,9 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from extra_foam.pipeline.processors.base_processor import (
-    SimplePairSequence
-)
+from extra_foam.algorithms import SimplePairSequence
+
 from .special_analysis_base import profiler, QThreadWorker
 
 
