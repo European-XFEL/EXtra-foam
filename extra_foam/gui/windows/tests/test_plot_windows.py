@@ -19,8 +19,6 @@ from extra_foam.gui.windows import (
     PulseOfInterestWindow, PumpProbeWindow,
     FileStreamWindow, AboutWindow
 )
-from extra_foam.pipeline.data_model import ProcessedData
-from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
 
@@ -345,19 +343,18 @@ class TestPlotWindows(unittest.TestCase):
 
             # change resolution
             proc._reset = False
-            self.assertIsInstance(proc._correlation, SimplePairSequence)
-            self.assertIsInstance(proc._correlation_slave, SimplePairSequence)
+            self.assertIsInstance(proc._corr, SimplePairSequence)
+            self.assertIsInstance(proc._corr_slave, SimplePairSequence)
             widget._table.cellWidget(3, idx).setText(str(1.0))
             proc.update()
             self.assertEqual(1.0, proc._resolution)
-            self.assertIsInstance(proc._correlation, OneWayAccuPairSequence)
-            self.assertIsInstance(proc._correlation_slave, OneWayAccuPairSequence)
+            self.assertIsInstance(proc._corr, OneWayAccuPairSequence)
+            self.assertIsInstance(proc._corr_slave, OneWayAccuPairSequence)
             # sequence type change will not have 'reset'
             self.assertFalse(proc._reset)
             widget._table.cellWidget(3, idx).setText(str(2.0))
             proc.update()
             self.assertEqual(2.0, proc._resolution)
-            self.assertTrue(proc._reset)
 
             # test reset button
             proc._reset = False
@@ -585,147 +582,3 @@ class TestPlotWindows(unittest.TestCase):
         mediator.onHistPulseResolvedChange(True)
         widget.loadMetaData()
         self.assertEqual(False, widget._pulse_resolved_cb.isChecked())
-
-
-class testPumpProbeWidgets(unittest.TestCase):
-    def testPumpProbeImageView(self):
-        from extra_foam.gui.windows.pump_probe_w import PumpProbeImageView
-
-        widget = PumpProbeImageView()
-        data = ProcessedData(1)
-        widget.updateF(data)
-
-    def testPumpProbeVFomPlot(self):
-        from extra_foam.gui.windows.pump_probe_w import PumpProbeVFomPlot
-
-        widget = PumpProbeVFomPlot()
-        data = ProcessedData(1)
-        widget.updateF(data)
-
-    def testPumpProbeFomPlot(self):
-        from extra_foam.gui.windows.pump_probe_w import PumpProbeFomPlot
-
-        widget = PumpProbeFomPlot()
-        widget._data = ProcessedData(1)
-        widget.refresh()
-
-
-class testPulseOfInterestWidgets(_TestDataMixin, unittest.TestCase):
-    def testPoiImageView(self):
-        from extra_foam.gui.windows.pulse_of_interest_w import PoiImageView
-
-        widget = PoiImageView(0)
-        data = ProcessedData(1)
-        widget.updateF(data)
-
-    def testPoiFomHist(self):
-        from extra_foam.gui.windows.pulse_of_interest_w import PoiFomHist
-
-        widget = PoiFomHist(0)
-
-        # empty data
-        widget._data = ProcessedData(1)
-        widget.refresh()
-
-        # non-empty data
-        widget._data = self.processed_data(1001, (4, 2, 2), histogram=True)
-        widget.refresh()
-
-    def testPoiRoiHist(self):
-        from extra_foam.gui.windows.pulse_of_interest_w import PoiRoiHist
-
-        widget = PoiRoiHist(0)
-
-        # empty data
-        data = ProcessedData(1)
-        widget.updateF(data)
-
-        # non-empty data
-        data = self.processed_data(1001, (4, 2, 2), histogram=True)
-        widget.updateF(data)
-
-
-class testBinningWidgets(unittest.TestCase):
-    def testHeatmap1D(self):
-        from extra_foam.gui.windows.binning_w import Bin1dHeatmap
-
-        widget = Bin1dHeatmap()
-        widget._data = ProcessedData(1)
-
-        # test "Auto level" reset
-        widget._auto_level = True
-        widget.refresh()
-        self.assertFalse(widget._auto_level)
-
-    def testHeatmap2D(self):
-        from extra_foam.gui.windows.binning_w import Bin2dHeatmap
-
-        for is_count in [False, True]:
-            widget = Bin2dHeatmap(count=is_count)
-            widget._data = ProcessedData(1)
-
-            # test "Auto level" reset
-            widget._auto_level = True
-            widget.refresh()
-            self.assertFalse(widget._auto_level)
-
-
-class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
-    def testGeneral(self):
-        from extra_foam.gui.windows.correlation_w import CorrelationPlot
-
-        for i in range(2):
-            widget = CorrelationPlot(0)
-            widget._data = ProcessedData(1)
-            widget.refresh()
-
-    def testResolutionSwitch(self):
-        from extra_foam.gui.windows.correlation_w import CorrelationPlot
-        from extra_foam.gui.plot_widgets.plot_items import StatisticsBarItem, pg
-
-        # resolution1 = 0.0 and resolution2 > 0.0
-        data = self.processed_data(1001, (4, 2, 2), correlation=True)
-
-        widget = CorrelationPlot(0)
-        widget._data = data
-        widget.refresh()
-        plot_item, plot_item_slave = widget._plot, widget._plot_slave
-        self.assertIsInstance(plot_item, pg.ScatterPlotItem)
-        self.assertIsInstance(plot_item_slave, pg.ScatterPlotItem)
-
-        widget._idx = 1  # a trick
-        widget.refresh()
-        self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
-        plot_item, plot_item_slave = widget._plot, widget._plot_slave
-        self.assertIsInstance(plot_item, StatisticsBarItem)
-        self.assertIsInstance(plot_item_slave, StatisticsBarItem)
-
-        widget._idx = 0  # a trick
-        widget.refresh()
-        self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
-        self.assertIsInstance(widget._plot, pg.ScatterPlotItem)
-        self.assertIsInstance(widget._plot_slave, pg.ScatterPlotItem)
-
-
-class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
-    def testFomHist(self):
-        from extra_foam.gui.windows.histogram_w import FomHist
-
-        widget = FomHist()
-
-        # empty data
-        widget._data = ProcessedData(1)
-        widget.refresh()
-
-        # non-empty data
-        widget._data = self.processed_data(1001, (4, 2, 2), histogram=True)
-        widget.refresh()
-
-    def testInTrainFomPlot(self):
-        from extra_foam.gui.windows.histogram_w import InTrainFomPlot
-
-        widget = InTrainFomPlot()
-        data = ProcessedData(1)
-        widget.updateF(data)

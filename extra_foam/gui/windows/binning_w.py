@@ -32,9 +32,9 @@ class Bin1dHist(TimedPlotWidgetF):
         self._default_y_label = "FOM (arb. u.)"
         self._default_y2_label = "Count"
 
+        self._fom_plot = self.plotStatisticsBar(line=True)
         self._count_plot = self.plotBar(
             y2=True, brush=FColor.mkBrush('i', alpha=70))
-        self._fom_plot = self.plotStatisticsBar(line=True)
 
         self._source = ""
 
@@ -49,8 +49,8 @@ class Bin1dHist(TimedPlotWidgetF):
             self._source = src
             self.updateLabel()
 
-        self._count_plot.setData(item.centers, item.counts)
         self._fom_plot.setData(item.centers, item.stats, beam=item.size)
+        self._count_plot.setData(item.centers, item.counts)
 
     def updateLabel(self):
         src = self._source

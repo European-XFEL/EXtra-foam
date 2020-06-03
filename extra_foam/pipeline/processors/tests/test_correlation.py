@@ -1,12 +1,3 @@
-"""
-Distributed under the terms of the BSD 3-Clause License.
-
-The full license is in the file LICENSE, distributed with this software.
-
-Author: Jun Zhu <jun.zhu@xfel.eu>
-Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
-All rights reserved.
-"""
 import pytest
 from unittest import mock
 
@@ -53,10 +44,6 @@ class TestCorrelationProcessor(_TestDataMixin):
 
         proc = CorrelationProcessor(index+1)
         proc.analysis_type = analysis_type
-
-        proc._resolution = 0.0
-        proc._correlation = SimplePairSequence()
-        proc._correlation_slave = SimplePairSequence()
 
         # source is empty
         proc._source = ''
@@ -129,7 +116,7 @@ class TestCorrelationProcessor(_TestDataMixin):
             assert 0 == proc._pp_fail_flag
 
     @pytest.mark.parametrize("index", [0, 1])
-    def testMaskSlave(self, index):
+    def testMasterSlave(self, index):
         data, processed = self.simple_data(1001, (2, 2))
         corr = processed.corr
 
@@ -168,7 +155,7 @@ class TestCorrelationProcessor(_TestDataMixin):
 
         # test reset
         proc._reset = True
-        with mock.patch.object(proc._correlation_pp, "reset") as patched_reset:
+        with mock.patch.object(proc._corr_pp, "reset") as patched_reset:
             proc.process(data)
             np.testing.assert_array_equal(np.array([1], dtype=np.float64), corr[index].x)
             np.testing.assert_array_equal(np.array([30], dtype=np.float64), corr[index].y)

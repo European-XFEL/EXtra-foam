@@ -24,17 +24,19 @@ class CorrelationProcessor(_BaseProcessor):
         _idx (int): Index of correlation starting from 1.
         analysis_type (AnalysisType): analysis type.
         _pp_analysis_type (AnalysisType): pump-probe analysis type.
-        _correlation (Sequence): pair sequences (SimplePairSequence,
-            OneWayAccuPairSequence) for storing the history of
-            (correlator, FOM).
-        _correlation_slave (Sequence): pair sequences (SimplePairSequence,
-            OneWayAccuPairSequence) for storing the history of
-            (correlator, FOM slave).
+        _raw (SimplePairSequence): sequence which stores the history of
+            (slow, FOM).
+        _corr (_AbstractSequence): SimplePairSequence/OneWayAccuPairSequence
+            which stores the correlation data.
+        _raw_slave (SimplePairSequence): sequence which stores the
+            history of (slow, FOM slave).
+        _corr_slave (_AbstractSequence): SimplePairSequence/OneWayAccuPairSequence
+            which stores the correlation data.
         _source: source of slow data.
         _resolution: resolution of correlation.
         _reset: reset flag for correlation data.
-        _correlation_pp (SimplePairSequence): store the history of
-            (correlator, FOM) which is displayed in PumpProbeWindow.
+        _corr_pp (SimplePairSequence): sequence which stores the history of
+            (slow, FOM) which is displayed in PumpProbeWindow.
         _pp_fail_flag (int): a flag used to check whether pump-probe FOM is
             available
     """
@@ -50,13 +52,15 @@ class CorrelationProcessor(_BaseProcessor):
         self.analysis_type = AnalysisType.UNDEFINED
         self._pp_analysis_type = AnalysisType.UNDEFINED
 
-        self._correlation = SimplePairSequence(max_len=self._MAX_POINTS)
-        self._correlation_slave = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._raw = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._raw_slave = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._corr = self._raw
+        self._corr_slave = self._raw_slave
         self._source = ""
         self._resolution = 0.0
         self._reset = False
 
-        self._correlation_pp = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._corr_pp = SimplePairSequence(max_len=self._MAX_POINTS)
         self._pp_fail_flag = 0
 
     def update(self):
@@ -77,21 +81,18 @@ class CorrelationProcessor(_BaseProcessor):
             self._reset = True
 
         resolution = float(cfg[f'resolution{idx}'])
-        if self._resolution != 0 and resolution == 0:
-            self._correlation = SimplePairSequence(
-                max_len=self._MAX_POINTS)
-            self._correlation_slave = SimplePairSequence(
-                max_len=self._MAX_POINTS)
-        elif self._resolution == 0 and resolution != 0:
-            self._correlation = OneWayAccuPairSequence(
-                resolution, max_len=self._MAX_POINTS)
-            self._correlation_slave = OneWayAccuPairSequence(
-                resolution, max_len=self._MAX_POINTS)
-        elif self._resolution != resolution:
-            # In the above two cases, we do not need 'reset' since
-            # new Sequence object will be constructed.
-            self._reset = True
-        self._resolution = resolution
+        if self._resolution != resolution:
+            if resolution == 0:
+                self._corr = self._raw
+                self._corr_slave = self._raw_slave
+            else:
+                self._corr = OneWayAccuPairSequence.from_array(
+                    *self._raw.data(), resolution,
+                    max_len=self._MAX_POINTS)
+                self._corr_slave = OneWayAccuPairSequence.from_array(
+                    *self._raw_slave.data(), resolution,
+                    max_len=self._MAX_POINTS)
+            self._resolution = resolution
 
         reset_key = f'reset{idx}'
         if reset_key in cfg:
@@ -120,8 +121,10 @@ class CorrelationProcessor(_BaseProcessor):
                 self._pp_analysis_type = pp_analysis_type
 
         if self._reset:
-            self._correlation.reset()
-            self._correlation_slave.reset()
+            self._raw.reset()
+            self._raw_slave.reset()
+            self._corr.reset()
+            self._corr_slave.reset()
             self._reset = False
 
         try:
@@ -130,8 +133,8 @@ class CorrelationProcessor(_BaseProcessor):
             logger.error(f"[Correlation] {str(e)}!")
 
         out = processed.corr[self._idx - 1]
-        out.x, out.y = self._correlation.data()
-        out.x_slave, out.y_slave = self._correlation_slave.data()
+        out.x, out.y = self._corr.data()
+        out.x_slave, out.y_slave = self._corr_slave.data()
         out.source = self._source
         out.resolution = self._resolution
 
@@ -147,13 +150,13 @@ class CorrelationProcessor(_BaseProcessor):
         pp = processed.pp
 
         if pp.reset:
-            self._correlation_pp.reset()
+            self._corr_pp.reset()
 
         if pp.fom is not None:
-            self._correlation_pp.append((tid, pp.fom))
+            self._corr_pp.append((tid, pp.fom))
 
         c = processed.corr.pp
-        c.x, c.y = self._correlation_pp.data()
+        c.x, c.y = self._corr_pp.data()
 
     def _update_data_point(self, processed, raw):
         analysis_type = self.analysis_type
@@ -194,6 +197,10 @@ class CorrelationProcessor(_BaseProcessor):
             logger.error(err)
 
         if v is not None:
-            self._correlation.append((v, fom))
+            self._raw.append((v, fom))
+            if self._resolution > 0:
+                self._corr.append((v, fom))
             if fom_slave is not None:
-                self._correlation_slave.append((v, fom_slave))
+                self._raw_slave.append((v, fom_slave))
+                if self._resolution > 0:
+                    self._corr_slave.append((v, fom_slave))
