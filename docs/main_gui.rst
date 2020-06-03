@@ -37,8 +37,8 @@ Namely, only one connection should be checked.
 In the data source tree, one can select which source items (a source item is defined by both the
 *Source name* and *Property*) are required in the analysis. The available sources are monitored
 and displayed in the *Available sources* widget below. However, for properties, you will need some
-instrument-domain knowledge. Users are not allowed to add/remove source items to/from the tree during
-the run time, however, they can be configured via :ref:`config file`. Nevertheless, one can still
+instrument-domain knowledge. Users are not allowed to add/remove source items to/from the tree in
+the GUI. However, they can be configured via :ref:`config file`. Nevertheless, one can still
 make use of "User-defined" source to define a control data source item dynamically.
 
 For each data source item, one can also set up the following attribute when applicable.

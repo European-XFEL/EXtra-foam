@@ -49,6 +49,12 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 """Override."""
                 self._dark_removed = True
 
+            def sources(self):
+                return [
+                    ("device1:output", "property1", 1),
+                    ("device2", "property2", 0)
+                ]
+
         class DummyImageView(ImageViewF):
             def __init__(self, *, parent=None):
                 super().__init__(parent=parent)
@@ -149,6 +155,10 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 self.assertEqual(f"tcp://{com_ctrl_widget._hostname_le.text()}:"
                                  f"{com_ctrl_widget._port_le.text()}", client._endpoint_st)
 
+                self.assertEqual(2, len(client._catalog_st))
+                self.assertIn("device1:output property1", client._catalog_st)
+                self.assertIn("device2 property2", client._catalog_st)
+
                 self.assertEqual(1, len(spy))
                 self.assertTrue(com_ctrl_widget.stop_btn.isEnabled())
                 self.assertFalse(com_ctrl_widget.start_btn.isEnabled())
@@ -172,6 +182,30 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
 
                 client_stop.assert_called_once()
                 timer_stop.assert_called_once()
+
+        with patch.object(client, "start") as client_start:
+            with patch.object(win._plot_timer_st, "start") as timer_start:
+                with patch.object(worker, "sources") as mocked_sources:
+                    with self.assertLogs(logger, level="ERROR") as cm:
+                        mocked_sources.return_value = [("", "property1", 1)]
+                        QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
+                        client_start.assert_not_called()
+                        timer_start.assert_not_called()
+                        self.assertIn("Empty source", cm.output[0])
+
+                    with self.assertLogs(logger, level="ERROR") as cm:
+                        mocked_sources.return_value = [("device", "", 0)]
+                        QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
+                        client_start.assert_not_called()
+                        timer_start.assert_not_called()
+                        self.assertIn("Empty property", cm.output[0])
+
+                    with self.assertLogs(logger, level="ERROR") as cm:
+                        mocked_sources.return_value = [("device", "property", 2)]
+                        QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
+                        client_start.assert_not_called()
+                        timer_start.assert_not_called()
+                        self.assertIn("Not understandable data type", cm.output[0])
 
         with patch.object(client, "onResetST") as client_reset:
             with patch.object(worker, "onResetST") as worker_reset:

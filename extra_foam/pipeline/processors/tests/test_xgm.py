@@ -30,7 +30,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         proc.process(data)
 
         # invalid control source
-        item = SourceItem('XGM', 'xgm1', [], 'some_property', None, None)
+        item = SourceItem('XGM', 'xgm1', [], 'some_property', None, None, 0)
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
         meta[src] = {'train_id': 12346}
@@ -43,9 +43,9 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src_pf = 'xgm1 pulseEnergy.photonFlux'
         src_bpx = 'xgm1 beamPosition.ixPos'
         src_bpy = 'xgm1 beamPosition.iyPos'
-        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None))
-        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.ixPos', None, None))
-        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.iyPos', None, None))
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None, 0))
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.ixPos', None, None, 0))
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.iyPos', None, None, 0))
 
         meta.update({
             src_pf: {'train_id': 12345}, src_bpx: {'train_id': 12345}, src_bpy: {'train_id': 12345}
@@ -59,7 +59,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         self._reset_processed(processed)
 
         # invalid pipeline source
-        item = SourceItem('XGM', 'xgm1:output', [], 'some_property', None, None)
+        item = SourceItem('XGM', 'xgm1:output', [], 'some_property', None, None, 1)
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
         meta[src] = {'train_id': 12346}
@@ -71,7 +71,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         # valid pipeline source
         src_it = 'xgm1:output data.intensityTD'
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), (0, 1000)))
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), (0, 1000), 1))
         meta[src_it] = {'train_id': 12346}
         raw[src_it] = [100, 200, 300]
         proc.process(data)
@@ -80,7 +80,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
 
         # same pipeline source with a different slice
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(1, 3), (0, 1000)))
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(1, 3), (0, 1000), 1))
         proc.process(data)
         self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
@@ -92,11 +92,11 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src_it3 = 'xgm1:output data.intensitySa3TD'
 
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensitySa1TD', slice(None, None), (0, 1000)))
+            'XGM', 'xgm1:output', [], 'data.intensitySa1TD', slice(None, None), (0, 1000), 1))
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensitySa2TD', slice(1, 4), (0, 100)))
+            'XGM', 'xgm1:output', [], 'data.intensitySa2TD', slice(1, 4), (0, 100), 1))
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensitySa3TD', slice(2, 3), (0, 10)))
+            'XGM', 'xgm1:output', [], 'data.intensitySa3TD', slice(2, 3), (0, 10), 1))
 
         meta.update({
             src_it1: {'train_id': 54321}, src_it2: {'train_id': 54321}, src_it3: {'train_id': 54321}
@@ -145,13 +145,13 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
 
         src_pf = 'xgm1 pulseEnergy.photonFlux'
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None))
+            'XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None, 0))
         meta[src_pf] = {'train_id': 12345}
         raw[src_pf] = 0.02
 
         src_it = 'xgm1:output data.intensityTD'
         catalog.add_item(SourceItem(
-            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), None))
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), None, 1))
         meta[src_it] = {'train_id': 12345}
         raw[src_it] = [100, 200, 300]
 

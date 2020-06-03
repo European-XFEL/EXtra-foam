@@ -24,7 +24,7 @@ from .smart_widgets import (
 )
 from ..gui_helpers import parse_boundary, parse_slice
 from ..mediator import Mediator
-from ...database import MonProxy, SourceItem
+from ...database import MonProxy
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes
@@ -212,7 +212,7 @@ class DataSourceTreeItem:
 class DataSourceItemModel(QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
-    # checked, SourceItem
+    # True/False, tuple/str
     source_item_toggled_sgn = pyqtSignal(bool, object)
 
     def __init__(self, parent=None):
@@ -244,12 +244,6 @@ class DataSourceItemModel(QAbstractItemModel):
 
     def setData(self, index, value, role=None) -> bool:
         """Override."""
-        def _parse_slice(x):
-            return str(parse_slice(x)) if x else x
-
-        def _parse_boundary(x):
-            return str(parse_boundary(x)) if x else x
-
         if role == Qt.CheckStateRole or role == Qt.EditRole:
             item = index.internalPointer()
             if role == Qt.CheckStateRole:
@@ -264,23 +258,17 @@ class DataSourceItemModel(QAbstractItemModel):
                                                       index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
                                     False,
-                                    SourceItem('',
-                                               item_sb.data(0),
-                                               [],
-                                               item_sb.data(1),
-                                               '',
-                                               ''))
+                                    f'{item_sb.data(0)} {item_sb.data(1)}')
                                 break
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
-                old_device_id = item.data(0)
+                old_src_name = item.data(0)
                 old_ppt = item.data(1)
                 item.setData(value, index.column())
                 # remove registered item with the old device ID and property
                 self.source_item_toggled_sgn.emit(
-                    False,
-                    SourceItem('', old_device_id, [], old_ppt, '', ''))
+                    False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
             ctg = item.parent().data(0)
@@ -291,15 +279,19 @@ class DataSourceItemModel(QAbstractItemModel):
             else:
                 modules = []
 
-            self.source_item_toggled_sgn.emit(
-                item.isChecked(),
-                SourceItem(
-                    ctg,
-                    src_name,
-                    modules,
-                    item.data(1),
-                    _parse_slice(item.data(2)),
-                    _parse_boundary(item.data(3))))
+            slicer = item.data(2)
+            vrange = item.data(3)
+            if item.isChecked():
+                self.source_item_toggled_sgn.emit(
+                    item.isChecked(),
+                    (ctg, src_name, str(modules), item.data(1),
+                     str(parse_slice(slicer)) if slicer else '',
+                     str(parse_boundary(vrange)) if vrange else '',
+                     item.data(4))
+                )
+            else:
+                self.source_item_toggled_sgn.emit(
+                    False, f'{src_name} {item.data(1)}')
 
             self.dataChanged.emit(index, index)
             return True
@@ -390,7 +382,7 @@ class DataSourceItemModel(QAbstractItemModel):
                 for ppt in ppts:
                     # For now, all pipeline data are exclusive
                     src_item = DataSourceTreeItem(
-                        [src, ppt, default_slicer, default_v_range],
+                        [src, ppt, default_slicer, default_v_range, 1],
                         exclusive=True,
                         parent=ctg_item)
                     ctg_item.appendChild(src_item)
@@ -410,7 +402,7 @@ class DataSourceItemModel(QAbstractItemModel):
             for src, ppts in srcs.items():
                 for ppt in ppts:
                     ctg_item.appendChild(DataSourceTreeItem(
-                        [src, ppt, default_slicer, default_v_range],
+                        [src, ppt, default_slicer, default_v_range, 0],
                         exclusive=False,
                         parent=ctg_item))
 
@@ -434,7 +426,7 @@ class DataSourceItemModel(QAbstractItemModel):
         self._root.appendChild(ctg_item)
         for i in range(n_user_defined):
             ctg_item.appendChild(DataSourceTreeItem(
-                [f"Device-ID-{i+1}", f"Property-{i+1}", "", '-inf, inf'],
+                [f"Device-ID-{i+1}", f"Property-{i+1}", "", '-inf, inf', 0],
                 exclusive=False,
                 parent=ctg_item))
 

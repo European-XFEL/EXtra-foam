@@ -57,7 +57,6 @@ class Config(collections.abc.Mapping):
 
 config = Config()
 
-
 _MAX_INT32 = np.iinfo(np.int32).max
 _MIN_INT32 = np.iinfo(np.int32).min
 

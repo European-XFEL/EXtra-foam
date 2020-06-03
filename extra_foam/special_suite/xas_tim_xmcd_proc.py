@@ -53,7 +53,7 @@ class XasTimXmcdProcessor(XasTimProcessor):
     def sources(self):
         """Override."""
         srcs = super().sources()
-        srcs.append((self._magnet_device_id, self._magnet_ppt))
+        srcs.append((self._magnet_device_id, self._magnet_ppt, 0))
         return srcs
 
     @profiler("XAS-TIM-XMCD Processor")

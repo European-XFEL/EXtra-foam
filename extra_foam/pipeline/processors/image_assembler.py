@@ -577,6 +577,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src, modules):
             """Override.
 
+            - raw, "data.image.pixels", (y, x)
             -> (y, x)
             """
             raise NotImplementedError

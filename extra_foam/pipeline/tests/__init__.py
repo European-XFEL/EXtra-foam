@@ -63,7 +63,7 @@ class _TestDataMixin:
         catalog = SourceCatalog()
         ctg = 'ABCD'
         src = f'{src_name} {key_name}'
-        catalog.add_item(SourceItem(ctg, src_name, [], key_name, slicer, None))
+        catalog.add_item(SourceItem(ctg, src_name, [], key_name, slicer, None, 1))
         catalog._main_detector = src
 
         n_pulses = processed.n_pulses
@@ -172,8 +172,8 @@ class _RawDataMixin:
         """
         catalog = SourceCatalog()
         for ctg, srcs in mapping.items():
-            for src, ppt in srcs:
-                catalog.add_item(SourceItem(ctg, src, [], ppt, None, None))
+            for src, ppt, ktype in srcs:
+                catalog.add_item(SourceItem(ctg, src, [], ppt, None, None, ktype))
         return catalog
 
     def _gen_kb_data(self, tid, mapping):

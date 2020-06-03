@@ -35,12 +35,10 @@ from extra_foam.gui.plot_widgets import ImageViewF
 from extra_foam.gui.misc_widgets import GuiLogger, set_button_color
 from extra_foam.pipeline.f_queue import SimpleQueue
 from extra_foam.pipeline.f_transformer import DataTransformer
-from extra_foam.pipeline.f_zmq import FoamZmqClient
+from extra_foam.pipeline.f_zmq import FoamZmqClient, KaraboGateClient
 from extra_foam.pipeline.exceptions import ProcessingError
 
 from . import __version__
-
-
 from . import logger
 from .config import _IMAGE_DTYPE, config
 
@@ -566,14 +564,23 @@ class _BaseQThreadClient(QThread):
         self._transformer_st.reset()
         self._output_st.clear()
 
-    def updateParamsST(self, params):
-        """Update internal states of the client."""
-        self._endpoint_st = params["endpoint"]
+    def updateEndpointST(self, endpoint):
+        """Update endpoint of the client."""
+        self._endpoint_st = endpoint
 
+    def updateSourcesST(self, sources):
+        """Update source catalog of the client."""
         ctl = self._catalog_st
         ctl.clear()
-        for name, ppt in params["sources"]:
-            ctl.add_item(None, name, None, ppt, None, None)
+        for name, ppt, ktype in sources:
+            if not name:
+                raise ValueError("Empty source name")
+            if not ppt:
+                raise ValueError(f"Empty property name for source {name}")
+            if ktype not in (0, 1):
+                raise ValueError(
+                    f"Not understandable data type: {ktype}")
+            ctl.add_item(None, name, None, ppt, None, None, ktype)
 
 
 class QThreadFoamClient(_BaseQThreadClient):
@@ -618,19 +625,76 @@ class QThreadFoamClient(_BaseQThreadClient):
 
 
 class QThreadKbClient(_BaseQThreadClient):
+
     _client_instance_type = KaraboBridgeClient
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if config["USE_KARABO_GATE_CLIENT"]:
+            self.__class__._client_instance_type = KaraboGateClient
 
     def run(self):
         """Override."""
         self.onResetST()
 
-        with self._client_instance_type(
-                self._endpoint_st, timeout=config["CLIENT_TIME_OUT"]) as client:
-            self.log.info(f"Connected to {self._endpoint_st}")
-            correlated = None
-            while not self.isInterruptionRequested():
+        kwargs = {
+            "timeout": config["CLIENT_TIME_OUT"]
+        }
+        if self._client_instance_type == KaraboGateClient:
+            kwargs["connect"] =  False
 
+        with self._client_instance_type(self._endpoint_st, **kwargs) as client:
+            self.log.info(f"Connected to {self._endpoint_st}")
+
+            correlated = None
+
+            if self._client_instance_type == KaraboGateClient:
+                connected = False
+                while not self.isInterruptionRequested():
+                    try:
+                        client.connect()
+                        self.log.debug("Connected to the server")
+                        connected = True
+                        break
+                    except Exception as e:
+                        self.log.debug(str(e))
+                        continue
+
+                if connected:
+                    for _, item in self._catalog_st.items():
+                        if item.ktype:
+                            try:
+                                device, channel = item.name.split(":")
+                            except ValueError:
+                                self.log.error(
+                                     "Output channel must have the format: "
+                                     "deviceID:channel")
+
+                            try:
+                                client.monitor_channel(device, channel)
+                                self.log.debug(
+                                    f"Monitor pipeline data '{item.name}'"
+                                    f" at {client.data.LAST_ENDPOINT}")
+                            except (TimeoutError,) as e:
+                                self.log.info(f"Failed to monitor output "
+                                              f"channel: {item.name}")
+                                self.log.debug(str(e))
+                        else:
+                            try:
+                                client.monitor_property(item.name, item.property)
+                                self.log.debug(
+                                    f"Monitor control data: "
+                                    f"{item.name} {item.property}"
+                                    f" at {client.data.LAST_ENDPOINT}")
+                            except (TimeoutError, RuntimeError) as e:
+                                self.log.info(f"Failed to monitor control data: "
+                                              f"{item.name} {item.property}")
+                                self.log.debug(str(e))
+
+            while not self.isInterruptionRequested():
                 try:
+                    self.log.debug("Data request sent ...")
                     data = client.next()
                 except TimeoutError:
                     continue
@@ -686,7 +750,7 @@ class _SpecialAnalysisBase(QMainWindow):
 
         self._topic_st = topic
 
-        self.setWindowTitle(f"EXtra-foam {__version__} - " +
+        self.setWindowTitle(f"EXtra-foam {__version__} - "
                             f"special suite - {self._title}")
 
         self._com_ctrl_st = _SharedCtrlWidgetS(**kwargs)
@@ -796,10 +860,13 @@ class _SpecialAnalysisBase(QMainWindow):
     ###################################################################
 
     def _onStartST(self):
-        self._client_st.updateParamsST({
-            "endpoint": self._com_ctrl_st.endpoint(),
-            "sources": self._worker_st.sources()
-        })
+        self._client_st.updateEndpointST(self._com_ctrl_st.endpoint())
+
+        try:
+            self._client_st.updateSourcesST(self._worker_st.sources())
+        except ValueError as e:
+            logger.error(str(e))
+            return
 
         self._com_ctrl_st.onStartST()
         self._ctrl_widget_st.onStartST()

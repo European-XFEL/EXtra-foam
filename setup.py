@@ -302,7 +302,7 @@ setup(
         'PyQt5==5.13.2',
         'EXtra-data>=1.0.0',
         'EXtra-geom>=0.8.0',
-        'karabo-bridge>=0.3.0',
+        'karabo-bridge>=0.5.0',
         'toolz>=0.9.0',
         'silx>=0.9.0',
         'hiredis>=1.0.0',
