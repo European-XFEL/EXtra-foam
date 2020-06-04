@@ -1,6 +1,40 @@
 CHANGELOG
 =========
 
+0.8.4 (8 June 2020)
+------------------------
+
+- **Bug Fix**
+
+  - Beam size in the bar plot will change when the resolution changes in the
+    correlation analysis. #209
+
+- **Improvement**
+
+  - Update Redis versions: server -> 6.0.5; redis-py -> 3.5.2; hiredis-py -> 1.0.1. #220
+  - Slightly improve image proc C++ code performance on machines with few threads. #219
+  - Visualize data type in data source Tree. #218
+  - Improve the performance of pulse filter. #214
+  - Improve setup.py. #212
+  - Keep data when resolution changes in correlation analysis; move sequence classes
+    into algorithms/data_structures. #209
+  - Mask ASIC edge when n_modules == 1; simplify geometry binding code. #207
+  - Add benchmark for generalized geometry. #205
+  - Make special suite more self-contained. #204
+  - Mask JungFrau and JungFrauPR. #200
+  - Move statistics ctrl widgets into corresponding windows. #199
+
+- **New Feature**
+
+  - Color encoding matched sources in the data source tree. #220
+  - Add processed pulse counter in ImageTool. #216
+  - Add support for C++ API. #213
+  - Add xtensor-blas as a submodule. #210
+  - Implement image transform processor and view (FFT, edge detection). #203
+  - Integrate Karabo gate (PipeToEXtraFoam device) which allows request pipeline
+    and control data in special suite. #168
+
+
 0.8.3 (11 May 2020)
 ------------------------
 
