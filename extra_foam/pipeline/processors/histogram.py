@@ -9,11 +9,9 @@ All rights reserved.
 """
 import math
 
-import numpy as np
-
-from .base_processor import _BaseProcessor, SimpleSequence
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError, UnknownParameterError
-from ...algorithms import hist_with_stats
+from ...algorithms import hist_with_stats, SimpleSequence
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType

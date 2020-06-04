@@ -59,8 +59,8 @@ class CorrelationPlot(TimedPlotWidgetF):
         y = item.y
         y_slave = item.y_slave
         if resolution == 0:
-            # SimplePairSequence
             if self._resolution != 0:
+                # bar -> scatter plot
                 self._newScatterPlot()
                 self._resolution = 0
 
@@ -68,10 +68,16 @@ class CorrelationPlot(TimedPlotWidgetF):
             if y_slave is not None:
                 self._plot_slave.setData(item.x_slave, y_slave)
         else:
-            # OneWayAccuPairSequence
-            if self._resolution == 0:
-                self._newStatisticsBarPlot(resolution)
+            if resolution != self._resolution:
+                if self._resolution == 0:
+                    # scatter -> bar plot
+                    self._newStatisticsBarPlot(resolution)
+                else:
+                    # update beam
+                    self._plot.setBeam(resolution)
+                    self._plot_slave.setBeam(resolution)
                 self._resolution = resolution
+
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
             if y_slave is not None:
                 self._plot_slave.setData(
@@ -102,8 +108,8 @@ class CorrelationPlot(TimedPlotWidgetF):
 
         pen_pair = self._pens[self._idx]
         self._plot = self.plotStatisticsBar(beam=resolution, pen=pen_pair[0])
-        self._plot_slave = self.plotStatisticsBar(beam=resolution,
-                                                  pen=pen_pair[1])
+        self._plot_slave = self.plotStatisticsBar(
+            beam=resolution, pen=pen_pair[1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):

@@ -12,8 +12,9 @@ import math
 import numpy as np
 from scipy import stats
 
-from .base_processor import _BaseProcessor, SimpleSequence, SimpleVectorSequence
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError, UnknownParameterError
+from ...algorithms import SimpleSequence, SimpleVectorSequence
 from ...database import Metadata as mt
 from ...config import AnalysisType, BinMode
 from ...utils import profiler

@@ -9,9 +9,8 @@ All rights reserved.
 """
 import numpy as np
 
-from extra_foam.algorithms import compute_spectrum_1d
-from extra_foam.pipeline.processors.base_processor import (
-    SimpleSequence, SimplePairSequence
+from extra_foam.algorithms import (
+    compute_spectrum_1d, SimpleSequence, SimplePairSequence
 )
 
 from .special_analysis_base import profiler

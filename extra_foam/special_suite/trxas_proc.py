@@ -13,7 +13,7 @@ import numpy as np
 from scipy import stats
 
 from extra_foam.algorithms import compute_spectrum_1d, nansum
-from extra_foam.pipeline.processors.base_processor import SimpleSequence
+from extra_foam.algorithms import SimpleSequence
 from extra_foam.pipeline.processors.binning import _BinMixin
 from extra_foam.pipeline.exceptions import ProcessingError
 

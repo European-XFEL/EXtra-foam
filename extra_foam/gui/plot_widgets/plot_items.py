@@ -416,10 +416,12 @@ class StatisticsBarItem(pg.GraphicsObject):
         if not len(self._y) == len(self._y_min) == len(self._y_max):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
-
         self._path = None
         self.update()
         self.informViewBoundsChanged()
+
+    def setBeam(self, w):
+        self._beam = w
 
     def isEmptyGraph(self):
         return not bool(len(self._x))
