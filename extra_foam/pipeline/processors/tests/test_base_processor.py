@@ -1,11 +1,14 @@
 import unittest
 
+import numpy as np
+
 from extra_foam.config import AnalysisType
 from extra_foam.database import MetaProxy
 from extra_foam.logger import logger
 from extra_foam.pipeline.processors.base_processor import (
     _BaseProcessor, UnknownParameterError
 )
+from extra_foam.pipeline.data_model import PulseIndexMask
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import start_redis_server
 
@@ -111,3 +114,20 @@ class TestBaseProcessor(unittest.TestCase):
         self.assertFalse(self._meta.has_analysis(analysis_type))
         self.assertFalse(self._meta.has_analysis(analysis_type))
         self.assertFalse(self._meta.has_analysis(analysis_type))
+
+    def testFilterPulseByVrange(self):
+        proc = _DummyProcessor
+
+        mask = PulseIndexMask()
+        arr = np.arange(10)
+        vrange = (3, 6)
+        proc.filter_pulse_by_vrange(arr, vrange, mask)
+        np.testing.assert_array_equal([3, 4, 5, 6], mask.kept_indices(10))
+
+        vrange = (-np.inf, 5)
+        proc.filter_pulse_by_vrange(arr, vrange, mask)
+        np.testing.assert_array_equal([3, 4, 5], mask.kept_indices(10))
+
+        vrange = (5, np.inf)
+        proc.filter_pulse_by_vrange(arr, vrange, mask)
+        np.testing.assert_array_equal([5], mask.kept_indices(10))

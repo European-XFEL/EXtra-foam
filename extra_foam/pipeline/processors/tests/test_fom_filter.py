@@ -53,7 +53,7 @@ class TestFomPulseFilter(_TestDataMixin):
         self._set_fom(processed, analysis_type, [1, 2, 3])
         proc.process(data)
         proc.filter_pulse_by_vrange.assert_called_with(
-            [1, 2, 3], (-5, 5), processed.pidx, 'FOM pulse filter')
+            [1, 2, 3], (-5, 5), processed.pidx)
 
 
 class TestFomTrainFilter(_TestDataMixin):

@@ -138,5 +138,4 @@ class XgmProcessor(_BaseProcessor):
             # apply pulse filter
             self.filter_pulse_by_vrange(self._pulse_intensity_ma,
                                         catalog.get_vrange(src),
-                                        processed.pidx,
-                                        src)
+                                        processed.pidx)

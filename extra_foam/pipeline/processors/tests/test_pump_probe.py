@@ -226,7 +226,7 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
 
         data, processed = self._gen_data(1001)
         image_data = processed.image
-        processed.pidx.mask([0, 2])
+        processed.pidx.mask_by_index([0, 2])
         proc.process(data)
         # test calculating the average image after pulse filtering
         np.testing.assert_array_equal(
@@ -294,17 +294,17 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         # --------------------
 
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([0, 2])
+        processed.pidx.mask_by_index([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
 
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([1, 3])
+        processed.pidx.mask_by_index([1, 3])
         # no Exception
         proc.process(data)
 
         # test image_on correctness
-        processed.pidx.mask([0])
+        processed.pidx.mask_by_index([0])
         proc.process(data)
         image_on_gt = data['assembled']['sliced'][2]
         image_on_gt[1, 1] = np.nan
@@ -356,18 +356,18 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         # --------------------
 
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([0, 2])
+        processed.pidx.mask_by_index([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
 
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([1, 3])
+        processed.pidx.mask_by_index([1, 3])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
 
         # test image_on correctness
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([0, 1])
+        processed.pidx.mask_by_index([0, 1])
         proc.process(data)
         image_on_gt = data['assembled']['sliced'][2]
         image_on_gt[1, 1] = np.nan
@@ -445,15 +445,15 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         # --------------------
 
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([0, 2])
+        processed.pidx.mask_by_index([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
         data, processed = self._gen_data(1002)
-        processed.pidx.mask([1, 3])
+        processed.pidx.mask_by_index([1, 3])
         # no Exception since this is an ON pulse
         proc.process(data)
         # drop one on/off indices each
-        processed.pidx.mask([0, 1])
+        processed.pidx.mask_by_index([0, 1])
         proc.process(data)
         np.testing.assert_array_equal(data['assembled']['sliced'][2], proc._prev_unmasked_on)
         # XGM and digitizer
@@ -461,20 +461,20 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         self.assertEqual(processed.pulse.digitizer['B'].pulse_integral[2], proc._prev_dpi_on)
 
         data, processed = self._gen_data(1003)
-        processed.pidx.mask([1, 3])  # drop all off indices
+        processed.pidx.mask_by_index([1, 3])  # drop all off indices
         with self.assertRaises(DropAllPulsesError):
             self.assertIsNotNone(proc._prev_unmasked_on)
             proc.process(data)
 
         # drop all on indices
         data, processed = self._gen_data(1003)
-        processed.pidx.mask([0, 2])
+        processed.pidx.mask_by_index([0, 2])
         # no Exception since this is an OFF pulse
         proc.process(data)
 
         # drop one on/off indices each
         data, processed = self._gen_data(1003)
-        processed.pidx.mask([0, 1])
+        processed.pidx.mask_by_index([0, 1])
         proc._prev_unmasked_on = np.zeros_like(data['assembled']['sliced'][0])  # any value except None
         proc.process(data)
         image_off_gt = data['assembled']['sliced'][3]

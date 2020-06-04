@@ -109,8 +109,7 @@ class DigitizerProcessor(_BaseProcessor):
                     self.__class__.__dict__[attr_name].__get__(
                         self, self.__class__),
                     catalog.get_vrange(src),
-                    processed.pidx,
-                    src)
+                    processed.pidx)
 
                 # It is allowed to select only one digitizer channel
                 processed.pulse.digitizer.ch_normalizer = channel

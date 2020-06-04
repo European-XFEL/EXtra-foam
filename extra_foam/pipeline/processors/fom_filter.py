@@ -59,7 +59,7 @@ class FomPulseFilter(_BaseProcessor):
             raise UnknownParameterError(
                 f"[{tag}] Unknown analysis type: {self.analysis_type}")
 
-        self.filter_pulse_by_vrange(fom, self._fom_range, processed.pidx, tag)
+        self.filter_pulse_by_vrange(fom, self._fom_range, processed.pidx)
 
 
 class FomTrainFilter(_BaseProcessor):

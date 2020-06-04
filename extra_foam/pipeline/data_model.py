@@ -731,11 +731,21 @@ class PulseIndexMask:
     LENGTH = config["MAX_N_PULSES_PER_TRAIN"]
 
     def __init__(self):
-        self._indices = np.array([True] * self.LENGTH)
+        self._indices = np.array([True] * self.LENGTH, dtype=bool)
 
-    def mask(self, idx):
-        """Mask a given index/list of indices."""
-        self._indices[idx] = False
+    def mask_by_index(self, a):
+        """Mask by indices.
+
+        :param int/iterable a: indices to be masked.
+        """
+        self._indices[a] = False
+
+    def mask_by_array(self, a):
+        """Mask by boolean array.
+
+        :param numpy.array a: a boolean array.
+        """
+        self._indices[:len(a)][a] = False
 
     def n_kept(self, n):
         """Return number of kept indices.
