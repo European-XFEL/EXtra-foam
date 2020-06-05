@@ -28,19 +28,22 @@ class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
     })
     _analysis_types_inv = invert_dict(_analysis_types)
 
+    _N_FILTERS = 2
+    _N_TRAIN_FILTERS = 1
+
     def __init__(self, *args, **kwargs):
         super().__init__("FOM filter setup", *args, **kwargs)
 
-        self._analysis_type_cb = QComboBox()
-        self._analysis_type_cb.addItems(self._analysis_types.keys())
-        self._fom_range_le = SmartBoundaryLineEdit("-Inf, Inf")
+        self._analysis_type_cbs = []
+        self._fom_range_les = []
+        for _ in range(self._N_FILTERS):
+            cb = QComboBox()
+            cb.addItems(self._analysis_types.keys())
+            self._analysis_type_cbs.append(cb)
+            self._fom_range_les.append(SmartBoundaryLineEdit("-Inf, Inf"))
 
-        self._pulse_resolved_cb = QCheckBox("Pulse resolved")
-        if self._pulse_resolved:
-            self._pulse_resolved_cb.setChecked(True)
-        else:
-            self._pulse_resolved_cb.setChecked(False)
-            self._pulse_resolved_cb.setEnabled(False)
+        if not self._pulse_resolved:
+            pass
 
         self.initUI()
         self.initConnections()
@@ -52,11 +55,16 @@ class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout = QGridLayout()
         AR = Qt.AlignRight
 
-        layout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
-        layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(QLabel("Fom range: "), 0, 2, AR)
-        layout.addWidget(self._fom_range_le, 0, 3)
-        layout.addWidget(self._pulse_resolved_cb, 0, 4)
+        for i, (cb, le) in enumerate(zip(self._analysis_type_cbs,
+                                         self._fom_range_les)):
+            if i < self._N_TRAIN_FILTERS:
+                layout.addWidget(QLabel(f"By train  - "), i, 0, AR)
+            else:
+                layout.addWidget(QLabel(f"By pulse  - "), i, 0, AR)
+            layout.addWidget(QLabel("Analysis type: "), i, 1, AR)
+            layout.addWidget(cb, i, 2)
+            layout.addWidget(QLabel("Fom range: "), i, 3, AR)
+            layout.addWidget(le, i, 4)
 
         self.setLayout(layout)
 
@@ -69,23 +77,23 @@ class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
                 self._analysis_types[x]))
         self._fom_range_le.value_changed_sgn.connect(
             mediator.onFomFilterRangeChange)
-        self._pulse_resolved_cb.toggled.connect(
-            mediator.onFomFilterPulseResolvedChange)
 
     def updateMetaData(self):
         """Overload."""
-        self._analysis_type_cb.currentTextChanged.emit(
-            self._analysis_type_cb.currentText())
-        self._fom_range_le.returnPressed.emit()
-        self._pulse_resolved_cb.toggled.emit(
-            self._pulse_resolved_cb.isChecked())
-        return True
+        # self._analysis_type_cb.currentTextChanged.emit(
+        #     self._analysis_type_cb.currentText())
+        # self._fom_range_le.returnPressed.emit()
+        # self._pulse_resolved_cb.toggled.emit(
+        #     self._pulse_resolved_cb.isChecked())
+        # return True
+        pass
 
     def loadMetaData(self):
         """Override."""
-        cfg = self._meta.hget_all(mt.FOM_FILTER_PROC)
-        self._analysis_type_cb.setCurrentText(
-            self._analysis_types_inv[int(cfg["analysis_type"])])
-        self._fom_range_le.setText(cfg["fom_range"][1:-1])
-        if self._pulse_resolved:
-            self._pulse_resolved_cb.setChecked(cfg["pulse_resolved"] == 'True')
+        # cfg = self._meta.hget_all(mt.FOM_FILTER_PROC)
+        # self._analysis_type_cb.setCurrentText(
+        #     self._analysis_types_inv[int(cfg["analysis_type"])])
+        # self._fom_range_le.setText(cfg["fom_range"][1:-1])
+        # if self._pulse_resolved:
+        #     self._pulse_resolved_cb.setChecked(cfg["pulse_resolved"] == 'True')
+        pass
