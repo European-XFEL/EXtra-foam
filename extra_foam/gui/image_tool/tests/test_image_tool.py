@@ -407,6 +407,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.image_tool.updateWidgetsF()
 
         view = self.image_tool._bulletin_view
+
         self.assertEqual(1357, int(view._displayed_tid.intValue()))
         self.assertEqual(10, int(view._n_total_pulses.intValue()))
         self.assertEqual(6, int(view._n_kept_pulses.intValue()))

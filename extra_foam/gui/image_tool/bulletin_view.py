@@ -34,8 +34,15 @@ class BulletinView(_AbstractImageToolView):
         self._dark_train_counter = QLCDNumber(self._LCD_DIGITS)
         self._n_dark_pulses = QLCDNumber(self._LCD_DIGITS)
         self._last_processed_tid = QLCDNumber(self._LCD_DIGITS)
-        self._n_processed = QLCDNumber(self._LCD_DIGITS)
-        self._n_dropped = QLCDNumber(self._LCD_DIGITS)
+        self._n_processed_trains = QLCDNumber(self._LCD_DIGITS)
+        self._n_dropped_trains = QLCDNumber(self._LCD_DIGITS)
+        # Note: it is difficult to count number of dropped pulses since
+        #       the processing code takes a shortcut if a train is dropped.
+        #       Also, when the pipeline decides to drop a train, it may still
+        #       not know how many pulses are there in a train. The number of
+        #       pulses in a train is not only decided by the data received,
+        #       but also depends on the pulse slicer.
+        self._n_processed_pulses = QLCDNumber(self._LCD_DIGITS)
 
         self._reset_process_count_btn = QPushButton("Reset process count")
 
@@ -57,8 +64,9 @@ class BulletinView(_AbstractImageToolView):
         self._setLcdStyle(self._dark_train_counter)
         self._setLcdStyle(self._n_dark_pulses)
         self._setLcdStyle(self._last_processed_tid)
-        self._setLcdStyle(self._n_processed)
-        self._setLcdStyle(self._n_dropped)
+        self._setLcdStyle(self._n_processed_trains)
+        self._setLcdStyle(self._n_dropped_trains)
+        self._setLcdStyle(self._n_processed_pulses)
 
         layout = QGridLayout()
         AR = Qt.AlignRight
@@ -75,10 +83,12 @@ class BulletinView(_AbstractImageToolView):
         layout.addWidget(QLabel("Last processed train ID: "), 5, 0, AR)
         layout.addWidget(self._last_processed_tid, 5, 1)
         layout.addWidget(QLabel("# of processed trains: "), 6, 0, AR)
-        layout.addWidget(self._n_processed, 6, 1)
+        layout.addWidget(self._n_processed_trains, 6, 1)
         layout.addWidget(QLabel("# of dropped trains: "), 7, 0, AR)
-        layout.addWidget(self._n_dropped, 7, 1)
-        layout.addWidget(self._reset_process_count_btn, 8, 1)
+        layout.addWidget(self._n_dropped_trains, 7, 1)
+        layout.addWidget(QLabel("# of processed pulses: "), 8, 0, AR)
+        layout.addWidget(self._n_processed_pulses, 8, 1)
+        layout.addWidget(self._reset_process_count_btn, 9, 1)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -102,10 +112,12 @@ class BulletinView(_AbstractImageToolView):
         self._n_dark_pulses.display(data.image.n_dark_pulses)
 
     def _updateProcessCount(self):
-        tid, n_processed, n_dropped = self._mon.get_process_count()
+        tid, n_processed, n_dropped, n_processed_pulses = \
+            self._mon.get_process_count()
         self._last_processed_tid.display(tid)
-        self._n_processed.display(n_processed)
-        self._n_dropped.display(n_dropped)
+        self._n_processed_trains.display(n_processed)
+        self._n_dropped_trains.display(n_dropped)
+        self._n_processed_pulses.display(n_processed_pulses)
 
     def _resetProcessCount(self):
         self._mon.reset_process_count()

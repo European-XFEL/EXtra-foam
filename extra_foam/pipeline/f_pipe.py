@@ -313,7 +313,9 @@ class MpOutQueue(_PipeOutBase):
                         data_out = data['processed']
 
                         tid = data_out.tid
-                        self._mon.add_tid_with_timestamp(tid)
+                        n_pulses = data_out.pidx.n_kept(data_out.n_pulses)
+                        self._mon.add_tid_with_timestamp(
+                            tid, n_pulses=n_pulses)
                         logger.info(f"Train {tid} processed!")
                     else:
                         data_out = {key: data[key] for key
