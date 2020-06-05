@@ -316,30 +316,23 @@ class _BaseProcessorMixin:
                                      f"out of range [{lb}, {ub}]")
 
     @staticmethod
-    def filter_pulse_by_vrange(arr, vrange, index_mask, src):
+    def filter_pulse_by_vrange(arr, vrange, index_mask):
         """Filter pulses in a train by pulse-resolved value.
 
-        :param numpy.array arr: pulse-resolved values of control data
+        :param numpy.array arr: pulse-resolved values of data
             in a train.
         :param tuple vrange: value range.
         :param PulseIndexMask index_mask: pulse index msk
-        :param str src: data source.
         """
         if vrange is not None:
             lb, ub = vrange
 
             if not math.isinf(lb) and not math.isinf(ub):
-                for i, v in enumerate(arr):
-                    if v > ub or v < lb:
-                        index_mask.mask(i)
+                index_mask.mask_by_array((arr > ub) | (arr < lb))
             elif not math.isinf(lb):
-                for i, v in enumerate(arr):
-                    if v < lb:
-                        index_mask.mask(i)
+                index_mask.mask_by_array(arr < lb)
             elif not math.isinf(ub):
-                for i, v in enumerate(arr):
-                    if v > ub:
-                        index_mask.mask(i)
+                index_mask.mask_by_array(arr > ub)
 
 
 class _BaseProcessor(_BaseProcessorMixin, _RedisParserMixin,

@@ -297,8 +297,8 @@ class TestIndexMask(unittest.TestCase):
     def testGeneral(self):
         mask = PulseIndexMask()
 
-        mask.mask([0, 5])
-        mask.mask(7)
+        mask.mask_by_index([0, 5])
+        mask.mask_by_index(7)
         self.assertEqual(3, mask.n_dropped(10))
         self.assertEqual(1, mask.n_dropped(4))
         self.assertEqual(7, mask.n_kept(10))
@@ -313,6 +313,14 @@ class TestIndexMask(unittest.TestCase):
 
         mask.reset()
         self.assertEqual(10, mask.n_kept(10))
+
+    def testMaskByArray(self):
+        mask = PulseIndexMask()
+
+        mask.mask_by_array(np.array([True, False]))
+        self.assertListEqual([0], mask.dropped_indices(100).tolist())
+        mask.mask_by_array(np.array([1, 1, 0, 1, 0], dtype=bool))
+        self.assertListEqual([0, 1, 3], mask.dropped_indices(100).tolist())
 
 
 class TestRoiGeom(unittest.TestCase):
