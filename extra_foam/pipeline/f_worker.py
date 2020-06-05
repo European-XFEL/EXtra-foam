@@ -118,7 +118,8 @@ class ProcessWorker(mp.Process):
                         self._run_tasks(data_out)
                     except StopPipelineError:
                         tid = data_out["processed"].tid
-                        self._mon.add_tid_with_timestamp(tid, dropped=True)
+                        self._mon.add_tid_with_timestamp(
+                            tid, n_pulses=0, dropped=True)
                         logger.info(f"Train {tid} dropped!")
                         data_out = None
 

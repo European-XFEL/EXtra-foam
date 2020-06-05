@@ -15,7 +15,8 @@ class CtrlDataProcessor(_BaseProcessor):
     """Control data processor.
 
     Process the control data (update at maximum 10 Hz),
-    e.g. motor positions, monochromator energies, etc.
+    e.g. motor positions, monochromator energies, etc. The control
+    data of XGM are processed in XgmProcessor.
     """
 
     _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
@@ -31,7 +32,6 @@ class CtrlDataProcessor(_BaseProcessor):
         raw = data['raw']
         catalog = data['catalog']
 
-        # FIXME: XGM can also have control data
         # parse sources
         for ctg in ["Magnet", "Monochromator", "Motor",
                     self._user_defined_key]:
