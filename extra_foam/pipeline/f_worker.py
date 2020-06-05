@@ -15,7 +15,7 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from .pipe import KaraboBridge, MpInQueue, MpOutQueue, ZmqOutQueue
+from .f_pipe import KaraboBridge, MpInQueue, MpOutQueue, ZmqOutQueue
 from .processors import (
     DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,

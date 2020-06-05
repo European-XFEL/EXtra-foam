@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import multiprocessing as mp
 
 from extra_foam.pipeline.exceptions import ProcessingError, StopPipelineError
-from extra_foam.pipeline.worker import TrainWorker, PulseWorker
+from extra_foam.pipeline.f_worker import TrainWorker, PulseWorker
 from extra_foam.config import config
 
 

@@ -10,7 +10,7 @@ from extra_foam.ipc import (
     init_redis_connection, redis_connection, RedisConnection, RedisSubscriber,
     RedisPSubscriber, _global_connections
 )
-from extra_foam.pipeline.worker import ProcessWorker
+from extra_foam.pipeline.f_worker import ProcessWorker
 from extra_foam.processes import wait_until_redis_shutdown
 
 logger.setLevel("CRITICAL")
