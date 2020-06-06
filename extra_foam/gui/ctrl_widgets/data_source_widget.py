@@ -222,7 +222,8 @@ class DataSourceItemModel(QAbstractItemModel):
         self._mediator = Mediator()
 
         self._root = DataSourceTreeItem([
-            "", "Source name", "Property", "Pulse slicer", "Value range"])
+            "", "Type", "Source name", "Property",
+            "Pulse slicer", "Value range"])
         self.setupModelData()
 
         self.source_item_toggled_sgn.connect(
@@ -238,7 +239,8 @@ class DataSourceItemModel(QAbstractItemModel):
         if role == Qt.DisplayRole:
             return item.data(index.column())
 
-        if role == Qt.CheckStateRole and index.column() == 1 and item.rank() > 1:
+        if role == Qt.CheckStateRole and index.column() == 2 \
+                and item.rank() > 1:
             return Qt.Checked if item.isChecked() else Qt.Unchecked
 
         return
@@ -259,40 +261,40 @@ class DataSourceItemModel(QAbstractItemModel):
                                                       index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
                                     False,
-                                    f'{item_sb.data(1)} {item_sb.data(2)}')
+                                    f'{item_sb.data(2)} {item_sb.data(3)}')
                                 break
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
-                old_src_name = item.data(1)
-                old_ppt = item.data(2)
+                old_src_name = item.data(2)
+                old_ppt = item.data(3)
                 item.setData(value, index.column())
                 # remove registered item with the old device ID and property
                 self.source_item_toggled_sgn.emit(
                     False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
-            ctg = item.parent().data(1)
-            src_name = item.data(1)
+            ctg = item.parent().data(2)
+            src_name = item.data(2)
             n_modules = config["NUMBER_OF_MODULES"]
             if ctg == main_det and n_modules > 1 and '*' in src_name:
                 modules = module_indices(n_modules, detector=main_det)
             else:
                 modules = []
 
-            slicer = item.data(3)
-            vrange = item.data(4)
+            slicer = item.data(4)
+            vrange = item.data(5)
             if item.isChecked():
                 self.source_item_toggled_sgn.emit(
                     item.isChecked(),
-                    (ctg, src_name, str(modules), item.data(2),
+                    (ctg, src_name, str(modules), item.data(3),
                      str(parse_slice(slicer)) if slicer else '',
                      str(parse_boundary(vrange)) if vrange else '',
-                     item.data(0))
+                     item.data(1))
                 )
             else:
                 self.source_item_toggled_sgn.emit(
-                    False, f'{src_name} {item.data(2)}')
+                    False, f'{src_name} {item.data(3)}')
 
             self.dataChanged.emit(index, index)
             return True
@@ -306,9 +308,9 @@ class DataSourceItemModel(QAbstractItemModel):
 
         item = index.internalPointer()
         if item.rank() > 1:
-            if index.column() == 1:
+            if index.column() == 2:
                 flags |= Qt.ItemIsUserCheckable
-            if item.isChecked() and index.column() > 0:
+            if item.isChecked() and index.column() > 1:
                 flags |= Qt.ItemIsEditable
 
         return flags
@@ -369,7 +371,7 @@ class DataSourceItemModel(QAbstractItemModel):
         src_categories = dict()
         for ctg, srcs in config.pipeline_sources.items():
             ctg_item = DataSourceTreeItem(
-                ["", ctg, "", "", ""], exclusive=False, parent=self._root)
+                ["", "", ctg, "", "", ""], exclusive=False, parent=self._root)
             self._root.appendChild(ctg_item)
             src_categories[ctg] = ctg_item
 
@@ -383,7 +385,7 @@ class DataSourceItemModel(QAbstractItemModel):
                 for ppt in ppts:
                     # For now, all pipeline data are exclusive
                     src_item = DataSourceTreeItem(
-                        [1, src, ppt, default_slicer, default_v_range],
+                        [False, 1, src, ppt, default_slicer, default_v_range],
                         exclusive=True,
                         parent=ctg_item)
                     ctg_item.appendChild(src_item)
@@ -391,7 +393,8 @@ class DataSourceItemModel(QAbstractItemModel):
         for ctg, srcs in config.control_sources.items():
             if ctg not in src_categories:
                 ctg_item = DataSourceTreeItem(
-                    ["", ctg, "", "", ""], exclusive=False, parent=self._root)
+                    ["", "", ctg, "", "", ""],
+                    exclusive=False, parent=self._root)
                 self._root.appendChild(ctg_item)
                 src_categories[ctg] = ctg_item
             else:
@@ -403,7 +406,7 @@ class DataSourceItemModel(QAbstractItemModel):
             for src, ppts in srcs.items():
                 for ppt in ppts:
                     ctg_item.appendChild(DataSourceTreeItem(
-                        [0, src, ppt, default_slicer, default_v_range],
+                        [False, 0, src, ppt, default_slicer, default_v_range],
                         exclusive=False,
                         parent=ctg_item))
 
@@ -421,13 +424,14 @@ class DataSourceItemModel(QAbstractItemModel):
         user_defined = config["SOURCE_USER_DEFINED_CATEGORY"]
         n_user_defined = 4
         assert user_defined not in src_categories
-        ctg_item = DataSourceTreeItem(["", user_defined, "", "", ""],
+        ctg_item = DataSourceTreeItem(["", "", user_defined, "", "", ""],
                                       exclusive=False,
                                       parent=self._root)
         self._root.appendChild(ctg_item)
         for i in range(n_user_defined):
             ctg_item.appendChild(DataSourceTreeItem(
-                [0, f"Device-ID-{i+1}", f"Property-{i+1}", "", '-inf, inf'],
+                [False, 0, f"Device-ID-{i+1}", f"Property-{i+1}",
+                 "", '-inf, inf'],
                 exclusive=False,
                 parent=ctg_item))
 
@@ -638,9 +642,35 @@ class DataSourceWidget(_AbstractCtrlWidget):
     Widgets provide data source management and monitoring.
     """
 
-    class ColorBoxDelegate(QStyledItemDelegate):
+    class AvailStateDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
             super().__init__(parent)
+            self._brush1 = FColor.mkBrush('g')
+            self._brush2 = Qt.NoBrush  # FColor.mkBrush('r')
+
+        def paint(self, painter, option, index):
+            """Override."""
+            v = index.data()
+            if isinstance(v, bool):
+                painter.setPen(Qt.NoPen)
+
+                if v:
+                    painter.setBrush(self._brush1)
+                else:
+                    painter.setBrush(self._brush2)
+
+                rect = option.rect
+                h = rect.height()
+                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            else:
+                super().paint(painter, option, index)
+
+    class DataTypeDelegate(QStyledItemDelegate):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+            self._c_brush = FColor.mkBrush('c')
+            self._p_brush = FColor.mkBrush('p')
 
         def paint(self, painter, option, index):
             """Override."""
@@ -650,16 +680,16 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
                 if v == 0:
                     # control data
-                    painter.setBrush(FColor.mkBrush('c'))
+                    painter.setBrush(self._c_brush)
                 elif v == 1:
                     # pipeline data
-                    painter.setBrush(FColor.mkBrush('p'))
+                    painter.setBrush(self._p_brush)
                 else:
                     raise ValueError(f"Unknown data type: {v}")
 
                 rect = option.rect
                 h = rect.height()
-                painter.drawRect(rect.x() + 1, rect.y() + 1, h - 2, h - 2)
+                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
             else:
                 super().paint(painter, option, index)
 
@@ -686,17 +716,19 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
         self._src_view = QTreeView()
         self._src_tree_model = DataSourceItemModel(self)
-        self._src_data_type_delegate = self.ColorBoxDelegate(self)
+        self._src_avail_delegate = self.AvailStateDelegate(self)
+        self._src_data_type_delegate = self.DataTypeDelegate(self)
         self._src_device_delegate = LineEditItemDelegate(self)
         self._src_ppt_delegate = LineEditItemDelegate(self)
         self._src_slicer_delegate = SliceItemDelegate(self)
         self._src_boundary_delegate = BoundaryItemDelegate(self)
         self._src_view.setModel(self._src_tree_model)
-        self._src_view.setItemDelegateForColumn(0, self._src_data_type_delegate)
-        self._src_view.setItemDelegateForColumn(1, self._src_device_delegate)
-        self._src_view.setItemDelegateForColumn(2, self._src_ppt_delegate)
-        self._src_view.setItemDelegateForColumn(3, self._src_slicer_delegate)
-        self._src_view.setItemDelegateForColumn(4, self._src_boundary_delegate)
+        self._src_view.setItemDelegateForColumn(0, self._src_avail_delegate)
+        self._src_view.setItemDelegateForColumn(1, self._src_data_type_delegate)
+        self._src_view.setItemDelegateForColumn(2, self._src_device_delegate)
+        self._src_view.setItemDelegateForColumn(3, self._src_ppt_delegate)
+        self._src_view.setItemDelegateForColumn(4, self._src_slicer_delegate)
+        self._src_view.setItemDelegateForColumn(5, self._src_boundary_delegate)
 
         self._monitor_tb = QTabWidget()
         self._avail_src_view = QListView()
@@ -751,10 +783,11 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
         self._src_view.setIndentation(self._src_view.indentation()/2)
         self._src_view.expandToDepth(1)
-        for i in (0, 1, 2):
+        for i in range(4):
             self._src_view.resizeColumnToContents(i)
-        self._src_view.header().setSectionResizeMode(
-            0, QHeaderView.Fixed)
+        for i in range(2):
+            self._src_view.header().setSectionResizeMode(
+                i, QHeaderView.Fixed)
 
     def initConnections(self):
         """Override."""
