@@ -169,81 +169,87 @@ class TestDataSourceWidget(unittest.TestCase):
         # ---------
         # test root
         # ---------
-        self.assertEqual('DSSC', model.index(0, 0, QModelIndex()).data())
-        self.assertEqual('XGM', model.index(1, 0, QModelIndex()).data())
-        self.assertEqual('MONOCHROMATOR', model.index(2, 0, QModelIndex()).data())
-        self.assertEqual('MOTOR', model.index(3, 0, QModelIndex()).data())
+        self.assertEqual('DSSC', model.index(0, 2, QModelIndex()).data())
+        self.assertEqual('XGM', model.index(1, 2, QModelIndex()).data())
+        self.assertEqual('MONOCHROMATOR', model.index(2, 2, QModelIndex()).data())
+        self.assertEqual('MOTOR', model.index(3, 2, QModelIndex()).data())
         self.assertEqual(config["SOURCE_USER_DEFINED_CATEGORY"],
-                         model.index(4, 0, QModelIndex()).data())
-        self.assertFalse(model.index(5, 0, QModelIndex()).isValid())
+                         model.index(4, 2, QModelIndex()).data())
+        self.assertFalse(model.index(5, 2, QModelIndex()).isValid())
         self.assertEqual(5, model.rowCount(QModelIndex()))
-        self.assertEqual(4, model.columnCount(QModelIndex()))
+        self.assertEqual(6, model.columnCount(QModelIndex()))
 
         # -----------------------
         # test exclusive category
         # -----------------------
 
         dssc_ctg = model.index(0, 0, QModelIndex())
-        self.assertEqual('A', model.index(0, 0, dssc_ctg).data())
-        self.assertEqual('a', model.index(0, 1, dssc_ctg).data())
-        self.assertEqual(':', model.index(0, 2, dssc_ctg).data())
-        self.assertEqual('', model.index(0, 3, dssc_ctg).data())
-        self.assertEqual(1, model.index(0, 4, dssc_ctg).data())
+        self.assertEqual(False, model.index(0, 0, dssc_ctg).data())
+        self.assertEqual(1, model.index(0, 1, dssc_ctg).data())
+        self.assertEqual('A', model.index(0, 2, dssc_ctg).data())
+        self.assertEqual('a', model.index(0, 3, dssc_ctg).data())
+        self.assertEqual(':', model.index(0, 4, dssc_ctg).data())
+        self.assertEqual('', model.index(0, 5, dssc_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # first check since it is not allowed to modify in unchecked state
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('DSSC', 'A', '[]', 'a', '[None, None]', '', 1), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change device ID
-        model.setData(model.index(0, 0, dssc_ctg), 'A+', Qt.EditRole)
+        model.setData(model.index(0, 2, dssc_ctg), 'A+', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
         self.assertEqual('A a', spy[0][1])
-        # add new source
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
         self.assertTupleEqual(('DSSC', 'A+', '[]', 'a', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change property
-        model.setData(model.index(0, 1, dssc_ctg), 'a-', Qt.EditRole)
+        model.setData(model.index(0, 3, dssc_ctg), 'a-', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
         self.assertEqual('A+ a', spy[0][1])
-        # add new source
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
         self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
-        model.setData(model.index(0, 2, dssc_ctg), '::2', Qt.EditRole)
+        model.setData(model.index(0, 4, dssc_ctg), '::2', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
         # deleting does not check slicer
-        # add new source
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
         self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None, 2]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change a DSSC source
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(2, len(spy))
-        # delete old source ('DSSC' is an exclusive category)
+        # check signal for deleting old source ('DSSC' is an exclusive category)
         self.assertFalse(spy[0][0])
         self.assertEqual('A+ a-', spy[0][1])
-        # add new source
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
         self.assertTupleEqual(('DSSC', 'B', '[]', 'b', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # uncheck a DSSC source
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, dssc_ctg), False, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
         self.assertEqual('B b', spy[0][1])
 
@@ -251,40 +257,58 @@ class TestDataSourceWidget(unittest.TestCase):
         # test mixed category
         # ---------------------
         xgm_ctg = model.index(1, 0, QModelIndex())
-        self.assertEqual('XA', model.index(0, 0, xgm_ctg).data())
-        self.assertEqual('intensity', model.index(0, 1, xgm_ctg).data())
-        self.assertEqual(':', model.index(0, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(0, 3, xgm_ctg).data())
-        self.assertEqual(1, model.index(0, 4, xgm_ctg).data())
-        self.assertEqual('XA', model.index(1, 0, xgm_ctg).data())
-        self.assertEqual('flux', model.index(1, 1, xgm_ctg).data())
-        self.assertEqual('', model.index(1, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(1, 3, xgm_ctg).data())
-        self.assertEqual(0, model.index(1, 4, xgm_ctg).data())
-        self.assertEqual('XA', model.index(2, 0, xgm_ctg).data())
-        self.assertEqual('xpos', model.index(2, 1, xgm_ctg).data())
-        self.assertEqual('', model.index(2, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(2, 3, xgm_ctg).data())
-        self.assertEqual(0, model.index(2, 4, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(1, model.index(0, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(0, 2, xgm_ctg).data())
+        self.assertEqual('intensity', model.index(0, 3, xgm_ctg).data())
+        self.assertEqual(':', model.index(0, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(0, 5, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(0, model.index(1, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(1, 2, xgm_ctg).data())
+        self.assertEqual('flux', model.index(1, 3, xgm_ctg).data())
+        self.assertEqual('', model.index(1, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(1, 5, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(0, model.index(2, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(2, 2, xgm_ctg).data())
+        self.assertEqual('xpos', model.index(2, 3, xgm_ctg).data())
+        self.assertEqual('', model.index(2, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(2, 5, xgm_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(2, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'xpos', '', '(-inf, inf)', 0), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-inf, inf)', 0), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'intensity', '[None, None]', '(-inf, inf)', 1), spy[0][1])
+
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
+        model.setData(model.index(2, 0, xgm_ctg), False, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+        self.assertEqual('XA xpos', spy[0][1])
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, xgm_ctg), False, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertEqual('XA intensity', spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
-        model.setData(model.index(1, 3, xgm_ctg), '-1, 1', Qt.EditRole)
+        model.setData(model.index(1, 5, xgm_ctg), '-1, 1', Qt.EditRole)
         self.assertEqual(2, len(spy))
         # delete old source
         self.assertFalse(spy[0][0])
@@ -311,9 +335,10 @@ class TestDataSourceWidget(unittest.TestCase):
         model = widget._src_tree_model
 
         jf_ctg = model.index(0, 0, QModelIndex())
-        self.assertEqual('A', model.index(0, 0, jf_ctg).data())
-        self.assertEqual('a', model.index(0, 1, jf_ctg).data())
+        self.assertEqual(False, model.index(0, 0, jf_ctg).data())
+        self.assertEqual(1, model.index(0, 1, jf_ctg).data())
+        self.assertEqual('A', model.index(0, 2, jf_ctg).data())
+        self.assertEqual('a', model.index(0, 3, jf_ctg).data())
         # no slicer for train-resolved detectors
-        self.assertEqual('', model.index(0, 2, jf_ctg).data())
-        self.assertEqual('', model.index(0, 3, jf_ctg).data())
-        self.assertEqual(1, model.index(0, 4, jf_ctg).data())
+        self.assertEqual('', model.index(0, 4, jf_ctg).data())
+        self.assertEqual('', model.index(0, 5, jf_ctg).data())
