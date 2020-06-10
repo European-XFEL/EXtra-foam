@@ -73,11 +73,11 @@ class BuildExt(build_ext):
 
     description = "Build the C++ extensions for EXtra-foam"
     user_options = [
-        ('with-tbb', None, 'build with intel TBB'),
-        ('xtensor-with-tbb', None, 'build xtensor with intel TBB'),
+        ('use-tbb', None, 'build with intel TBB'),
+        ('xtensor-use-tbb', None, 'build xtensor with intel TBB'),
         # https://quantstack.net/xsimd.html
-        ('with-xsimd', None, 'build with XSIMD'),
-        ('xtensor-with-xsimd', None, 'build xtensor with XSIMD'),
+        ('use-xsimd', None, 'build with XSIMD'),
+        ('xtensor-use-xsimd', None, 'build xtensor with XSIMD'),
         ('with-tests', None, 'build cpp unittests'),
     ] + build_ext.user_options
 
@@ -86,14 +86,14 @@ class BuildExt(build_ext):
 
         build_serial = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
         build_para = '0' if build_serial else '1'
-        self.with_tbb = strtobool(
-            os.environ.get('FOAM_WITH_TBB', build_para))
-        self.xtensor_with_tbb = strtobool(
-            os.environ.get('XTENSOR_WITH_TBB', build_para))
-        self.with_xsimd = strtobool(
-            os.environ.get('FOAM_WITH_XSIMD', build_para))
-        self.xtensor_with_xsimd = strtobool(
-            os.environ.get('XTENSOR_WITH_XSIMD', build_para))
+        self.use_tbb = strtobool(
+            os.environ.get('FOAM_USE_TBB', build_para))
+        self.xtensor_use_tbb = strtobool(
+            os.environ.get('XTENSOR_USE_TBB', build_para))
+        self.use_xsimd = strtobool(
+            os.environ.get('FOAM_USE_XSIMD', build_para))
+        self.xtensor_use_xsimd = strtobool(
+            os.environ.get('XTENSOR_USE_XSIMD', build_para))
 
         self.with_tests = strtobool(os.environ.get('BUILD_FOAM_TESTS', '0'))
 
@@ -107,7 +107,7 @@ class BuildExt(build_ext):
 
         cmake_version = LooseVersion(
             re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-        cmake_minimum_version_required = '3.12.0'
+        cmake_minimum_version_required = '3.13.0'
         if cmake_version < cmake_minimum_version_required:
             raise RuntimeError(f"CMake >= {cmake_minimum_version_required} "
                                f"is required!")
@@ -132,20 +132,21 @@ class BuildExt(build_ext):
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
             f"-DCMAKE_PREFIX_PATH={os.getenv('CMAKE_PREFIX_PATH')}",
+            f"-DBUILD_FOAM_PYTHON=ON",
         ]
 
         def _opt_switch(x):
             return 'ON' if x else 'OFF'
 
         cmake_options.append(
-            f'-DFOAM_WITH_TBB={_opt_switch(self.with_tbb)}')
+            f'-DFOAM_USE_TBB={_opt_switch(self.use_tbb)}')
         cmake_options.append(
-            f'-DXTENSOR_USE_TBB={_opt_switch(self.xtensor_with_tbb)}')
+            f'-DXTENSOR_USE_TBB={_opt_switch(self.xtensor_use_tbb)}')
 
         cmake_options.append(
-            f'-DFOAM_WITH_XSIMD={_opt_switch(self.with_xsimd)}')
+            f'-DFOAM_USE_XSIMD={_opt_switch(self.use_xsimd)}')
         cmake_options.append(
-            f'-DXTENSOR_USE_XSIMD={_opt_switch(self.xtensor_with_xsimd)}')
+            f'-DXTENSOR_USE_XSIMD={_opt_switch(self.xtensor_use_xsimd)}')
 
         cmake_options.append(
             f'-DBUILD_FOAM_TESTS={_opt_switch(self.with_tests)}')
@@ -175,8 +176,9 @@ class BuildExt(build_ext):
             except OSError:
                 pass
 
-            if self.with_tbb or self.xtensor_with_tbb:
-                self._move_shared_libs('tbb', build_temp, build_lib)
+            # placeholder
+            # if self.use_tbb or self.xtensor_use_tbb:
+            #     self._move_shared_libs('tbb', build_temp, build_lib)
 
     def _move_thirdparty_exec_files(self):
         for filename in self._thirdparty_exec_files:

@@ -59,7 +59,7 @@ template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
 void gaussianBlur(const E& src, E& dst, size_t k_size, double sigma = -1.)
 {
   auto shape = src.shape();
-  checkShape(shape, dst.shape(), "src and dst have different shapes");
+  utils::checkShape(shape, dst.shape(), "src and dst have different shapes");
 
   if (k_size == 0) k_size = 1;
 

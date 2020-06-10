@@ -15,11 +15,16 @@
 #include <vector>
 #include <algorithm>
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 #include "tbb/tick_count.h"
+
+namespace foam
+{
+namespace test
+{
 
 static const std::size_t N = 21;
 
@@ -110,4 +115,7 @@ TEST(TestTBB, GeneralSubStringFinder) {
   }
 }
 
-#endif // FOAM_WITH_TBB
+} // test
+} // foam
+
+#endif // FOAM_USE_TBB

@@ -16,7 +16,7 @@
 #include "xtensor/xmath.hpp"
 #include "xtensor/xindex_view.hpp"
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
 #include "tbb/blocked_range3d.h"
@@ -29,7 +29,7 @@
 namespace foam
 {
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 namespace detail
 {
 
@@ -102,7 +102,7 @@ template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
 inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
 {
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   return detail::nanmeanImageArrayImp(std::forward<E>(src), keep);
 #else
   using value_type = typename std::decay_t<E>::value_type;
@@ -114,7 +114,7 @@ inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
 template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
 inline auto nanmeanImageArray(E&& src)
 {
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   return detail::nanmeanImageArrayImp(std::forward<E>(src));
 #else
   using value_type = typename std::decay_t<E>::value_type;
@@ -135,9 +135,9 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
   using value_type = typename std::decay_t<E>::value_type;
   auto shape = src1.shape();
 
-  checkShape(shape, src2.shape(), "Images have different shapes");
+  utils::checkShape(shape, src2.shape(), "Images have different shapes");
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   auto mean = std::decay_t<E>({shape[0], shape[1]});
 
   tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
@@ -213,7 +213,7 @@ inline void imageDataNanMask(const E& src, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   for (size_t j = 0; j < shape[0]; ++j)
   {
@@ -267,7 +267,7 @@ inline void maskImageDataZero(E& src, T lb, T ub, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -326,7 +326,7 @@ inline void maskImageDataNan(E& src, T lb, T ub, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -358,7 +358,7 @@ inline void maskImageDataZero(E& src, const M& mask)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -385,8 +385,8 @@ inline void maskImageDataZero(E& src, const M& mask, M& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -415,7 +415,7 @@ inline void maskImageDataNan(E& src, const M& mask)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -440,8 +440,8 @@ inline void maskImageDataNan(E& src, const M& mask, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -477,7 +477,7 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -511,8 +511,8 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -552,7 +552,7 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -585,8 +585,8 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub, N& out)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes");
-  checkShape(shape, out.shape(), "Image and output array have different shapes");
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
+  utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
@@ -621,7 +621,7 @@ inline void maskImageDataZero(E& src)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src] (const tbb::blocked_range3d<int> &block)
     {
@@ -663,7 +663,7 @@ template <typename E, typename T,
 inline void maskImageDataZero(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   auto shape = src.shape();
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
@@ -702,7 +702,7 @@ inline void maskImageDataNan(E& src, T lb, T ub)
   using value_type = typename E::value_type;
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   auto shape = src.shape();
 
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
@@ -741,10 +741,10 @@ inline void maskImageDataZero(E& src, const M& mask)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &mask, nan] (const tbb::blocked_range3d<int> &block)
     {
@@ -766,7 +766,7 @@ inline void maskImageDataZero(E& src, const M& mask)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -785,10 +785,10 @@ inline void maskImageDataNan(E& src, const M& mask)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &mask, nan] (const tbb::blocked_range3d<int> &block)
     {
@@ -810,7 +810,7 @@ inline void maskImageDataNan(E& src, const M& mask)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -830,10 +830,10 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &mask, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
     {
@@ -862,7 +862,7 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -881,10 +881,10 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
+  utils::checkShape(shape, mask.shape(), "Image and mask have different shapes", 1);
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &mask, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
     {
@@ -914,7 +914,7 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -935,7 +935,7 @@ inline void movingAvgImageData(E& src, const E& data, size_t count)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, data.shape(), "Inconsistent data shapes");
+  utils::checkShape(shape, data.shape(), "Inconsistent data shapes");
 
   for (size_t j = 0; j < shape[0]; ++j)
   {
@@ -961,9 +961,9 @@ inline void movingAvgImageData(E& src, const E& data, size_t count)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  checkShape(shape, data.shape(), "Inconsistent data shapes");
+  utils::checkShape(shape, data.shape(), "Inconsistent data shapes");
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &data, count] (const tbb::blocked_range3d<int> &block)
     {
@@ -985,7 +985,7 @@ inline void movingAvgImageData(E& src, const E& data, size_t count)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -1020,9 +1020,9 @@ inline void correctImageData(E& src, const E& constants)
 {
   auto shape = src.shape();
 
-  checkShape(shape, constants.shape(), "data and constants have different shapes");
+  utils::checkShape(shape, constants.shape(), "data and constants have different shapes");
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &constants] (const tbb::blocked_range3d<int> &block)
     {
@@ -1044,7 +1044,7 @@ inline void correctImageData(E& src, const E& constants)
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -1063,7 +1063,7 @@ inline void correctImageData(E& src, const E& constants)
 {
   auto shape = src.shape();
 
-  checkShape(shape, constants.shape(), "data and constants have different shapes");
+  utils::checkShape(shape, constants.shape(), "data and constants have different shapes");
 
   for (size_t j = 0; j < shape[0]; ++j)
   {
@@ -1086,10 +1086,10 @@ inline void correctImageData(E& src, const E& gain, const E& offset)
 {
   auto shape = src.shape();
 
-  checkShape(shape, gain.shape(), "data and gain constants have different shapes");
-  checkShape(shape, offset.shape(), "data and offset constants have different shapes");
+  utils::checkShape(shape, gain.shape(), "data and gain constants have different shapes");
+  utils::checkShape(shape, offset.shape(), "data and offset constants have different shapes");
 
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
     [&src, &gain, &offset] (const tbb::blocked_range3d<int> &block)
     {
@@ -1111,7 +1111,7 @@ inline void correctImageData(E& src, const E& gain, const E& offset)
         }
       }
     }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -1129,8 +1129,8 @@ inline void correctImageData(E& src, const E& gain, const E& offset)
 {
   auto shape = src.shape();
 
-  checkShape(shape, gain.shape(), "data and gain constants have different shapes");
-  checkShape(shape, offset.shape(), "data and offset constants have different shapes");
+  utils::checkShape(shape, gain.shape(), "data and gain constants have different shapes");
+  utils::checkShape(shape, offset.shape(), "data and offset constants have different shapes");
 
   for (size_t j = 0; j < shape[0]; ++j)
   {

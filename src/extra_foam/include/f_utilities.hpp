@@ -20,6 +20,8 @@
 
 namespace foam
 {
+namespace utils
+{
 
 /**
  * Compare two shape containers.
@@ -41,6 +43,7 @@ inline void checkShape(S1&& shape1, S2&& shape2, std::string&& header, size_t s0
   }
 }
 
-}
+} //utils
+} //foam
 
 #endif //EXTRA_FOAM_UTILITIES_H

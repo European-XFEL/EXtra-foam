@@ -4,6 +4,10 @@
 # All rights reserved.                                            #
 ###################################################################
 
+if(NOT CMAKE_CXX_FLAGS MATCHES "-march")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+endif()
+
 # Download and unpack googletest at configure time
 configure_file(downloadGTest.cmake.in googletest-download/CMakeLists.txt)
 
@@ -41,78 +45,70 @@ set(GMOCK_INCLUDE_DIRS "${gmock_SOURCE_DIR}/include")
 
 find_package(Threads REQUIRED)
 
-set(FOAM_TESTS
+set(_FOAM_UNITTESTS
     test_tbb.cpp
     test_blas.cpp
-    test_imageproc.cpp
+    test_canny.cpp
     test_geometry.cpp
     test_geometry_1m.cpp
-    test_statistics.cpp
+    test_imageproc.cpp
     test_smooth.cpp
-    test_canny.cpp)
+    test_statistics.cpp
+    )
 
-set(FOAM_TARGETS_WITH_BLAS
+set(_FOAM_UNITTEST_TARGETS_NEED_BLAS
     test_blas)
 
-set(CMAKE_INSTALL_RPATH "${target_install_rpath}/../;${CMAKE_PREFIX_PATH}/lib")
+set(CMAKE_BUILD_RPATH "${CMAKE_PREFIX_PATH}/lib")
 
-foreach(filename IN LISTS FOAM_TESTS)
+foreach(pathname IN LISTS _FOAM_UNITTESTS)
+    get_filename_component(filename ${pathname} NAME)
     string(REPLACE ".cpp" "" targetname ${filename})
     add_executable(${targetname} main.cpp ${filename})
-    if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
-        target_compile_definitions(${targetname} PRIVATE FOAM_WITH_TBB)
-        target_include_directories(${targetname} PRIVATE ${TBB_INCLUDE_DIRS})
-        target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARY})
-    endif()
     target_include_directories(${targetname}
         PRIVATE
-            ${FOAM_INCLUDE_DIRS}
+            $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_INCLUDE_DIRS}>
             ${GTEST_INCLUDE_DIRS}
             ${GMOCK_INCLUDE_DIRS}
     )
-    target_link_libraries(${targetname} PRIVATE gtest pthread xtensor)
+    target_link_libraries(${targetname}
+        PRIVATE
+            extra-foam
+            $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_LIBRARY}>
+            gtest
+            pthread)
 
-    if (${targetname} IN_LIST FOAM_TARGETS_WITH_BLAS)
+    if (${targetname} IN_LIST _FOAM_UNITTEST_TARGETS_NEED_BLAS)
         target_link_libraries(${targetname}
             PRIVATE
-                xtensor-blas
                 ${BLAS_LIBRARIES}
                 ${LAPACK_LIBRARIES})
     endif()
 
-    add_custom_target(
-        f${targetname}
+    add_custom_target(f${targetname}
         COMMAND ${targetname}
         DEPENDS ${targetname} ${filename}
     )
 endforeach()
 
-add_executable(test_foam_cpp main.cpp ${FOAM_TESTS})
+add_executable(test_foam_cpp main.cpp ${_FOAM_UNITTESTS})
 
 target_include_directories(test_foam_cpp
     PRIVATE
-        ${FOAM_INCLUDE_DIRS}
+        $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_INCLUDE_DIRS}>
         ${GTEST_INCLUDE_DIRS}
-        ${GMOCK_INCLUDE_DIRS}
-)
+        ${GMOCK_INCLUDE_DIRS})
 
 target_link_libraries(test_foam_cpp
     PRIVATE
         gtest
         pthread
-        xtensor
-        xtensor-blas
+        extra-foam
+        $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_LIBRARY}>
         ${BLAS_LIBRARIES}
         ${LAPACK_LIBRARIES})
 
-if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
-    target_compile_definitions(test_foam_cpp PRIVATE FOAM_WITH_TBB)
-    target_include_directories(test_foam_cpp PRIVATE ${TBB_INCLUDE_DIRS})
-    target_link_libraries(test_foam_cpp PRIVATE ${TBB_LIBRARY})
-endif()
-
-add_custom_target(
-    ftest
+add_custom_target(ftest
     COMMAND test_foam_cpp
     DEPENDS test_foam_cpp
 )

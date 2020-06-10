@@ -15,15 +15,14 @@
 
 #include "f_canny.hpp"
 
-using ::testing::Each;
-using ::testing::Eq;
-using ::testing::ElementsAre;
-
-
 namespace foam
 {
 namespace test
 {
+
+using ::testing::Each;
+using ::testing::Eq;
+using ::testing::ElementsAre;
 
 static constexpr auto nan = std::numeric_limits<float>::quiet_NaN();
 
