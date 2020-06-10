@@ -18,7 +18,6 @@
 #if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
-#include "tbb/blocked_range3d.h"
 #endif
 
 #include "f_traits.hpp"
