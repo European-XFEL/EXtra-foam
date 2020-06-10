@@ -19,7 +19,6 @@
 #if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
-#include "tbb/blocked_range3d.h"
 #endif
 
 #include "f_traits.hpp"
@@ -622,14 +621,14 @@ inline void maskImageDataZero(E& src)
   auto shape = src.shape();
 
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        for(int j=0; j != shape[1]; ++j)
         {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          for(int k=0; k != shape[2]; ++k)
           {
             if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
           }
@@ -667,14 +666,14 @@ inline void maskImageDataZero(E& src, T lb, T ub)
   auto shape = src.shape();
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, lb, ub, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        for(int j=0; j != shape[1]; ++j)
         {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          for(int k=0; k != shape[2]; ++k)
           {
             auto v = src(i, j, k);
             if (std::isnan(v) || v < lb || v > ub) src(i, j, k) = value_type(0);
@@ -705,14 +704,14 @@ inline void maskImageDataNan(E& src, T lb, T ub)
 #if defined(FOAM_USE_TBB)
   auto shape = src.shape();
 
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, lb, ub, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        for(int j=0; j != shape[1]; ++j)
         {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          for(int k=0; k != shape[2]; ++k)
           {
             auto v = src(i, j, k);
             if (std::isnan(v)) continue;
@@ -745,23 +744,19 @@ inline void maskImageDataZero(E& src, const M& mask)
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &mask, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &mask, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             if (mask(j, k) || std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
           }
         }
@@ -789,23 +784,19 @@ inline void maskImageDataNan(E& src, const M& mask)
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &mask, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &mask, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             if (mask(j, k)) src(i, j, k) = nan;
           }
         }
@@ -834,23 +825,19 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub)
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &mask, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &mask, lb, ub, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             if (mask(j, k))
             {
               src(i, j, k) = value_type(0);
@@ -885,23 +872,19 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &mask, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &mask, lb, ub, nan, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             if (mask(j, k))
             {
               src(i, j, k) = nan;
@@ -964,23 +947,19 @@ inline void movingAvgImageData(E& src, const E& data, size_t count)
   utils::checkShape(shape, data.shape(), "Inconsistent data shapes");
 
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &data, count] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &data, count, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             src(i, j, k) += (data(i, j, k) - src(i, j, k)) / value_type(count);
           }
         }
@@ -1023,23 +1002,19 @@ inline void correctImageData(E& src, const E& constants)
   utils::checkShape(shape, constants.shape(), "data and constants have different shapes");
 
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &constants] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &constants, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
       for (size_t i = 0; i < shape[0]; ++i)
       {
+#endif
         for (size_t j = 0; j < shape[1]; ++j)
         {
           for (size_t k = 0; k < shape[2]; ++k)
           {
-#endif
             src(i, j, k) = Policy::correct(src(i, j, k), constants(i, j, k));
           }
         }
@@ -1090,27 +1065,23 @@ inline void correctImageData(E& src, const E& gain, const E& offset)
   utils::checkShape(shape, offset.shape(), "data and offset constants have different shapes");
 
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &gain, &offset] (const tbb::blocked_range3d<int> &block)
+  tbb::parallel_for(tbb::blocked_range<int>(0, shape[0]),
+    [&src, &gain, &offset, &shape] (const tbb::blocked_range<int> &block)
     {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
-  for (size_t i = 0; i < shape[0]; ++i)
-    {
-      for (size_t j = 0; j < shape[1]; ++j)
+      for (size_t i = 0; i < shape[0]; ++i)
       {
-        for (size_t k = 0; k < shape[2]; ++k)
-        {
 #endif
-          src(i, j, k) = gain(i, j, k) * (src(i, j, k) - offset(i, j, k));
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+            src(i, j, k) = gain(i, j, k) * (src(i, j, k) - offset(i, j, k));
+          }
         }
       }
-    }
 #if defined(FOAM_USE_TBB)
     }
   );
