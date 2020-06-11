@@ -99,13 +99,12 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
 
     # Construct the command to start the Redis server.
     # TODO: Add log rotation or something else which prevent logfile bloating
-    if password is None:
-        password = ''
     command = [executable,
                "--port", str(port),
-               "--requirepass", password,
                "--loglevel", "warning",
                "--logfile", config["REDIS_LOGFILE"]]
+    if password is not None:
+        command.extend(["--requirepass", password])
 
     process = psutil.Popen(command)
 
