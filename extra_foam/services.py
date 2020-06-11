@@ -122,7 +122,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
         client = init_redis_connection(host, port, password=password)
 
         # Put a time stamp in Redis to indicate when it was started.
-        client.hmset(mt.SESSION, {
+        client.hset(mt.SESSION, mapping={
             'detector': config["DETECTOR"],
             'topic': config["TOPIC"],
             'redis_server_start_time': time.time(),
@@ -131,7 +131,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
         # TODO: find a better place to do the initialization
         # Prevent 'has_analysis', 'has_any_analysis' and
         # 'has_all_analysis' from getting None when querying.
-        client.hmset(mt.ANALYSIS_TYPE, {t: 0 for t in AnalysisType})
+        client.hset(mt.ANALYSIS_TYPE, mapping={t: 0 for t in AnalysisType})
 
         logger.info(f"Redis server started at {host}:{port}")
 

@@ -139,13 +139,13 @@ class MetaProxy(_AbstractProxy):
         ctg, name, modules, ppt, slicer, vrange, ktype = item
         key = f"{name} {ppt}"
         return self._db.pipeline().execute_command(
-            'HMSET', key, 'category', ctg,
-                          'name', name,
-                          'modules', modules,
-                          'property', ppt,
-                          'slicer', slicer,
-                          'vrange', vrange,
-                          'ktype', ktype).execute_command(
+            'HSET', key, 'category', ctg,
+                         'name', name,
+                         'modules', modules,
+                         'property', ppt,
+                         'slicer', slicer,
+                         'vrange', vrange,
+                         'ktype', ktype).execute_command(
             'PUBLISH', Metadata.DATA_SOURCE, key).execute()
 
     @redis_except_handler
@@ -249,7 +249,7 @@ class MetaProxy(_AbstractProxy):
 
             if k_root in Metadata.processor_keys:
                 if v:
-                    self._db.hmset(k_new, v)
+                    self._db.hset(k_new, mapping=v)
                 else:
                     self._db.execute_command("DEL", k_new)
             else:

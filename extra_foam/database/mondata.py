@@ -110,7 +110,7 @@ class MonProxy(_AbstractProxy):
         pipe = self._db.pipeline()
         key = self.AVAILABLE_SOURCES
         pipe.execute_command('DEL', key)
-        pipe.hmset(key, mapping)
+        pipe.hset(key, mapping=mapping)
         # key expiration time should be longer than sources update interval
         pipe.execute_command('PEXPIRE', key, config['SOURCE_EXPIRATION_TIMER'])
         return pipe.execute()

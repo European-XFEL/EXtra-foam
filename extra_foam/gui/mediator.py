@@ -65,8 +65,8 @@ class Mediator(QObject):
     def onBridgeConnectionsChange(self, connections: dict):
         # key = endpoint, value = source type
         pipe = self._meta.pipeline()
-        pipe.delete(mt.CONNECTION)
-        pipe.hmset(mt.CONNECTION, connections)
+        pipe.execute_command('DEL', mt.CONNECTION)
+        pipe.hset(mt.CONNECTION, mapping=connections)
         pipe.execute()
 
         self.connection_change_sgn.emit(connections)
