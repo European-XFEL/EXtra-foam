@@ -85,31 +85,35 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
 
         trans = DataTransformer(catalog)
 
-        correlated, dropped = trans.correlate(self._gen_kb_data(1001, {"abc": [("ppt", 1)]}))
+        correlated, matched, dropped = trans.correlate(self._gen_kb_data(1001, {"abc": [("ppt", 1)]}))
         self.assertDictEqual(
             {'abc ppt': {'train_id': 1001, 'source_type': DataSource.UNKNOWN}}, correlated['meta'])
         self.assertDictEqual({'abc ppt': 1}, correlated['raw'])
         self.assertEqual(1001, correlated['processed'].tid)
+        self.assertListEqual(['abc ppt'], matched)
         self.assertListEqual([], dropped)
 
         # not correlated
-        correlated, dropped = trans.correlate(self._gen_kb_data(1002, {"Motor": [("b", 1)]}))
-        self.assertIsNone(correlated)
+        correlated, matched, dropped = trans.correlate(self._gen_kb_data(1002, {"Motor": [("b", 1)]}))
+        self.assertDictEqual(dict(), correlated)
+        self.assertListEqual([], matched)
         self.assertListEqual([], dropped)
 
         # one more not correlated
-        correlated, dropped = trans.correlate(self._gen_kb_data(1003, {"Motor": [("b", 2)]}))
-        self.assertIsNone(correlated)
+        correlated, matched, dropped = trans.correlate(self._gen_kb_data(1003, {"Motor": [("b", 2)]}))
+        self.assertDictEqual(dict(), correlated)
+        self.assertListEqual([], matched)
         self.assertListEqual([], dropped)
 
         # correlated
-        correlated, dropped = trans.correlate(self._gen_kb_data(1004, {"abc": [("ppt", 2)]}))
+        correlated, matched, dropped = trans.correlate(self._gen_kb_data(1004, {"abc": [("ppt", 2)]}))
         self.assertDictEqual(
             {'abc ppt': {'train_id': 1004, 'source_type': DataSource.UNKNOWN}}, correlated['meta'])
         self.assertDictEqual({'abc ppt': 2}, correlated['raw'])
         self.assertEqual(1004, correlated['processed'].tid)
-        self.assertListEqual([(1002, 'Train 1002 dropped! Found 0 out of 1 sources. Not found: abc ppt ...'),
-                              (1003, 'Train 1003 dropped! Found 0 out of 1 sources. Not found: abc ppt ...')],
+        self.assertListEqual(['abc ppt'], matched)
+        self.assertListEqual([(1002, 'Train 1002 dropped! Not found: 1 out of 1 source items.'),
+                              (1003, 'Train 1003 dropped! Not found: 1 out of 1 source items.')],
                              dropped)
 
     def testCorrelationMultiple(self):
@@ -119,17 +123,19 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         trans = DataTransformer(catalog)
 
         for tid in [1001, 1002, 1003]:
-            correlated, dropped = trans.correlate(self._gen_kb_data(tid, {"abc": [("ppt", 1)]}))
-            self.assertIsNone(correlated)
+            correlated, matched, dropped = trans.correlate(self._gen_kb_data(tid, {"abc": [("ppt", 1)]}))
+            self.assertDictEqual(dict(), correlated)
+            self.assertListEqual(['abc ppt'], matched)
             self.assertListEqual([], dropped)
 
-        correlated, dropped = trans.correlate(self._gen_kb_data(1002, {"efg": [("ppt", 1)]}))
+        correlated, matched, dropped = trans.correlate(self._gen_kb_data(1002, {"efg": [("ppt", 1)]}))
         self.assertDictEqual(
             {'abc ppt': {'train_id': 1002, 'source_type': DataSource.UNKNOWN},
              'efg ppt': {'train_id': 1002, 'source_type': DataSource.UNKNOWN}}, correlated['meta'])
         self.assertDictEqual({'abc ppt': 1, 'efg ppt': 1}, correlated['raw'])
         self.assertEqual(1002, correlated['processed'].tid)
-        self.assertListEqual([(1001, 'Train 1001 dropped! Found 1 out of 2 sources. Not found: efg ppt ...')],
+        self.assertListEqual(['abc ppt', 'efg ppt'], matched)
+        self.assertListEqual([(1001, 'Train 1001 dropped! Not found: 1 out of 2 source items.')],
                              dropped)
         self.assertListEqual([1003], list(trans._cached.keys()))
 
@@ -140,11 +146,13 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         trans = DataTransformer(catalog, cache_size=5)
 
         for i in range(cache_size + 2):
-            correlated, dropped = trans.correlate(self._gen_kb_data(1000 + i, {"abc": [("ppt", 2)]}))
-            self.assertIsNone(correlated)
+            correlated, matched, dropped = trans.correlate(self._gen_kb_data(1000 + i, {"abc": [("ppt", 2)]}))
+            self.assertDictEqual(dict(), correlated)
             if i + 1 > cache_size:
+                self.assertListEqual(['abc ppt'], matched)
                 self.assertListEqual([1000 + i - cache_size], [item[0] for item in dropped])
                 self.assertEqual(cache_size, len(trans._cached))
             else:
+                self.assertListEqual(['abc ppt'], matched)
                 self.assertListEqual([], dropped)
                 self.assertEqual(i + 1, len(trans._cached))

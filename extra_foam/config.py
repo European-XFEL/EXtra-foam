@@ -259,8 +259,8 @@ class _Config(dict):
         "SOURCE_RAW_IMAGE_DTYPE": np.uint16,
         # interval for updating available data sources, in milliseconds
         "SOURCE_AVAIL_UPDATE_TIMER": 1000,
-        # After how long the available sources key expires, in milliseconds
-        "SOURCE_EXPIRATION_TIMER": 2000,
+        # After how long the available sources key expires, in seconds
+        "SOURCE_EXPIRATION_TIMER": 2,
         "SOURCE_USER_DEFINED_CATEGORY": "User-defined",
         # -------------------------------------------------------------
         # REDIS

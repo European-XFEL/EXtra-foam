@@ -103,11 +103,15 @@ class DataTransformer:
 
         return new_raw, new_meta, tid
 
-    def _found_all(self, meta):
+    def _check_cached(self, meta):
+        found_all = True
+        founded = []
         for k in self._catalog:
             if k not in meta:
-                return False
-        return True
+                found_all = False
+            else:
+                founded.append(k)
+        return founded, found_all
 
     def correlate(self, data, *, source_type=DataSource.UNKNOWN):
         """Transform and correlate.
@@ -115,14 +119,15 @@ class DataTransformer:
         :param tuple data: (data, meta).
         :param DataSource source_type: source type.
 
-        :return: (correlated, dropped)
-        :rtype: (dict, list)
+        :return: (correlated, matched, dropped)
+        :rtype: (dict, list, list)
         """
         catalog = self._catalog
         raw, meta, tid = self.transform_euxfel(
             data, catalog=catalog, source_type=source_type)
 
-        correlated = None
+        correlated = {}
+        matched = []
         dropped = []
         if tid > 0:
             # update cached data
@@ -132,7 +137,8 @@ class DataTransformer:
             cached['meta'].update(meta)
             cached['raw'].update(raw)
 
-            if self._found_all(cached['meta']):
+            matched, found_all = self._check_cached(cached['meta'])
+            if found_all:
                 correlated = {
                     'catalog': catalog.__copy__(),
                     'meta': cached['meta'],
@@ -154,7 +160,7 @@ class DataTransformer:
                 dropped.append((key, self._not_found_message(
                     key, item['meta'].keys())))
 
-        return correlated, dropped
+        return correlated, matched, dropped
 
     def _not_found_message(self, tid, found):
         not_found = []
@@ -172,8 +178,8 @@ class DataTransformer:
         #       since we do not know which data are requested
         #       in the old time.
         if not_found:
-            msg += f"Found {len(found)} out of {len(self._catalog)} sources. " \
-                   f"Not found: {not_found[0]} ..."
+            msg += f"Not found: {len(not_found)} out of " \
+                   f"{len(self._catalog)} source items."
         return msg
 
     def reset(self):

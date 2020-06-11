@@ -249,7 +249,7 @@ class MetaProxy(_AbstractProxy):
 
             if k_root in Metadata.processor_keys:
                 if v:
-                    self._db.hset(k_new, mapping=v)
+                    self._db.hmset(k_new, v)
                 else:
                     self._db.execute_command("DEL", k_new)
             else:
