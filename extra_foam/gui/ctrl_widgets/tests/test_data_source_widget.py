@@ -14,12 +14,14 @@ from extra_foam.services import start_redis_server
 from extra_foam.processes import ProcessInfoList, wait_until_redis_shutdown
 from extra_foam.database import Metadata, MetaProxy
 
+from extra_foam.pipeline.tests import _RawDataMixin
+
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
 
 
-class TestDataSourceWidget(unittest.TestCase):
+class TestDataSourceWidget(unittest.TestCase, _RawDataMixin):
     @classmethod
     def setUpClass(cls):
         class DummyParent(QWidget):
@@ -34,37 +36,42 @@ class TestDataSourceWidget(unittest.TestCase):
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
-    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCE_EXPIRATION_TIMER": 10})
-    def testDataSourceListMV(self):
+    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCE_EXPIRATION_TIMER": 0.01})
+    def testUpdateAvailableSources(self):
         widget = DataSourceWidget(parent=self._dummy)
-        model = widget._avail_src_model
+        list_model = widget._avail_src_model
+        tree_model = widget._src_tree_model
         proxy = widget._mon
 
         # test default
-        widget.updateSourceList()
-        self.assertListEqual([], model._sources)
+        widget.updateAvailableSources()
+        self.assertListEqual([], list_model._sources)
 
         # test new sources
-        proxy.set_available_sources({"abc": "1234567", "efg": "234567"})
-        widget.updateSourceList()
-        self.assertListEqual(["abc", "efg"], model._sources)
+        _, meta = self._gen_kb_data(1234, {"abc": [('ppt', 1)], "efg": [('ppt', 2)]})
+        proxy.set_available_sources(meta, ["efg ppt"])
+        widget.updateAvailableSources()
+        self.assertListEqual(["abc", "efg"], list_model._sources)
+        self.assertListEqual(["efg ppt"], tree_model._matched_srcs)
 
         # test old sources do not exist when new sources are set
-        proxy.set_available_sources({"cba": "1234567", "gfe": "234567"})
-        widget.updateSourceList()
-        self.assertListEqual(["cba", "gfe"], model._sources)
+        _, meta = self._gen_kb_data(1234, {"cba": [('ppt', 1)], "gfe": [('ppt', 2)]})
+        proxy.set_available_sources(meta, ["gfe ppt"])
+        widget.updateAvailableSources()
+        self.assertListEqual(["abc", "cba", "efg", "gfe"], list_model._sources)
+        self.assertListEqual(["efg ppt", "gfe ppt"], tree_model._matched_srcs)
 
         # test expiration
-        time.sleep(0.020)
-        widget.updateSourceList()
-        self.assertListEqual([], model._sources)
+        time.sleep(0.05)
+        widget.updateAvailableSources()
+        self.assertListEqual([], list_model._sources)
+        self.assertListEqual([], tree_model._matched_srcs)
 
     @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS"})
     @patch("extra_foam.gui.ctrl_widgets.data_source_widget.list_foam_processes")
     def testProcessMonitorMV(self, query):
         widget = DataSourceWidget(parent=self._dummy)
         view = widget._process_mon_view
-        model = widget._process_mon_model
 
         query.return_value = [ProcessInfoList(
             name='ZeroMQ',
@@ -193,11 +200,14 @@ class TestDataSourceWidget(unittest.TestCase):
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # first check since it is not allowed to modify in unchecked state
+        model._matched_srcs = ['A a']
         # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
         self.assertTrue(spy[0][0])
         self.assertTupleEqual(('DSSC', 'A', '[]', 'a', '[None, None]', '', 1), spy[0][1])
+        # check availability
+        self.assertTrue(model.data(model.index(0, 0, dssc_ctg), Qt.DisplayRole))
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change device ID
@@ -234,6 +244,7 @@ class TestDataSourceWidget(unittest.TestCase):
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change a DSSC source
+        model._matched_srcs = ['B b']
         # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(2, len(spy))
@@ -243,6 +254,9 @@ class TestDataSourceWidget(unittest.TestCase):
         # check signal for adding new source
         self.assertTrue(spy[1][0])
         self.assertTupleEqual(('DSSC', 'B', '[]', 'b', '[None, None]', '', 1), spy[1][1])
+        # check availability
+        self.assertFalse(model.data(model.index(0, 0, dssc_ctg), Qt.DisplayRole))
+        self.assertTrue(model.data(model.index(1, 0, dssc_ctg), Qt.DisplayRole))
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # uncheck a DSSC source
@@ -252,6 +266,8 @@ class TestDataSourceWidget(unittest.TestCase):
         # check signal for deleting old source
         self.assertFalse(spy[0][0])
         self.assertEqual('B b', spy[0][1])
+        # check availability
+        self.assertFalse(model.data(model.index(1, 0, dssc_ctg), Qt.DisplayRole))
 
         # ---------------------
         # test mixed category

@@ -7,7 +7,7 @@ set -e
 TP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../
 ROOT_DIR=${TP_DIR}/..
 
-REDIS_VERSION=5.0.4
+REDIS_VERSION=6.0.5
 REDIS_BUILD_DIR=${TP_DIR}/pkg/redis/
 
 if [[ ! -f ${REDIS_BUILD_DIR}/src/redis-server ]]; then

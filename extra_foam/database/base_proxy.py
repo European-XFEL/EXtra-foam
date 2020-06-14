@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from itertools import chain
+
 from .db_utils import redis_except_handler
 from ..ipc import ProcessLogger, RedisConnection
 
@@ -46,7 +48,8 @@ class _AbstractProxy(ProcessLogger):
         :return: None if the connection failed;
                  True if set.
         """
-        return self._db.hmset(name, mapping)
+        return self._db.execute_command(
+            'HSET', name, *chain.from_iterable(mapping.items()))
 
     @redis_except_handler
     def hget(self, name, key):

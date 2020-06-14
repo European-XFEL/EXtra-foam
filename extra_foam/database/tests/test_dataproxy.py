@@ -38,6 +38,15 @@ class TestDataProxy(unittest.TestCase):
 
         os.rmdir(_tmp_cfg_dir)
 
+    def testBaseProxyMethods(self):
+        proxy = self._mon
+
+        proxy.hset('name1', 'key1', 'value1')
+        self.assertEqual('value1', proxy.hget('name1', 'key1'))
+
+        proxy.hmset('name2', {'key1': 'value1', 'kay2': 'value2'})
+        self.assertDictEqual({'key1': 'value1', 'kay2': 'value2'}, proxy.hget_all('name2'))
+
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
         type2 = AnalysisType.PUMP_PROBE

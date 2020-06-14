@@ -647,8 +647,7 @@ class QThreadKbClient(_BaseQThreadClient):
         with self._client_instance_type(self._endpoint_st, **kwargs) as client:
             self.log.info(f"Connected to {self._endpoint_st}")
 
-            correlated = None
-
+            correlated = dict()
             if self._client_instance_type == KaraboGateClient:
                 connected = False
                 while not self.isInterruptionRequested():
@@ -708,7 +707,7 @@ class QThreadKbClient(_BaseQThreadClient):
                     # will stop the thread
                     self.log.error(str(e))
 
-                if correlated is not None:
+                if correlated:
                     # keep the latest processed data in the output
                     self._output_st.put_pop(correlated)
                     with self._cv_st:

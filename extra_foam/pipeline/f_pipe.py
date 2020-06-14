@@ -182,14 +182,14 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
     @run_in_thread(daemon=True)
     def run(self):
         """Override."""
-        correlated = None
+        correlated = dict()
         proxy = BridgeProxy()
         src_type = DataSource.UNKNOWN
         while not self.closing:
             if self.updating:
                 client, src_type = self._update_connection(proxy)
 
-                correlated = None
+                correlated = dict()
                 self.clear()
                 self._transformer.reset()
                 self.finish_updating()
@@ -204,26 +204,30 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     time.sleep(1)  # sleep a little long
                     continue
 
-                if correlated is None:
+                if not correlated:
                     try:
                         # always pull the latest data from the bridge
                         data = self._recv_imp(proxy.client)
 
-                        self._update_available_sources(data[1])
-
+                        matched = []
                         try:
-                            correlated, dropped = self._transformer.correlate(
+                            correlated, matched, dropped = self._transformer.correlate(
                                 data, source_type=src_type)
                             for tid, err in dropped:
                                 logger.error(err)
+                                self._mon.add_tid_with_timestamp(
+                                    tid, n_pulses=0, dropped=True)
                         except Exception as e:
                             # To be on the safe side since any Exception here
                             # will stop the thread
                             logger.error(str(e))
+                        finally:
+                            self._mon.set_available_sources(data[1], matched)
+
                     except TimeoutError:
                         pass
 
-                if correlated is not None:
+                if correlated:
                     try:
                         self._cache.put(correlated)
                         correlated = None
@@ -231,10 +235,6 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                         pass
 
             time.sleep(0.001)
-
-    def _update_available_sources(self, meta):
-        sources = {k: v["timestamp.tid"] for k, v in meta.items()}
-        self._mon.set_available_sources(sources)
 
     @profiler("Receive Data from Bridge")
     def _recv_imp(self, client):
