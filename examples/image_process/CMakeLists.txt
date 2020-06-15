@@ -1,7 +1,11 @@
-cmake_minimum_required(VERSION 3.14)
-project(foam_cpp_api_test)
+cmake_minimum_required(VERSION 3.13)
+project(image_process)
 
 set(CMAKE_CXX_STANDARD 14)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
 find_package(extra-foam REQUIRED)
 if(extra-foam_FOUND)
