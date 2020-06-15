@@ -19,9 +19,9 @@ In your Anaconda_ environment, run the following commands:
 
 .. code-block:: bash
 
-    $ conda install -c anaconda cmake numpy
-    $ conda install -c creditx gcc-7
-    $ conda install -c conda-forge tbb-devel
+    $ conda install -c anaconda cmake libstdcxx-ng numpy
+    $ conda install -c omgarcia gcc-6
+    $ conda install -c conda-forge tbb
 
 Install **EXtra-foam**
 ----------------------

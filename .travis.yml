@@ -86,7 +86,7 @@ before_install:
 install:
   - conda install -y python=$PYTHON_VERSION
   - echo $PYTHON_VERSION
-  - conda install -y cmake numpy -c anaconda
+  - conda install -y cmake libstdcxx-ng numpy -c anaconda
   - conda install -y -c conda-forge tbb-devel
   - export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
   - pip install -e .[test]
