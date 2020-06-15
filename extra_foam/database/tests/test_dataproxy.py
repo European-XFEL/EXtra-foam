@@ -38,6 +38,15 @@ class TestDataProxy(unittest.TestCase):
 
         os.rmdir(_tmp_cfg_dir)
 
+    def testBaseProxyMethods(self):
+        proxy = self._mon
+
+        proxy.hset('name1', 'key1', 'value1')
+        self.assertEqual('value1', proxy.hget('name1', 'key1'))
+
+        proxy.hmset('name2', {'key1': 'value1', 'kay2': 'value2'})
+        self.assertDictEqual({'key1': 'value1', 'kay2': 'value2'}, proxy.hget_all('name2'))
+
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
         type2 = AnalysisType.PUMP_PROBE
@@ -79,6 +88,30 @@ class TestDataProxy(unittest.TestCase):
         self.assertListEqual([Dummy.GLOBAL_PROC,
                               Dummy.IMAGE_PROC,
                               Dummy.GEOMETRY_PROC], Dummy.processor_keys)
+
+    def testProcessCount(self):
+        mon = self._mon
+        mon.reset_process_count()
+
+        tid, n_proc, n_drop, n_proc_p = self._mon.get_process_count()
+        self.assertIsNone(tid)
+        self.assertEqual('0', n_proc)
+        self.assertEqual('0', n_drop)
+        self.assertEqual('0', n_proc_p)
+
+        self._mon.add_tid_with_timestamp(1234, n_pulses=20)
+        tid, n_proc, n_drop, n_proc_p = self._mon.get_process_count()
+        self.assertEqual('1234', tid)
+        self.assertEqual('1', n_proc)
+        self.assertEqual('0', n_drop)
+        self.assertEqual('20', n_proc_p)
+
+        self._mon.add_tid_with_timestamp(1235, n_pulses=10, dropped=True)
+        tid, n_proc, n_drop, n_proc_p = self._mon.get_process_count()
+        self.assertEqual('1235', tid)
+        self.assertEqual('1', n_proc)
+        self.assertEqual('1', n_drop)
+        self.assertEqual('20', n_proc_p)
 
     def testSnapshotOperation(self):
         data = {

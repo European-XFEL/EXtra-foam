@@ -99,13 +99,12 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
 
     # Construct the command to start the Redis server.
     # TODO: Add log rotation or something else which prevent logfile bloating
-    if password is None:
-        password = ''
     command = [executable,
                "--port", str(port),
-               "--requirepass", password,
                "--loglevel", "warning",
                "--logfile", config["REDIS_LOGFILE"]]
+    if password is not None:
+        command.extend(["--requirepass", password])
 
     process = psutil.Popen(command)
 
@@ -123,7 +122,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
         client = init_redis_connection(host, port, password=password)
 
         # Put a time stamp in Redis to indicate when it was started.
-        client.hmset(mt.SESSION, {
+        client.hset(mt.SESSION, mapping={
             'detector': config["DETECTOR"],
             'topic': config["TOPIC"],
             'redis_server_start_time': time.time(),
@@ -132,7 +131,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
         # TODO: find a better place to do the initialization
         # Prevent 'has_analysis', 'has_any_analysis' and
         # 'has_all_analysis' from getting None when querying.
-        client.hmset(mt.ANALYSIS_TYPE, {t: 0 for t in AnalysisType})
+        client.hset(mt.ANALYSIS_TYPE, mapping={t: 0 for t in AnalysisType})
 
         logger.info(f"Redis server started at {host}:{port}")
 
@@ -315,7 +314,8 @@ def application():
                         version="%(prog)s " + __version__)
     parser.add_argument("detector",
                         help="detector name (case insensitive)",
-                        choices=[det.upper() for det in config.detectors],
+                        choices=[det.upper() for det in config.detectors]
+                                + ["JUNGFRAUPR"],
                         type=lambda s: s.upper())
     parser.add_argument("topic",
                         help="name of the instrument",
@@ -354,6 +354,13 @@ def application():
 
     detector = config.parse_detector_name(args.detector)
     topic = args.topic
+    if detector == "JUNGFRAUPR":
+        raise ValueError(f"Invalid detector type!\n\n"
+                         f"Please use JungFrau instead and modify your config "
+                         f"file {topic.lower()}.config.yaml accordingly: \n"
+                         f"1. Move non-duplicated data sources under JungFrauPR "
+                         f"into JungFrau;\n"
+                         f"2. Remove JungFrauPR from 'SOURCE' and 'DETECTOR'.")
 
     redis_address = args.redis_address
     if redis_address not in ["localhost", "127.0.0.1"]:
@@ -366,7 +373,7 @@ def application():
     )
 
     # update global configuration
-    if detector in ("JungFrauPR", "ePix100"):
+    if detector in ("JungFrau", "ePix100"):
         n_modules = args.n_modules
         if n_modules is None:
             n_modules = 1

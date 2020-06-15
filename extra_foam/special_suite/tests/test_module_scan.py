@@ -6,8 +6,7 @@ from collections import Counter
 import pytest
 import numpy as np
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.module_scan_proc import ModuleScanProcessor
 from extra_foam.special_suite.module_scan_w import (
     ModuleScanWindow

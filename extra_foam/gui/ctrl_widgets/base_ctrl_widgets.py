@@ -9,6 +9,7 @@ All rights reserved.
 """
 import abc
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame, QGroupBox
 
 from ..mediator import Mediator
@@ -64,6 +65,7 @@ class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
             geometry to assemble its modules.
         """
         super().__init__(parent=parent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
 
         self._mediator = Mediator()
         self._meta = MetaProxy()

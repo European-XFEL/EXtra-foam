@@ -13,7 +13,7 @@ import numpy as np
 from scipy import stats
 
 from extra_foam.algorithms import compute_spectrum_1d, nansum
-from extra_foam.pipeline.processors.base_processor import SimpleSequence
+from extra_foam.algorithms import SimpleSequence
 from extra_foam.pipeline.processors.binning import _BinMixin
 from extra_foam.pipeline.exceptions import ProcessingError
 
@@ -147,8 +147,8 @@ class TrXasProcessor(QThreadWorker, _BinMixin):
     def sources(self):
         """Override."""
         return [
-            (self._device_id1, self._ppt1),
-            (self._device_id2, self._ppt2),
+            (self._device_id1, self._ppt1, 0),
+            (self._device_id2, self._ppt2, 0),
         ]
 
     @profiler("tr-XAS Processor")

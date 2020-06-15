@@ -365,3 +365,22 @@ all modules (1, 2, 3, 6, 7, 8) are arranged in closewise order.
 |                                 | be faster than assembling with a geometry. It simply provides an   |
 |                                 | alternative to check the data from different modules.              |
 +---------------------------------+--------------------------------------------------------------------+
+
+.. _Image transform:
+
+Image Transform
+---------------
+
+Here, one can visualize the original image and its transform side by side. The transformed image is
+only for visualization unless it is required by `Feature extract`_.
+
+The reason for separating `Image transform`_ and `Feature extract`_ is that the latter
+is usually an expensive operation and cannot be carried out in real-time. Nevertheless, it is sometimes
+not necessary to perform the feature extraction step in real time. For example, it is enough to
+find the center of concentric rings only once, using a moving averaged image.
+
+
+.. _Feature extract:
+
+Feature Extract
+---------------

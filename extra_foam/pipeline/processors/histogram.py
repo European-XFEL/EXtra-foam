@@ -9,11 +9,9 @@ All rights reserved.
 """
 import math
 
-import numpy as np
-
-from .base_processor import _BaseProcessor, SimpleSequence
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError, UnknownParameterError
-from ...algorithms import hist_with_stats
+from ...algorithms import hist_with_stats, SimpleSequence
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType
@@ -50,6 +48,10 @@ class HistogramProcessor(_BaseProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.HISTOGRAM_PROC)
+        if not cfg:
+            # HistogramWindow not initialized
+            return
+
         self._pulse_resolved = cfg['pulse_resolved'] == 'True'
 
         self._bin_range = self.str2tuple(cfg["bin_range"])

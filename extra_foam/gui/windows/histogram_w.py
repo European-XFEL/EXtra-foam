@@ -9,9 +9,11 @@ All rights reserved.
 """
 from string import Template
 
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow
+from ..ctrl_widgets import HistogramCtrlWidget
 from ..plot_widgets import HistMixin, PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
@@ -75,16 +77,20 @@ class HistogramWindow(_AbstractPlotWindow):
     _title = "Histogram"
 
     _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
-    _TOTAL_H /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
+        self._ctrl_widget = self.createCtrlWidget(HistogramCtrlWidget)
+
         self._pulse_fom = InTrainFomPlot(parent=self)
         self._fom_hist = FomHist(parent=self)
 
         self.initUI()
+        self.initConnections()
+        self.loadMetaData()
+        self.updateMetaData()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
@@ -93,13 +99,24 @@ class HistogramWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QSplitter()
-        self._cw.addWidget(self._pulse_fom)
-        self._cw.addWidget(self._fom_hist)
-        self._cw.setSizes([1, 1])
+        plots = QSplitter(Qt.Horizontal)
+        plots.addWidget(self._pulse_fom)
+        plots.addWidget(self._fom_hist)
+        plots.setSizes([1, 1])
 
+        self._cw = QFrame()
+        layout = QVBoxLayout()
+        layout.addWidget(plots)
+        layout.addWidget(self._ctrl_widget)
+        self._ctrl_widget.setFixedHeight(
+            self._ctrl_widget.minimumSizeHint().height())
+        self._cw.setLayout(layout)
         self.setCentralWidget(self._cw)
 
     def initConnections(self):
         """Override."""
         pass
+
+    def closeEvent(self, QCloseEvent):
+        self._ctrl_widget.resetAnalysisType()
+        super().closeEvent(QCloseEvent)

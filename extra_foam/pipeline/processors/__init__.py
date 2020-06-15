@@ -10,6 +10,7 @@ from .correlation import CorrelationProcessor
 from .image_processor import ImageProcessor
 from .image_roi import ImageRoiPulse, ImageRoiTrain
 from .image_assembler import ImageAssemblerFactory
+from .image_transform import ImageTransformProcessor
 from .control_data import CtrlDataProcessor
 from .pump_probe import PumpProbeProcessor
 from .xgm import XgmProcessor

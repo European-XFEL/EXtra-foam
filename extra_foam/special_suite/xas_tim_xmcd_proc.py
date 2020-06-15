@@ -9,10 +9,9 @@ All rights reserved.
 """
 import numpy as np
 
-from extra_foam.pipeline.processors.base_processor import (
-    SimpleSequence, SimplePairSequence
+from extra_foam.algorithms import (
+    compute_spectrum_1d, SimpleSequence, SimplePairSequence
 )
-from extra_foam.algorithms import compute_spectrum_1d
 
 from .special_analysis_base import profiler
 from .xas_tim_proc import XasTimProcessor, _MAX_WINDOW
@@ -53,7 +52,7 @@ class XasTimXmcdProcessor(XasTimProcessor):
     def sources(self):
         """Override."""
         srcs = super().sources()
-        srcs.append((self._magnet_device_id, self._magnet_ppt))
+        srcs.append((self._magnet_device_id, self._magnet_ppt, 0))
         return srcs
 
     @profiler("XAS-TIM-XMCD Processor")

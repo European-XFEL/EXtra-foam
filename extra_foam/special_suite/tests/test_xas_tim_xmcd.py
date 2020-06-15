@@ -7,8 +7,9 @@ import numpy as np
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtTest import QSignalSpy, QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
+from extra_foam.pipeline.tests import _RawDataMixin
+
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.xas_tim_xmcd_proc import XasTimXmcdProcessor
 from extra_foam.special_suite.xas_tim_proc import ProcessingError
 from extra_foam.special_suite.xas_tim_xmcd_w import (
@@ -16,7 +17,6 @@ from extra_foam.special_suite.xas_tim_xmcd_w import (
     XasTimCorrelationPlot, XasTimXmcdAbsorpPnSpectraPlot,
     XasTimXmcdSpectraPlot, XasTimXgmSpectrumPlot, _DEFAULT_CURRENT_THRESHOLD
 )
-from extra_foam.pipeline.tests import _RawDataMixin
 
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 

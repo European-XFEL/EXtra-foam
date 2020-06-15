@@ -54,12 +54,17 @@ class _AbstractPlotWindow(QMainWindow, _AbstractWindowMixin):
 
     _SPLITTER_HANDLE_WIDTH = 5
 
-    def __init__(self, queue, *, pulse_resolved=True, parent=None):
+    def __init__(self, queue, *,
+                 pulse_resolved=True,
+                 require_geometry=True,
+                 parent=None):
         """Initialization.
 
         :param deque queue: data queue.
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
+        :param bool require_geometry: whether the detector requires a
+            geometry to assemble its modules.
         """
         super().__init__(parent=parent)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
@@ -70,7 +75,9 @@ class _AbstractPlotWindow(QMainWindow, _AbstractWindowMixin):
 
         self._queue = queue
         self._pulse_resolved = pulse_resolved
+        self._require_geometry = require_geometry
 
+        self._ctrl_widgets = []
         self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
 
         try:
@@ -97,6 +104,37 @@ class _AbstractPlotWindow(QMainWindow, _AbstractWindowMixin):
         data = self._queue[0]
         for widget in self._plot_widgets:
             widget.updateF(data)
+
+    def onStart(self):
+        for widget in self._ctrl_widgets:
+            widget.onStart()
+
+    def onStop(self):
+        for widget in self._ctrl_widgets:
+            widget.onStop()
+
+    def updateMetaData(self):
+        """Update metadata from all the ctrl widgets.
+
+        :returns bool: True if all metadata successfully parsed
+            and emitted, otherwise False.
+        """
+        for widget in self._ctrl_widgets:
+            if not widget.updateMetaData():
+                return False
+        return True
+
+    def loadMetaData(self):
+        """Load metadata from Redis and set child control widgets."""
+        for widget in self._ctrl_widgets:
+            widget.loadMetaData()
+
+    def createCtrlWidget(self, widget_class):
+        widget = widget_class(pulse_resolved=self._pulse_resolved,
+                              require_geometry=self._require_geometry,
+                              parent=self)
+        self._ctrl_widgets.append(widget)
+        return widget
 
     def registerPlotWidget(self, instance):
         self._plot_widgets[instance] = 1

@@ -14,12 +14,14 @@ from extra_foam.services import start_redis_server
 from extra_foam.processes import ProcessInfoList, wait_until_redis_shutdown
 from extra_foam.database import Metadata, MetaProxy
 
+from extra_foam.pipeline.tests import _RawDataMixin
+
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
 
 
-class TestDataSourceWidget(unittest.TestCase):
+class TestDataSourceWidget(unittest.TestCase, _RawDataMixin):
     @classmethod
     def setUpClass(cls):
         class DummyParent(QWidget):
@@ -34,37 +36,42 @@ class TestDataSourceWidget(unittest.TestCase):
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
-    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCE_EXPIRATION_TIMER": 10})
-    def testDataSourceListMV(self):
+    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCE_EXPIRATION_TIMER": 0.01})
+    def testUpdateAvailableSources(self):
         widget = DataSourceWidget(parent=self._dummy)
-        model = widget._avail_src_model
+        list_model = widget._avail_src_model
+        tree_model = widget._src_tree_model
         proxy = widget._mon
 
         # test default
-        widget.updateSourceList()
-        self.assertListEqual([], model._sources)
+        widget.updateAvailableSources()
+        self.assertListEqual([], list_model._sources)
 
         # test new sources
-        proxy.set_available_sources({"abc": "1234567", "efg": "234567"})
-        widget.updateSourceList()
-        self.assertListEqual(["abc", "efg"], model._sources)
+        _, meta = self._gen_kb_data(1234, {"abc": [('ppt', 1)], "efg": [('ppt', 2)]})
+        proxy.set_available_sources(meta, ["efg ppt"])
+        widget.updateAvailableSources()
+        self.assertListEqual(["abc", "efg"], list_model._sources)
+        self.assertListEqual(["efg ppt"], tree_model._matched_srcs)
 
         # test old sources do not exist when new sources are set
-        proxy.set_available_sources({"cba": "1234567", "gfe": "234567"})
-        widget.updateSourceList()
-        self.assertListEqual(["cba", "gfe"], model._sources)
+        _, meta = self._gen_kb_data(1234, {"cba": [('ppt', 1)], "gfe": [('ppt', 2)]})
+        proxy.set_available_sources(meta, ["gfe ppt"])
+        widget.updateAvailableSources()
+        self.assertListEqual(["abc", "cba", "efg", "gfe"], list_model._sources)
+        self.assertListEqual(["efg ppt", "gfe ppt"], tree_model._matched_srcs)
 
         # test expiration
-        time.sleep(0.020)
-        widget.updateSourceList()
-        self.assertListEqual([], model._sources)
+        time.sleep(0.05)
+        widget.updateAvailableSources()
+        self.assertListEqual([], list_model._sources)
+        self.assertListEqual([], tree_model._matched_srcs)
 
     @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS"})
     @patch("extra_foam.gui.ctrl_widgets.data_source_widget.list_foam_processes")
     def testProcessMonitorMV(self, query):
         widget = DataSourceWidget(parent=self._dummy)
         view = widget._process_mon_view
-        model = widget._process_mon_model
 
         query.return_value = [ProcessInfoList(
             name='ZeroMQ',
@@ -169,117 +176,162 @@ class TestDataSourceWidget(unittest.TestCase):
         # ---------
         # test root
         # ---------
-        self.assertEqual('DSSC', model.index(0, 0, QModelIndex()).data())
-        self.assertEqual('XGM', model.index(1, 0, QModelIndex()).data())
-        self.assertEqual('MONOCHROMATOR', model.index(2, 0, QModelIndex()).data())
-        self.assertEqual('MOTOR', model.index(3, 0, QModelIndex()).data())
+        self.assertEqual('DSSC', model.index(0, 2, QModelIndex()).data())
+        self.assertEqual('XGM', model.index(1, 2, QModelIndex()).data())
+        self.assertEqual('MONOCHROMATOR', model.index(2, 2, QModelIndex()).data())
+        self.assertEqual('MOTOR', model.index(3, 2, QModelIndex()).data())
         self.assertEqual(config["SOURCE_USER_DEFINED_CATEGORY"],
-                         model.index(4, 0, QModelIndex()).data())
-        self.assertFalse(model.index(5, 0, QModelIndex()).isValid())
+                         model.index(4, 2, QModelIndex()).data())
+        self.assertFalse(model.index(5, 2, QModelIndex()).isValid())
         self.assertEqual(5, model.rowCount(QModelIndex()))
-        self.assertEqual(4, model.columnCount(QModelIndex()))
+        self.assertEqual(6, model.columnCount(QModelIndex()))
 
         # -----------------------
         # test exclusive category
         # -----------------------
 
         dssc_ctg = model.index(0, 0, QModelIndex())
-        self.assertEqual('A', model.index(0, 0, dssc_ctg).data())
-        self.assertEqual('a', model.index(0, 1, dssc_ctg).data())
-        self.assertEqual(':', model.index(0, 2, dssc_ctg).data())
-        self.assertEqual('', model.index(0, 3, dssc_ctg).data())
+        self.assertEqual(False, model.index(0, 0, dssc_ctg).data())
+        self.assertEqual(1, model.index(0, 1, dssc_ctg).data())
+        self.assertEqual('A', model.index(0, 2, dssc_ctg).data())
+        self.assertEqual('a', model.index(0, 3, dssc_ctg).data())
+        self.assertEqual(':', model.index(0, 4, dssc_ctg).data())
+        self.assertEqual('', model.index(0, 5, dssc_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # first check since it is not allowed to modify in unchecked state
+        model._matched_srcs = ['A a']
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('DSSC', 'A', '[]', 'a', '[None, None]', '', 1), spy[0][1])
+        # check availability
+        self.assertTrue(model.data(model.index(0, 0, dssc_ctg), Qt.DisplayRole))
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change device ID
-        model.setData(model.index(0, 0, dssc_ctg), 'A+', Qt.EditRole)
+        model.setData(model.index(0, 2, dssc_ctg), 'A+', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
-        self.assertEqual('A', spy[0][1].name)
-        # add new source
+        self.assertEqual('A a', spy[0][1])
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('A+', spy[1][1].name)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change property
-        model.setData(model.index(0, 1, dssc_ctg), 'a-', Qt.EditRole)
+        model.setData(model.index(0, 3, dssc_ctg), 'a-', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
-        self.assertEqual('a', spy[0][1].property)
-        # add new source
+        self.assertEqual('A+ a', spy[0][1])
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('a-', spy[1][1].property)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
-        model.setData(model.index(0, 2, dssc_ctg), '::2', Qt.EditRole)
+        model.setData(model.index(0, 4, dssc_ctg), '::2', Qt.EditRole)
         self.assertEqual(2, len(spy))
-        # delete old source
+        # check signal for deleting old source
         self.assertFalse(spy[0][0])
         # deleting does not check slicer
-        # add new source
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('[None, None, 2]', spy[1][1].slicer)
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None, 2]', '', 1), spy[1][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change a DSSC source
+        model._matched_srcs = ['B b']
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, dssc_ctg), True, Qt.CheckStateRole)
         self.assertEqual(2, len(spy))
-        # delete old source ('DSSC' is an exclusive category)
+        # check signal for deleting old source ('DSSC' is an exclusive category)
         self.assertFalse(spy[0][0])
-        self.assertEqual('A+', spy[0][1].name)
-        # add new source
+        self.assertEqual('A+ a-', spy[0][1])
+        # check signal for adding new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('B', spy[1][1].name)
+        self.assertTupleEqual(('DSSC', 'B', '[]', 'b', '[None, None]', '', 1), spy[1][1])
+        # check availability
+        self.assertFalse(model.data(model.index(0, 0, dssc_ctg), Qt.DisplayRole))
+        self.assertTrue(model.data(model.index(1, 0, dssc_ctg), Qt.DisplayRole))
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # uncheck a DSSC source
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
+        model.setData(model.index(1, 0, dssc_ctg), False, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+        # check signal for deleting old source
+        self.assertFalse(spy[0][0])
+        self.assertEqual('B b', spy[0][1])
+        # check availability
+        self.assertFalse(model.data(model.index(1, 0, dssc_ctg), Qt.DisplayRole))
 
         # ---------------------
         # test mixed category
         # ---------------------
         xgm_ctg = model.index(1, 0, QModelIndex())
-        self.assertEqual('XA', model.index(0, 0, xgm_ctg).data())
-        self.assertEqual('intensity', model.index(0, 1, xgm_ctg).data())
-        self.assertEqual(':', model.index(0, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(0, 3, xgm_ctg).data())
-        self.assertEqual('XA', model.index(1, 0, xgm_ctg).data())
-        self.assertEqual('flux', model.index(1, 1, xgm_ctg).data())
-        self.assertEqual('', model.index(1, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(1, 3, xgm_ctg).data())
-        self.assertEqual('XA', model.index(2, 0, xgm_ctg).data())
-        self.assertEqual('xpos', model.index(2, 1, xgm_ctg).data())
-        self.assertEqual('', model.index(2, 2, xgm_ctg).data())
-        self.assertEqual('-inf, inf', model.index(2, 3, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(1, model.index(0, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(0, 2, xgm_ctg).data())
+        self.assertEqual('intensity', model.index(0, 3, xgm_ctg).data())
+        self.assertEqual(':', model.index(0, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(0, 5, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(0, model.index(1, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(1, 2, xgm_ctg).data())
+        self.assertEqual('flux', model.index(1, 3, xgm_ctg).data())
+        self.assertEqual('', model.index(1, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(1, 5, xgm_ctg).data())
+        self.assertEqual(False, model.index(0, 0, xgm_ctg).data())
+        self.assertEqual(0, model.index(2, 1, xgm_ctg).data())
+        self.assertEqual('XA', model.index(2, 2, xgm_ctg).data())
+        self.assertEqual('xpos', model.index(2, 3, xgm_ctg).data())
+        self.assertEqual('', model.index(2, 4, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(2, 5, xgm_ctg).data())
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(2, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'xpos', '', '(-inf, inf)', 0), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(1, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-inf, inf)', 0), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, xgm_ctg), True, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'intensity', '[None, None]', '(-inf, inf)', 1), spy[0][1])
+
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
+        model.setData(model.index(2, 0, xgm_ctg), False, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+        self.assertEqual('XA xpos', spy[0][1])
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # FIXME: 'setData' does not care about which the column index with CheckStateRole.
         model.setData(model.index(0, 0, xgm_ctg), False, Qt.CheckStateRole)
         self.assertEqual(1, len(spy))
+        self.assertEqual('XA intensity', spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
-        model.setData(model.index(1, 3, xgm_ctg), '-1, 1', Qt.EditRole)
+        model.setData(model.index(1, 5, xgm_ctg), '-1, 1', Qt.EditRole)
         self.assertEqual(2, len(spy))
         # delete old source
         self.assertFalse(spy[0][0])
         # deleting does not check range
         # add new source
         self.assertTrue(spy[1][0])
-        self.assertEqual('(-1.0, 1.0)', spy[1][1].vrange)
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-1.0, 1.0)', 0), spy[1][1])
 
     @patch.dict(config._data, {"PULSE_RESOLVED": False})
     @patch.object(ConfigWrapper, "pipeline_sources", new_callable=PropertyMock)
@@ -299,8 +351,10 @@ class TestDataSourceWidget(unittest.TestCase):
         model = widget._src_tree_model
 
         jf_ctg = model.index(0, 0, QModelIndex())
-        self.assertEqual('A', model.index(0, 0, jf_ctg).data())
-        self.assertEqual('a', model.index(0, 1, jf_ctg).data())
+        self.assertEqual(False, model.index(0, 0, jf_ctg).data())
+        self.assertEqual(1, model.index(0, 1, jf_ctg).data())
+        self.assertEqual('A', model.index(0, 2, jf_ctg).data())
+        self.assertEqual('a', model.index(0, 3, jf_ctg).data())
         # no slicer for train-resolved detectors
-        self.assertEqual('', model.index(0, 2, jf_ctg).data())
-        self.assertEqual('', model.index(0, 3, jf_ctg).data())
+        self.assertEqual('', model.index(0, 4, jf_ctg).data())
+        self.assertEqual('', model.index(0, 5, jf_ctg).data())

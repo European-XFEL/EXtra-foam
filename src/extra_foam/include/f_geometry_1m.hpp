@@ -21,10 +21,9 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xindex_view.hpp"
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
-#include "tbb/blocked_range3d.h"
 #endif
 
 #include "f_traits.hpp"
@@ -213,7 +212,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_
 
   int n_pulses = ss[0];
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
     [&src, &dst, &norm_pos, ignore_tile_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -236,7 +235,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_
           );
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -256,7 +255,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_
 
   int n_pulses = ss[0];
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
     [&src, &dst, &norm_pos, ignore_tile_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -279,7 +278,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_
           );
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -318,7 +317,7 @@ void Detector1MGeometryBase<G>::dismantleAllModules(M&& src, E& dst) const
 
   int n_pulses = ss[0];
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
     [&src, &dst, &norm_pos, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -340,7 +339,7 @@ void Detector1MGeometryBase<G>::dismantleAllModules(M&& src, E& dst) const
           );
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif

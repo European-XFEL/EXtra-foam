@@ -19,7 +19,7 @@ from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, GeomAssembler, DataSource
 from ...database import SourceCatalog
-from ...geometries import load_geometry
+from ...geometries import load_geometry, maybe_mask_asic_edges
 from ...ipc import process_logger as logger
 
 
@@ -121,7 +121,7 @@ class ImageAssemblerFactory(ABC):
             _coordinates (list): (x, y) coordinates for the corners of 4
                 quadrants for detectors like AGIPD, LPD and DSSC; (x, y)
                 coordinates for the corners of all modules for detectors like
-                JungFrauPR.
+                JungFrau.
             _geom: geometry instance in use.
             _out_array (numpy.ndarray): buffer to store the assembled modules.
         """
@@ -231,9 +231,12 @@ class ImageAssemblerFactory(ABC):
                 and (y, x) for train resolved detectors.
             """
             if modules.ndim == 4:
-                # single module operation (for all 1M detectors and JungFrauPR)
+                # single module operation (for all 1M detectors and JungFrau)
                 if modules.shape[1] == 1:
-                    return modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
+                    sm = modules.astype(_IMAGE_DTYPE).squeeze(axis=1)
+                    if self._mask_asic:
+                        maybe_mask_asic_edges(sm, self._detector)
+                    return sm
 
                 n_pulses = modules.shape[0]
                 if self._out_array is None or self._out_array.shape[0] != n_pulses:
@@ -259,7 +262,7 @@ class ImageAssemblerFactory(ABC):
                     n_pulses = modules.shape[0]
                     self._out_array = self._geom.output_array_for_position_fast(
                             extra_shape=(n_pulses, ), dtype=_IMAGE_DTYPE)
-                else: # modules.ndim == 3
+                else:  # modules.ndim == 3
                     self._out_array = self._geom.output_array_for_position_fast(
                         dtype=_IMAGE_DTYPE)
 
@@ -269,6 +272,23 @@ class ImageAssemblerFactory(ABC):
                                                 ignore_asic_edge=self._mask_asic)
 
             return self._out_array
+
+        def _preprocess(self, image):
+            """Preprocess single image data.
+
+            :param array-like image: image data. shape = (y, x).
+
+            :return numpy.ndarray: processed image data
+            """
+            # For train-resolved detector, assembled is a reference
+            # to the array data received from the pyzmq. This array data
+            # is only readable since the data is owned by a pointer in
+            # the zmq message (it is not copied). However, other data
+            # like data['metadata'] is writeable.
+            image = image.astype(_IMAGE_DTYPE)
+            if self._mask_asic:
+                maybe_mask_asic_edges(image, self._detector)
+            return image
 
         def process(self, data):
             """Override."""
@@ -316,12 +336,7 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(f"Number of memory cells is zero!")
 
             if ndim == 2:
-                # For train-resolved detector, assembled is a reference
-                # to the array data received from the pyzmq. This array data
-                # is only readable since the data is owned by a pointer in
-                # the zmq message (it is not copied). However, other data
-                # like data['metadata'] is writeable.
-                data['assembled'] = {'data': modules_data.astype(_IMAGE_DTYPE)}
+                data['assembled'] = {'data': self._preprocess(modules_data)}
             else:
                 data['assembled'] = {'data': self._assemble(modules_data)}
 
@@ -450,36 +465,6 @@ class ImageAssemblerFactory(ABC):
 
             Calibrated data only.
 
-            - calibrated, "data.adc", (y, x, 1)
-            - raw, "data.adc", TODO
-            -> (y, x)
-            """
-            try:
-                return _maybe_squeeze_to_image(data[src])
-            except ValueError:
-                raise NotImplementedError(
-                    "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
-
-        def _get_modules_file(self, data, src, modules):
-            """Override.
-
-            - calibrated, "data.adc", (1, y, x)
-            - raw, "data.adc", (1, y, x)
-            -> (y, x)
-            """
-            modules_data = data[src]
-            if modules_data.shape[0] == 1:
-                return modules_data.squeeze(axis=0)
-
-            raise NotImplementedError(
-                "Use 'JungFrauPR' for burst-mode multi-module JungFrau!")
-
-    class JungFrauPulseResolvedImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src, modules):
-            """Override.
-
-            Calibrated data only.
-
             Single module:
             - calibrated, "data.adc", (y, x, memory cells)
             - raw, "data.adc", TODO
@@ -592,6 +577,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src, modules):
             """Override.
 
+            - raw, "data.image.pixels", (y, x)
             -> (y, x)
             """
             raise NotImplementedError
@@ -618,8 +604,5 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'BaslerCamera':
             return cls.BaslerCameraImageAssembler()
-
-        if detector == 'JungFrauPR':
-            return cls.JungFrauPulseResolvedImageAssembler()
 
         raise NotImplementedError(f"Unknown detector type {detector}!")

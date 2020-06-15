@@ -33,7 +33,7 @@ def module_indices(n_modules, *, detector=None, topic=None):
     :param str detector: detector name
     :param str topic: topic
     """
-    if detector == "JungFrauPR":
+    if detector == "JungFrau":
         if n_modules == 6:
             return [1, 2, 3, 6, 7, 8]
         return [*range(1, n_modules + 1)]
@@ -281,6 +281,22 @@ class _GeometryPyMixin:
         """
         self.dismantleAllModules(assembled, out)
 
+    @classmethod
+    def mask_module_py(cls, image):
+        """Mask the ASIC edges of a single module.
+
+        :param numpy.ndarray image: image data of a single module.
+            Shape = (y, x) or (pulses, y, x)
+        """
+        ah, aw = cls.asic_shape
+        ny, nx = cls.asic_grid_shape
+        for i in range(ny):
+            image[..., i * ah, :] = np.nan
+            image[..., (i + 1) * ah - 1, :] = np.nan
+        for j in range(nx):
+            image[..., :, j * aw] = np.nan
+            image[..., :, (j + 1) * aw - 1] = np.nan
+
 
 class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
     """JungFrauGeometryFast.
@@ -294,7 +310,7 @@ class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
 
         geom_dict = load_crystfel_geometry(filename)
         modules = []
-        for i_p in module_indices(n_rows * n_columns, detector="JungFrauPR"):
+        for i_p in module_indices(n_rows * n_columns, detector="JungFrau"):
             i_a = 1 if i_p > 4 else 8
             d = geom_dict['panels'][f'p{i_p}a{i_a}']
             modules.append(GeometryFragment.from_panel_dict(d).corner_pos)
@@ -306,6 +322,15 @@ class EPix100GeometryFast(EPix100Geometry, _GeometryPyMixin):
 
     Extend the functionality of EPix100Geometry implementation in C++.
     """
+    @classmethod
+    def mask_module_py(cls, image):
+        """Override.
+
+        :param numpy.ndarray image: image data of a single module.
+            Shape = (y, x)
+        """
+        image[0, :] = np.nan
+        image[-1, :] = np.nan
 
 
 def load_geometry(detector, *,
@@ -364,7 +389,7 @@ def load_geometry(detector, *,
             return DSSC_1MGeometry.from_h5_file_and_quad_positions(
                 filepath, coordinates)
 
-    if detector == "JungFrauPR":
+    if detector == "JungFrau":
         shape = module_grid_shape(n_modules, detector=detector)
         if stack_only:
             return JungFrauGeometryFast(*shape)
@@ -381,3 +406,14 @@ def load_geometry(detector, *,
             "ePix100 detector does not support loading geometry from file!")
 
     raise ValueError(f"Unknown detector {detector}!")
+
+
+def maybe_mask_asic_edges(image, detector):
+    """Helper function to mask the edges of ASICs of a single module."""
+    if detector == "JungFrau":
+        JungFrauGeometryFast.mask_module_py(image)
+        return
+
+    if detector == "ePix100":
+        EPix100GeometryFast.mask_module_py(image)
+        return

@@ -9,10 +9,9 @@ from xarray import DataArray
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
 
-from extra_foam.logger import logger_suite as logger
-from extra_foam.gui import mkQApp
 from extra_foam.pipeline.tests import _RawDataMixin
 
+from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.cam_view_proc import CamViewProcessor
 from extra_foam.special_suite.cam_view_w import (
     CamViewWindow, CameraView, CameraViewRoiHist

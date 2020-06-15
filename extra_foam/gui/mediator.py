@@ -65,13 +65,13 @@ class Mediator(QObject):
     def onBridgeConnectionsChange(self, connections: dict):
         # key = endpoint, value = source type
         pipe = self._meta.pipeline()
-        pipe.delete(mt.CONNECTION)
-        pipe.hmset(mt.CONNECTION, connections)
+        pipe.execute_command('DEL', mt.CONNECTION)
+        pipe.hset(mt.CONNECTION, mapping=connections)
         pipe.execute()
 
         self.connection_change_sgn.emit(connections)
 
-    def onSourceItemToggled(self, checked: bool, item: object):
+    def onSourceItemToggled(self, checked: bool, item):
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -302,3 +302,21 @@ class Mediator(QObject):
 
     def onFomFilterPulseResolvedChange(self, value: bool):
         self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
+
+    def onItMaWindowChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ma_window", value)
+
+    def onItTransformTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "transform_type", int(value))
+
+    def onItFftLogrithmicScaleChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "fft:logrithmic", str(value))
+
+    def onItEdKernelSizeChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:kernel_size", value)
+
+    def onItEdSigmaChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:sigma", value)
+
+    def onItEdThresholdChange(self, value: tuple):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:threshold", str(value))

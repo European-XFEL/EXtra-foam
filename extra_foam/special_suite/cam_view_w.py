@@ -13,10 +13,10 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QSplitter
 
-from extra_foam.gui.plot_widgets import HistMixin, ImageViewF, PlotWidgetF
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
 )
+from extra_foam.gui.plot_widgets import HistMixin, ImageViewF, PlotWidgetF
 
 from .cam_view_proc import (
     CamViewProcessor, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
@@ -31,7 +31,7 @@ _MAX_N_BINS = 999
 # a non-empty place holder
 _DEFAULT_OUTPUT_CHANNEL = "camera:output"
 # default is for Basler camera
-_DEFAULT_PROPERTY = "data.image.pixels"
+_DEFAULT_PROPERTY = "data.image.data"
 
 
 class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):

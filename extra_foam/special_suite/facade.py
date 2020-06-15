@@ -14,16 +14,18 @@ from PyQt5.QtWidgets import (
     QGridLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 )
 
+from extra_foam.gui.gui_helpers import create_icon_button
+
+from . import __version__
 from .cam_view_w import CamViewWindow
-from .multicam_view_w import MultiCamViewWindow
-from .gotthard_w import GotthardWindow
 from .gotthard_pump_probe_w import GotthardPumpProbeWindow
+from .gotthard_w import GotthardWindow
+from .module_scan_w import ModuleScanWindow
+from .multicam_view_w import MultiCamViewWindow
 from .trxas_w import TrXasWindow
 from .xas_tim_w import XasTimWindow
 from .xas_tim_xmcd_w import XasTimXmcdWindow
-from .module_scan_w import ModuleScanWindow
-from ..gui.gui_helpers import create_icon_button
-from .. import __version__
+from .xes_timing_w import XesTimingWindow
 
 
 class SpecialSuiteController:
@@ -115,6 +117,7 @@ class FxeSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("FXE")
 
+        self.addSpecial(XesTimingWindow)
         self.addCommonSpecials()
 
         self.initUI()

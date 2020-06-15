@@ -441,12 +441,19 @@ class ImageData:
     """
 
     __slots__ = ["_pixel_size",
-                 "images", "mean", "masked_mean",
+                 "images", "mean", "masked_mean", "featured",
                  "sliced_indices", "poi_indices",
                  "gain_mean", "offset_mean",
                  "n_dark_pulses", "dark_mean", "dark_count",
                  "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
-                 "reference"]
+                 "reference", "transformed"]
+
+    class _Transformed:
+        __slots__ = ['origin', 'transformed']
+
+        def __init__(self):
+            self.origin = None
+            self.transformed = None
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
@@ -454,6 +461,7 @@ class ImageData:
         self.images = None
         self.mean = None
         self.masked_mean = None
+        self.featured = None
 
         self.sliced_indices = None
         self.poi_indices = None
@@ -470,6 +478,7 @@ class ImageData:
         self.threshold_mask = None
         self.mask = None
 
+        self.transformed = self._Transformed()
         self.reference = None
 
     @property
@@ -722,11 +731,21 @@ class PulseIndexMask:
     LENGTH = config["MAX_N_PULSES_PER_TRAIN"]
 
     def __init__(self):
-        self._indices = np.array([True] * self.LENGTH)
+        self._indices = np.array([True] * self.LENGTH, dtype=bool)
 
-    def mask(self, idx):
-        """Mask a given index/list of indices."""
-        self._indices[idx] = False
+    def mask_by_index(self, a):
+        """Mask by indices.
+
+        :param int/iterable a: indices to be masked.
+        """
+        self._indices[a] = False
+
+    def mask_by_array(self, a):
+        """Mask by boolean array.
+
+        :param numpy.array a: a boolean array.
+        """
+        self._indices[:len(a)][a] = False
 
     def n_kept(self, n):
         """Return number of kept indices.

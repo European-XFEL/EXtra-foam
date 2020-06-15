@@ -21,6 +21,7 @@ from .calibration_view import CalibrationView
 from .bulletin_view import BulletinView
 from .reference_view import ReferenceView
 from .geometry_view import GeometryView
+from .transform_view import TransformView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
 from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget
@@ -43,11 +44,12 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     mask_file_path_sgn = pyqtSignal(str)
 
     class TabIndex(IntEnum):
-        CORRECTED = 0
+        OVERVIEW = 0
         GAIN_OFFSET = 1
         REFERENCE = 2
         AZIMUTHAL_INTEG_1D = 3
         GEOMETRY = 4
+        IMAGE_TRANSFORM = 5
 
     def __init__(self, queue, *,
                  pulse_resolved=True, require_geometry=True, parent=None):
@@ -93,6 +95,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._reference_view = self.createView(ReferenceView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
+        self._transform_view = self.createView(TransformView)
 
         # Whether the view is updated automatically
         self._auto_update = True
@@ -109,21 +112,23 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     def initUI(self):
         """Override."""
         corrected_tab_idx = self._views_tab.addTab(
-            self._corrected_view, "Corrected")
+            self._corrected_view, "Overview")
         cali_idx = self._views_tab.addTab(
             self._calibration_view, "Gain / offset")
         ref_idx = self._views_tab.addTab(self._reference_view, "Reference")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
-        geom_tab_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
+        geom_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
         if not self._require_geometry:
-            self._views_tab.setTabEnabled(geom_tab_idx, False)
+            self._views_tab.setTabEnabled(geom_idx, False)
+        transform_idx = self._views_tab.addTab(self._transform_view, "Image transform")
 
-        assert(corrected_tab_idx == self.TabIndex.CORRECTED)
+        assert(corrected_tab_idx == self.TabIndex.OVERVIEW)
         assert(cali_idx == self.TabIndex.GAIN_OFFSET)
         assert(ref_idx == self.TabIndex.REFERENCE)
         assert(azimuthal_integ_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D)
-        assert(geom_tab_idx == self.TabIndex.GEOMETRY)
+        assert(geom_idx == self.TabIndex.GEOMETRY)
+        assert(transform_idx == self.TabIndex.IMAGE_TRANSFORM)
 
         ctrl_panel = QWidget()
         ctrl_panel_layout = QVBoxLayout()
@@ -200,8 +205,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
-            succeeded = widget.updateMetaData()
-            if not succeeded:
+            if not widget.updateMetaData():
                 return False
         return True
 
@@ -245,7 +249,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self.updateWidgets(True)  # force update
 
         self._mask_ctrl_widget.setInteractiveButtonsEnabled(
-            self._views_tab.currentIndex() == self.TabIndex.CORRECTED)
+            self._views_tab.currentIndex() == self.TabIndex.OVERVIEW)
 
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):

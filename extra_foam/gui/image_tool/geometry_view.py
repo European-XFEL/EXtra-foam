@@ -24,6 +24,7 @@ class GeometryView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._corrected = ImageViewF(hide_axis=False)
+        self._corrected.setTitle("Assembled")
 
         self.initUI()
         self.initConnections()

@@ -9,6 +9,7 @@ All rights reserved.
 """
 import contextlib
 import glob
+import multiprocessing as mp
 import os
 import os.path as osp
 import re
@@ -72,29 +73,27 @@ class BuildExt(build_ext):
 
     description = "Build the C++ extensions for EXtra-foam"
     user_options = [
-        ('with-tbb', None, 'build with intel TBB'),
-        ('xtensor-with-tbb', None, 'build xtensor with intel TBB'),
+        ('use-tbb', None, 'build with intel TBB'),
+        ('xtensor-use-tbb', None, 'build xtensor with intel TBB'),
         # https://quantstack.net/xsimd.html
-        ('with-xsimd', None, 'build with XSIMD'),
-        ('xtensor-with-xsimd', None, 'build xtensor with XSIMD'),
+        ('use-xsimd', None, 'build with XSIMD'),
+        ('xtensor-use-xsimd', None, 'build xtensor with XSIMD'),
         ('with-tests', None, 'build cpp unittests'),
     ] + build_ext.user_options
 
     def initialize_options(self):
         super().initialize_options()
 
-        self.serial_only = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
-
-        if self.serial_only:
-            self.with_tbb = False
-            self.xtensor_with_tbb = False
-            self.with_xsimd = False
-            self.xtensor_with_xsimd = False
-        else:
-            self.with_tbb = strtobool(os.environ.get('FOAM_WITH_TBB', '1'))
-            self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
-            self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
-            self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
+        build_serial = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
+        build_para = '0' if build_serial else '1'
+        self.use_tbb = strtobool(
+            os.environ.get('FOAM_USE_TBB', build_para))
+        self.xtensor_use_tbb = strtobool(
+            os.environ.get('XTENSOR_USE_TBB', build_para))
+        self.use_xsimd = strtobool(
+            os.environ.get('FOAM_USE_XSIMD', build_para))
+        self.xtensor_use_xsimd = strtobool(
+            os.environ.get('XTENSOR_USE_XSIMD', build_para))
 
         self.with_tests = strtobool(os.environ.get('BUILD_FOAM_TESTS', '0'))
 
@@ -108,7 +107,7 @@ class BuildExt(build_ext):
 
         cmake_version = LooseVersion(
             re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-        cmake_minimum_version_required = '3.12.0'
+        cmake_minimum_version_required = '3.13.0'
         if cmake_version < cmake_minimum_version_required:
             raise RuntimeError(f"CMake >= {cmake_minimum_version_required} "
                                f"is required!")
@@ -132,38 +131,28 @@ class BuildExt(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/algorithms')}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
+            f"-DCMAKE_PREFIX_PATH={os.getenv('CMAKE_PREFIX_PATH')}",
+            f"-DBUILD_FOAM_PYTHON=ON",
         ]
 
-        if self.with_tbb:
-            cmake_options.append('-DFOAM_WITH_TBB=ON')
-        else:
-            # necessary to switch from ON to OFF
-            cmake_options.append('-DFOAM_WITH_TBB=OFF')
+        def _opt_switch(x):
+            return 'ON' if x else 'OFF'
 
-        if self.xtensor_with_tbb:
-            # cmake option in thirdparty/xtensor
-            cmake_options.append('-DXTENSOR_USE_TBB=ON')
-        else:
-            cmake_options.append('-DXTENSOR_USE_TBB=OFF')
+        cmake_options.append(
+            f'-DFOAM_USE_TBB={_opt_switch(self.use_tbb)}')
+        cmake_options.append(
+            f'-DXTENSOR_USE_TBB={_opt_switch(self.xtensor_use_tbb)}')
 
-        if self.with_xsimd:
-            cmake_options.append('-DFOAM_WITH_XSIMD=ON')
-        else:
-            cmake_options.append('-DFOAM_WITH_XSIMD=OFF')
+        cmake_options.append(
+            f'-DFOAM_USE_XSIMD={_opt_switch(self.use_xsimd)}')
+        cmake_options.append(
+            f'-DXTENSOR_USE_XSIMD={_opt_switch(self.xtensor_use_xsimd)}')
 
-        if self.xtensor_with_xsimd:
-            # cmake option in thirdparty/xtensor
-            cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
-        else:
-            cmake_options.append('-DXTENSOR_USE_XSIMD=OFF')
+        cmake_options.append(
+            f'-DBUILD_FOAM_TESTS={_opt_switch(self.with_tests)}')
 
-        if self.with_tests:
-            cmake_options.append('-DBUILD_FOAM_TESTS=ON')
-        else:
-            cmake_options.append('-DBUILD_FOAM_TESTS=OFF')
-
-        # FIXME
-        build_options = ['--', '-j4']
+        max_jobs = os.environ.get('BUILD_FOAM_MAX_JOBS', str(mp.cpu_count()))
+        build_options = ['--', '-j', max_jobs]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -187,8 +176,9 @@ class BuildExt(build_ext):
             except OSError:
                 pass
 
-            if self.with_tbb or self.xtensor_with_tbb:
-                self._move_shared_libs('tbb', build_temp, build_lib)
+            # placeholder
+            # if self.use_tbb or self.xtensor_use_tbb:
+            #     self._move_shared_libs('tbb', build_temp, build_lib)
 
     def _move_thirdparty_exec_files(self):
         for filename in self._thirdparty_exec_files:
@@ -210,7 +200,7 @@ class BuildExt(build_ext):
         if sys.platform == 'darwin':
             lib_pattern = f"lib{lib_name}*.dylib"
         else:
-            lib_pattern = f"lib{lib_name}.so*"
+            lib_pattern = f"lib{lib_name}*.so*"
 
         libs = glob.glob(lib_pattern)
 
@@ -279,7 +269,7 @@ setup(
     entry_points={
         'console_scripts': [
             'extra-foam=extra_foam.services:application',
-            'extra-foam-special-suite=extra_foam.special_services:application',
+            'extra-foam-special-suite=extra_foam.special_suite.services:application',
             'extra-foam-kill=extra_foam.services:kill_application',
             'extra-foam-stream=extra_foam.services:stream_file',
             'extra-foam-redis-cli=extra_foam.services:start_redis_client',
@@ -310,15 +300,15 @@ setup(
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
-        'pyFAI>=0.15.0',
-        'PyQt5>=5.12.0',
+        'pyFAI>=0.17.0',
+        'PyQt5==5.13.2',
         'EXtra-data>=1.0.0',
         'EXtra-geom>=0.8.0',
-        'karabo-bridge>=0.3.0',
+        'karabo-bridge>=0.5.0',
         'toolz>=0.9.0',
         'silx>=0.9.0',
-        'hiredis>=1.0.0',
-        'redis>=3.3.11',
+        'hiredis==1.0.1',
+        'redis==3.5.2',
         'psutil>=5.6.2',
         'imageio==2.8.0',
         'Pillow==7.0.0',

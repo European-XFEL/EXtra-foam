@@ -9,10 +9,9 @@ All rights reserved.
 """
 import numpy as np
 
-from extra_foam.pipeline.processors.base_processor import (
-    SimpleSequence, SimplePairSequence
+from extra_foam.algorithms import (
+    compute_spectrum_1d, SimpleSequence, SimplePairSequence
 )
-from extra_foam.algorithms import compute_spectrum_1d
 
 from .special_analysis_base import ProcessingError, profiler, QThreadWorker
 
@@ -119,10 +118,10 @@ class XasTimProcessor(QThreadWorker):
     def sources(self):
         """Override."""
         return [
-            (self._xgm_output_channel, self._xgm_ppt),
-            *[(self._digitizer_output_channel, ppt)
+            (self._xgm_output_channel, self._xgm_ppt, 1),
+            *[(self._digitizer_output_channel, ppt, 1)
               for ppt in self._digitizer_ppts],
-            (self._mono_device_id, self._mono_ppt)
+            (self._mono_device_id, self._mono_ppt, 0)
         ]
 
     def _update_data_history(self, data):

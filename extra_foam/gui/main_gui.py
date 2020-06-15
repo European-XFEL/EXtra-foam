@@ -29,9 +29,8 @@ from PyQt5.QtWidgets import (
 from redis import ConnectionError
 
 from .ctrl_widgets import (
-    AnalysisCtrlWidget, BinCtrlWidget, CorrelationCtrlWidget,
-    ExtensionCtrlWidget, FomFilterCtrlWidget, DataSourceWidget,
-    HistogramCtrlWidget, PumpProbeCtrlWidget
+    AnalysisCtrlWidget, ExtensionCtrlWidget, FomFilterCtrlWidget,
+    DataSourceWidget, PumpProbeCtrlWidget
 )
 from .misc_widgets import Configurator, GuiLogger
 from .image_tool import ImageToolWindow
@@ -143,56 +142,58 @@ class MainGUI(QMainWindow):
 
         # *************************************************************
         # Tool bar
-        # Note: the order of 'addAction` affect the unittest!!!
+        # Note: the order of '_addAction` affect the unittest!!!
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
         # make icon a bit larger
-        self._tool_bar.setIconSize(1.25 * self._tool_bar.iconSize())
+        self._tool_bar.setIconSize(2 * self._tool_bar.iconSize())
 
-        self._start_at = self.addAction("Start bridge", "start.png")
+        self._start_at = self._addAction("Start bridge", "start.png")
         self._start_at.triggered.connect(self.onStart)
 
-        self._stop_at = self.addAction("Stop bridge", "stop.png")
+        self._stop_at = self._addAction("Stop bridge", "stop.png")
         self._stop_at.triggered.connect(self.onStop)
         self._stop_at.setEnabled(False)
 
         self._tool_bar.addSeparator()
 
-        image_tool_at = self.addAction("Image tool", "image_tool.png")
+        image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(
             lambda: (self._image_tool.show(),
                      self._image_tool.activateWindow()))
 
-        open_poi_window_at = self.addAction("Pulse-of-interest", "poi.png")
+        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
         if not self._pulse_resolved:
             open_poi_window_at.setEnabled(False)
 
-        pump_probe_window_at = self.addAction("Pump-probe", "pump-probe.png")
+        pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
-        open_statistics_window_at = self.addAction("Correlation", "correlation.png")
-        open_statistics_window_at.triggered.connect(
+        open_correlation_window_at = self._addAction(
+            "Correlation", "correlation.png")
+        open_correlation_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
-        open_statistics_window_at = self.addAction("Histogram", "histogram.png")
-        open_statistics_window_at.triggered.connect(
+        open_histogram_window_at = self._addAction(
+            "Histogram", "histogram.png")
+        open_histogram_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, HistogramWindow))
 
-        open_bin2d_window_at = self.addAction("Binning", "binning.png")
+        open_bin2d_window_at = self._addAction("Binning", "binning.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, BinningWindow))
 
         self._tool_bar.addSeparator()
 
-        open_file_stream_window_at = self.addAction(
+        open_file_stream_window_at = self._addAction(
             "File stream", "file_stream.png")
         open_file_stream_window_at.triggered.connect(
             lambda: self.onOpenSatelliteWindow(FileStreamWindow))
 
-        open_about_at = self.addAction("About EXtra-foam", "about.png")
+        open_about_at = self._addAction("About EXtra-foam", "about.png")
         open_about_at.triggered.connect(
             lambda: self.onOpenSatelliteWindow(AboutWindow))
 
@@ -238,11 +239,6 @@ class MainGUI(QMainWindow):
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
         self.fom_filter_ctrl_widget = self.createCtrlWidget(FomFilterCtrlWidget)
 
-        # statistics control widgets
-        self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
-        self.histogram_ctrl_widget = self.createCtrlWidget(HistogramCtrlWidget)
-        self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
-
         # *************************************************************
         # status bar
         # *************************************************************
@@ -253,10 +249,11 @@ class MainGUI(QMainWindow):
 
         # ImageToolWindow is treated differently since it is the second
         # control window.
-        self._image_tool = ImageToolWindow(queue=self._queue,
-                                           pulse_resolved=self._pulse_resolved,
-                                           require_geometry=self._require_geometry,
-                                           parent=self)
+        self._image_tool = ImageToolWindow(
+            queue=self._queue,
+            pulse_resolved=self._pulse_resolved,
+            require_geometry=self._require_geometry,
+            parent=self)
 
         self.initUI()
         self.initConnections()
@@ -270,7 +267,8 @@ class MainGUI(QMainWindow):
 
     def createCtrlWidget(self, widget_class):
         widget = widget_class(pulse_resolved=self._pulse_resolved,
-                              require_geometry=self._require_geometry)
+                              require_geometry=self._require_geometry,
+                              parent=self)
         self._ctrl_widgets.append(widget)
         return widget
 
@@ -306,10 +304,8 @@ class MainGUI(QMainWindow):
 
     def initCtrlUI(self):
         self.initGeneralAnalysisUI()
-        self.initStatisticsAnalysisUI()
 
-        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
-        self._ctrl_panel_cw.addTab(self._statistics_cw, "Statistics analysis")
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "Analysis setup")
 
     def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()
@@ -317,13 +313,6 @@ class MainGUI(QMainWindow):
         layout.addWidget(self.pump_probe_ctrl_widget)
         layout.addWidget(self.fom_filter_ctrl_widget)
         self._analysis_cw.setLayout(layout)
-
-    def initStatisticsAnalysisUI(self):
-        layout = QVBoxLayout()
-        layout.addWidget(self.correlation_ctrl_widget)
-        layout.addWidget(self.bin_ctrl_widget)
-        layout.addWidget(self.histogram_ctrl_widget)
-        self._statistics_cw.setLayout(layout)
 
     def initUtilUI(self):
         self._util_panel_cw.addTab(self._gui_logger.widget, "Logger")
@@ -392,7 +381,7 @@ class MainGUI(QMainWindow):
                                f"Shutting down!")
                 self.close()
 
-    def addAction(self, description, filename):
+    def _addAction(self, description, filename):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
         action = QAction(icon, description, self)
         self._tool_bar.addAction(action)
@@ -408,6 +397,7 @@ class MainGUI(QMainWindow):
 
         return instance_type(self._queue,
                              pulse_resolved=self._pulse_resolved,
+                             require_geometry=self._require_geometry,
                              parent=self)
 
     def onOpenSatelliteWindow(self, instance_type):
@@ -463,6 +453,8 @@ class MainGUI(QMainWindow):
 
         for widget in self._ctrl_widgets:
             widget.onStart()
+        for win in self._plot_windows:
+            win.onStart()
         self._image_tool.onStart()
         self._configurator.onStart()
 
@@ -482,6 +474,8 @@ class MainGUI(QMainWindow):
 
         for widget in self._ctrl_widgets:
             widget.onStop()
+        for win in self._plot_windows:
+            win.onStop()
         self._image_tool.onStop()
         self._configurator.onStop()
 
@@ -492,16 +486,24 @@ class MainGUI(QMainWindow):
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
-            succeeded = widget.updateMetaData()
-            if not succeeded:
+            if not widget.updateMetaData():
                 return False
+
+        for win in self._plot_windows:
+            if not win.updateMetaData():
+                return False
+
         return self._image_tool.updateMetaData()
 
     def loadMetaData(self):
         """Load metadata from Redis and set child control widgets."""
         for widget in self._ctrl_widgets:
             widget.loadMetaData()
-        return self._image_tool.loadMetaData()
+
+        for win in self._plot_windows:
+            win.loadMetaData()
+
+        self._image_tool.loadMetaData()
 
     @pyqtSlot(str, str)
     def onLogMsgReceived(self, ch, msg):

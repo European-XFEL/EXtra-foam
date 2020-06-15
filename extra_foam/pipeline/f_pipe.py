@@ -136,18 +136,23 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
             item = self._meta.hget_all(src)
             if item:
                 # add a new source item
-                category = item['category']
+                ctg = item['category']
+                name = item['name']
                 modules = item['modules']
+                ppt = item['property']
                 slicer = item['slicer']
                 vrange = item['vrange']
                 self._catalog.add_item(
-                    category,
-                    item['name'],
+                    ctg,
+                    name,
                     self.str2list(modules, handler=int)
                     if modules else None,
-                    item['property'],
+                    ppt,
                     self.str2slice(slicer) if slicer else None,
-                    self.str2tuple(vrange) if vrange else None)
+                    self.str2tuple(vrange) if vrange else None,
+                    int(item['ktype'])
+                )
+                logger.debug(f"Source item registered: {name} {ppt} ({ctg})")
             else:
                 # remove a source item
                 if src not in self._catalog:
@@ -158,6 +163,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     logger.error("Duplicated data source items")
                     continue
                 self._catalog.remove_item(src)
+                logger.debug(f"Source item unregistered: {src}")
 
     def _update_connection(self, proxy):
         cons = self._meta.hget_all(mt.CONNECTION)
@@ -176,14 +182,14 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
     @run_in_thread(daemon=True)
     def run(self):
         """Override."""
-        correlated = None
+        correlated = dict()
         proxy = BridgeProxy()
         src_type = DataSource.UNKNOWN
         while not self.closing:
             if self.updating:
                 client, src_type = self._update_connection(proxy)
 
-                correlated = None
+                correlated = dict()
                 self.clear()
                 self._transformer.reset()
                 self.finish_updating()
@@ -198,26 +204,30 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     time.sleep(1)  # sleep a little long
                     continue
 
-                if correlated is None:
+                if not correlated:
                     try:
                         # always pull the latest data from the bridge
                         data = self._recv_imp(proxy.client)
 
-                        self._update_available_sources(data[1])
-
+                        matched = []
                         try:
-                            correlated, dropped = self._transformer.correlate(
+                            correlated, matched, dropped = self._transformer.correlate(
                                 data, source_type=src_type)
                             for tid, err in dropped:
                                 logger.error(err)
+                                self._mon.add_tid_with_timestamp(
+                                    tid, n_pulses=0, dropped=True)
                         except Exception as e:
                             # To be on the safe side since any Exception here
                             # will stop the thread
                             logger.error(str(e))
+                        finally:
+                            self._mon.set_available_sources(data[1], matched)
+
                     except TimeoutError:
                         pass
 
-                if correlated is not None:
+                if correlated:
                     try:
                         self._cache.put(correlated)
                         correlated = None
@@ -225,10 +235,6 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                         pass
 
             time.sleep(0.001)
-
-    def _update_available_sources(self, meta):
-        sources = {k: v["timestamp.tid"] for k, v in meta.items()}
-        self._mon.set_available_sources(sources)
 
     @profiler("Receive Data from Bridge")
     def _recv_imp(self, client):
@@ -307,7 +313,9 @@ class MpOutQueue(_PipeOutBase):
                         data_out = data['processed']
 
                         tid = data_out.tid
-                        self._mon.add_tid_with_timestamp(tid)
+                        n_pulses = data_out.pidx.n_kept(data_out.n_pulses)
+                        self._mon.add_tid_with_timestamp(
+                            tid, n_pulses=n_pulses)
                         logger.info(f"Train {tid} processed!")
                     else:
                         data_out = {key: data[key] for key

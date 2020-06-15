@@ -21,10 +21,9 @@
 #include "xtensor/xfixed.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xindex_view.hpp"
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range2d.h"
-#include "tbb/blocked_range3d.h"
 #endif
 
 #include "f_traits.hpp"
@@ -205,6 +204,12 @@ public:
     EnableIf<std::decay_t<M>, IsModulesVector> = false, EnableIf<E, IsImageArray> = false>
   void positionAllModules(M&& src, E& dst, bool ignore_asic_edge=false) const;
 
+  template<typename M, EnableIf<M, IsImage> = false>
+  static void maskModule(M& src);
+
+  template<typename M, EnableIf<M, IsImageArray> = false>
+  static void maskModule(M& src);
+
   /**
    * Dismantle an assembled image into modules.
    *
@@ -288,6 +293,9 @@ private:
    */
   template<typename M,  typename N, typename T>
   void positionModule(M&& src, N& dst, T&& p0, T&& p1, bool ignore_asic_edge) const;
+
+  template<typename M>
+  static void maskModuleImp(M& src);
 
   /**
    * Check the src and dst shapes used for dismantling..
@@ -424,7 +432,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -447,7 +455,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
             ignore_asic_edge);
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -468,7 +476,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -491,7 +499,7 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
             ignore_asic_edge);
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -531,7 +539,7 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
   int n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
     [&src, &dst, &p0, &p1, this] (const tbb::blocked_range2d<int> &block)
     {
@@ -553,7 +561,7 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
             xt::view(p1, im, xt::all(), xt::all()));
         }
       }
-#if defined(FOAM_WITH_TBB)
+#if defined(FOAM_USE_TBB)
     }
   );
 #endif
@@ -732,6 +740,103 @@ void DetectorGeometry<Detector>::positionModule(M&& src, N& dst, T&& p0, T&& p1,
       }
     }
   }
+}
+
+template<>
+template<typename M, typename N, typename T>
+void DetectorGeometry<EPix100>::positionModule(M&& src, N& dst, T&& p0, T&& p1, bool ignore_asic_edge) const
+{
+  int wm = EPix100::module_shape[1];
+  int hm = EPix100::module_shape[0];
+
+  int edge = 0;
+  if (ignore_asic_edge) edge = 1;
+
+  auto x0 = p0(0);
+  auto y0 = p0(1);
+
+  int ix_dir = (p1(0) - x0 > 0) ? 1 : -1;
+  int iy_dir = (p1(1) - y0 > 0) ? 1 : -1;
+
+  int ix0 = 0;
+  int iy0 = 0;
+
+  auto ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
+                            : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
+  auto iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
+                            : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
+
+  for (size_t iy = edge, iy_dst = iy0_dst + edge * iy_dir; iy < hm - edge; ++iy, iy_dst += iy_dir)
+  {
+    for (size_t ix = 0, ix_dst = ix0_dst; ix < wm; ++ix, ix_dst += ix_dir)
+    {
+      dst(iy_dst, ix_dst) = src(iy, ix);
+    }
+  }
+}
+
+template<typename Detector>
+template<typename M>
+void DetectorGeometry<Detector>::maskModuleImp(M& src)
+{
+  auto ss = src.shape();
+  if (ss[1] != Detector::module_shape[0] || ss[2] != Detector::module_shape[1])
+  {
+    std::stringstream fmt;
+    fmt << "Expected module with shape (" << Detector::module_shape[0] << ", " << Detector::module_shape[1]
+        << ") modules, get (" << ss[1] << ", " << ss[2] << ")!";
+    throw std::invalid_argument(fmt.str());
+  }
+
+  int wa = Detector::asic_shape[1];
+  int ha = Detector::asic_shape[0];
+
+  auto nan = std::numeric_limits<typename M::value_type>::quiet_NaN();
+
+  for (int i_row = 0; i_row < Detector::asic_grid_shape[0]; ++i_row)
+  {
+    xt::view(src, xt::all(), i_row * ha, xt::all()) = nan;
+    xt::view(src, xt::all(), (i_row + 1) * ha - 1, xt::all()) = nan;
+  }
+  for (int i_col = 0; i_col < Detector::asic_grid_shape[1]; ++i_col)
+  {
+    xt::view(src, xt::all(), xt::all(), i_col * wa) = nan;
+    xt::view(src, xt::all(), xt::all(), (i_col + 1) * wa - 1) = nan;
+  }
+}
+
+template<>
+template<typename M>
+void DetectorGeometry<EPix100>::maskModuleImp(M& src)
+{
+  auto ss = src.shape();
+  if (ss[1] != EPix100::module_shape[0] || ss[2] != EPix100::module_shape[1])
+  {
+    std::stringstream fmt;
+    fmt << "Expected module with shape (" << EPix100::module_shape[0] << ", " << EPix100::module_shape[1]
+        << ") modules, get (" << ss[1] << ", " << ss[2] << ")!";
+    throw std::invalid_argument(fmt.str());
+  }
+
+  auto nan = std::numeric_limits<typename M::value_type>::quiet_NaN();
+
+  xt::view(src, xt::all(), 0, xt::all()) = nan;
+  xt::view(src, xt::all(), EPix100::module_shape[0] - 1, xt::all()) = nan;
+}
+
+template<typename Detector>
+template<typename M, EnableIf<M, IsImageArray>>
+void DetectorGeometry<Detector>::maskModule(M& src)
+{
+  maskModuleImp(src);
+}
+
+template<typename Detector>
+template<typename M, EnableIf<M, IsImage>>
+void DetectorGeometry<Detector>::maskModule(M& src)
+{
+  auto&& expanded = xt::view(src, xt::newaxis(), xt::all(), xt::all());
+  maskModuleImp(expanded);
 }
 
 template<typename Detector>

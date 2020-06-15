@@ -89,6 +89,12 @@ class GeomAssembler(IntEnum):
     EXTRA_GEOM = 2  # use Extra-geom geometry assembler
 
 
+class ImageTransformType(IntEnum):
+    UNDEFINED = 0
+    FOURIER_TRANSFORM = 1
+    EDGE_DETECTION = 2
+
+
 class PipelineSlowPolicy(IntEnum):
     DROP = 0
     WAIT = 1
@@ -253,8 +259,8 @@ class _Config(dict):
         "SOURCE_RAW_IMAGE_DTYPE": np.uint16,
         # interval for updating available data sources, in milliseconds
         "SOURCE_AVAIL_UPDATE_TIMER": 1000,
-        # After how long the available sources key expires, in milliseconds
-        "SOURCE_EXPIRATION_TIMER": 2000,
+        # After how long the available sources key expires, in seconds
+        "SOURCE_EXPIRATION_TIMER": 2,
         "SOURCE_USER_DEFINED_CATEGORY": "User-defined",
         # -------------------------------------------------------------
         # REDIS
@@ -357,7 +363,7 @@ class _Config(dict):
             MASK_TILE_EDGE=True,
             MASK_ASIC_EDGE=False,
         ),
-        "JungFrauPR": _AreaDetectorConfig(
+        "JungFrau": _AreaDetectorConfig(
             REDIS_PORT=6381,
             PULSE_RESOLVED=True,
             REQUIRE_GEOMETRY=False,
@@ -366,16 +372,6 @@ class _Config(dict):
             PIXEL_SIZE=0.075e-3,
             MASK_TILE_EDGE=False,
             MASK_ASIC_EDGE=True,
-        ),
-        "JungFrau": _AreaDetectorConfig(
-            REDIS_PORT=6382,
-            PULSE_RESOLVED=False,
-            REQUIRE_GEOMETRY=False,
-            NUMBER_OF_MODULES=1,
-            MODULE_SHAPE=(512, 1024),
-            PIXEL_SIZE=0.075e-3,
-            MASK_TILE_EDGE=False,
-            MASK_ASIC_EDGE=False,
         ),
         "FastCCD": _AreaDetectorConfig(
             REDIS_PORT=6383,
@@ -509,18 +505,39 @@ class _Config(dict):
 
         # update data sources
         src_cfg = cfg.get("SOURCE", dict())
+
         self["SOURCE_DEFAULT_TYPE"] = src_cfg["DEFAULT_TYPE"]
         for ctg, srcs in src_cfg.get("CATEGORY", dict()).items():
+            if ctg == "JungFrauPR":
+                logger.warning(
+                    f"Found 'JungFrauPR' in {config_file}\n\n"
+                    f"Please modify your config file: \n"
+                    f"1. Move non-duplicated data sources under 'JungFrauPR' "
+                    f"into 'JungFrau';\n"
+                    f"2. Remove JungFrauPR from 'SOURCE' and 'DETECTOR'.\n")
+
+                if "JungFrau" not in src_cfg.get("CATEGORY", dict()):
+                    # try to import sources under JungFrauPR later
+                    ctg = "JungFrau"
+
             # We assume the main detector type is exclusive, i.e., only one
             # of them will be needed.
-            if ctg == detector or ctg not in self.detectors():
-                if ctg != detector and ctg not in self._misc_source_categories:
-                    raise ValueError(
-                        f"Invalid source category: {ctg}!\n"
-                        f"The valid source categories are: "
-                        f"{self._misc_source_categories + self.detectors()}")
+            if ctg == detector or ctg in self._misc_source_categories:
                 self.control_sources[ctg] = srcs.get("CONTROL", dict())
                 self.pipeline_sources[ctg] = srcs.get("PIPELINE", dict())
+
+                if ctg == "JungFrau":
+                    # try to merge "JungFrauPR"
+                    self.pipeline_sources[ctg].update(
+                        src_cfg.get("CATEGORY", dict()).get(
+                            "JungFrauPR", dict()).get(
+                            "PIPELINE", dict()))
+
+            elif ctg not in self.detectors() and ctg not in ("JungFrauPR",):
+                raise ValueError(
+                    f"Invalid source category: {ctg}!\n"
+                    f"The valid source categories are: "
+                    f"{self._misc_source_categories + self.detectors()}")
 
         # update connection
         con_cfg = cfg.get("STREAMER", dict())
@@ -598,9 +615,6 @@ class ConfigWrapper(abc.Mapping):
 
         if detector == 'BASLERCAMERA':
             return 'BaslerCamera'
-
-        if detector == 'JUNGFRAUPR':
-            return 'JungFrauPR'
 
         if detector == 'EPIX100':
             return 'ePix100'

@@ -23,8 +23,9 @@ from .smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit
 )
 from ..gui_helpers import parse_boundary, parse_slice
+from ..misc_widgets import FColor
 from ..mediator import Mediator
-from ...database import MonProxy, SourceItem
+from ...database import MonProxy
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes
@@ -160,6 +161,9 @@ class DataSourceTreeItem:
         except IndexError:
             pass
 
+    def children(self):
+        return self._children
+
     def appendChild(self, item):
         """Append a child item."""
         if not isinstance(item, DataSourceTreeItem):
@@ -175,7 +179,6 @@ class DataSourceTreeItem:
         """Return the index of child in its parents' list of children."""
         if self._parent is not None:
             return self._parent._children.index(self)
-
         return 0
 
     def columnCount(self):
@@ -188,6 +191,21 @@ class DataSourceTreeItem:
             return self._data[column]
         except IndexError:
             pass
+
+    def dtype(self):
+        return self._data[1]
+
+    def name(self):
+        return self._data[2]
+
+    def ppt(self):
+        return self._data[3]
+
+    def slicer(self):
+        return self._data[4]
+
+    def vrange(self):
+        return self._data[5]
 
     def setData(self, value, column):
         if 0 <= column < len(self._data):
@@ -212,7 +230,7 @@ class DataSourceTreeItem:
 class DataSourceItemModel(QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
-    # checked, SourceItem
+    # True/False, tuple/str
     source_item_toggled_sgn = pyqtSignal(bool, object)
 
     def __init__(self, parent=None):
@@ -221,8 +239,11 @@ class DataSourceItemModel(QAbstractItemModel):
         self._mediator = Mediator()
 
         self._root = DataSourceTreeItem([
-            "Source name", "Property", "Pulse slicer", "Value range"])
+            "", "Type", "Source name", "Property",
+            "Pulse slicer", "Value range"])
         self.setupModelData()
+
+        self._matched_srcs = set()
 
         self.source_item_toggled_sgn.connect(
             self._mediator.onSourceItemToggled)
@@ -232,76 +253,71 @@ class DataSourceItemModel(QAbstractItemModel):
         if not index.isValid():
             return
 
-        item = index.internalPointer()
+        item = self.getItem(index)
 
         if role == Qt.DisplayRole:
             return item.data(index.column())
 
-        if role == Qt.CheckStateRole and index.column() == 0 and item.rank() > 1:
+        if role == Qt.CheckStateRole and index.column() == 2 \
+                and item.rank() > 1:
             return Qt.Checked if item.isChecked() else Qt.Unchecked
 
         return
 
     def setData(self, index, value, role=None) -> bool:
         """Override."""
-        def _parse_slice(x):
-            return str(parse_slice(x)) if x else x
-
-        def _parse_boundary(x):
-            return str(parse_boundary(x)) if x else x
-
         if role == Qt.CheckStateRole or role == Qt.EditRole:
-            item = index.internalPointer()
+            item = self.getItem(index)
             if role == Qt.CheckStateRole:
                 n_rows = index.model().rowCount(index.parent())
                 if item.isExclusive() and not item.isChecked():
                     for i in range(n_rows):
                         if i != index.row():
-                            item_sb = index.sibling(i, 0).internalPointer()
+                            item_sb = self.getItem(index.sibling(i, 0))
                             if item_sb.isExclusive() and item_sb.isChecked():
                                 item_sb.setChecked(False)
-                                self.dataChanged.emit(index.siblingAtRow(i),
+                                item_sb.setData(False, 0)
+                                self.dataChanged.emit(index.sibling(i, 0),
                                                       index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
                                     False,
-                                    SourceItem('',
-                                               item_sb.data(0),
-                                               [],
-                                               item_sb.data(1),
-                                               '',
-                                               ''))
+                                    f'{item_sb.name()} {item_sb.ppt()}')
                                 break
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
-                old_device_id = item.data(0)
-                old_ppt = item.data(1)
+                old_src_name = item.name()
+                old_ppt = item.ppt()
                 item.setData(value, index.column())
                 # remove registered item with the old device ID and property
                 self.source_item_toggled_sgn.emit(
-                    False,
-                    SourceItem('', old_device_id, [], old_ppt, '', ''))
+                    False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
-            ctg = item.parent().data(0)
-            src_name = item.data(0)
+            ctg = item.parent().name()
+            name = item.name()
+            ppt = item.ppt()
             n_modules = config["NUMBER_OF_MODULES"]
-            if ctg == main_det and n_modules > 1 and '*' in src_name:
+            if ctg == main_det and n_modules > 1 and '*' in name:
                 modules = module_indices(n_modules, detector=main_det)
             else:
                 modules = []
 
-            self.source_item_toggled_sgn.emit(
-                item.isChecked(),
-                SourceItem(
-                    ctg,
-                    src_name,
-                    modules,
-                    item.data(1),
-                    _parse_slice(item.data(2)),
-                    _parse_boundary(item.data(3))))
-
-            self.dataChanged.emit(index, index)
+            slicer = item.slicer()
+            vrange = item.vrange()
+            if item.isChecked():
+                self.source_item_toggled_sgn.emit(
+                    item.isChecked(),
+                    (ctg, name, str(modules), ppt,
+                     str(parse_slice(slicer)) if slicer else '',
+                     str(parse_boundary(vrange)) if vrange else '',
+                     item.dtype())
+                )
+                item.setData(f"{name} {ppt}" in self._matched_srcs, 0)
+            else:
+                self.source_item_toggled_sgn.emit(False, f'{name} {item.ppt()}')
+                item.setData(False, 0)
+            self.dataChanged.emit(index.siblingAtColumn(0), index)
             return True
         return False
 
@@ -311,11 +327,11 @@ class DataSourceItemModel(QAbstractItemModel):
 
         flags = Qt.ItemIsEnabled
 
-        item = index.internalPointer()
+        item = self.getItem(index)
         if item.rank() > 1:
-            if index.column() == 0:
+            if index.column() == 2:
                 flags |= Qt.ItemIsUserCheckable
-            if item.isChecked():
+            if item.isChecked() and index.column() > 1:
                 flags |= Qt.ItemIsEditable
 
         return flags
@@ -325,58 +341,48 @@ class DataSourceItemModel(QAbstractItemModel):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self._root.data(section)
 
-    def index(self, row, column, parent=None, *args, **kwargs) -> QModelIndex:
+    def index(self, row, column, parent=QModelIndex(), *args, **kwargs) -> QModelIndex:
         """Override."""
-        if not self.hasIndex(row, column, parent):
+        if parent.isValid() and parent.column() != 0:
             return QModelIndex()
 
-        if parent is None or not parent.isValid():
-            parent_item = self._root
-        else:
-            parent_item = parent.internalPointer()
+        child_item = self.getItem(parent).child(row)
+        if child_item:
+            return self.createIndex(row, column, child_item)
+        return QModelIndex()
 
-        child_item = parent_item.child(row)
-        if child_item is None:
-            return QModelIndex()
-        return self.createIndex(row, column, child_item)
-
-    def parent(self, index=None) -> QModelIndex:
+    def parent(self, index=QModelIndex()) -> QModelIndex:
         """Override."""
         if not index.isValid():
             return QModelIndex()
 
-        child_item = index.internalPointer()
-        parent_item = child_item.parent()
-
+        parent_item = self.getItem(index).parent()
         if parent_item == self._root:
             return QModelIndex()
 
         return self.createIndex(parent_item.row(), 0, parent_item)
 
-    def rowCount(self, parent=None, *args, **kwargs) -> int:
+    def rowCount(self, parent=QModelIndex(), *args, **kwargs) -> int:
         """Override."""
-        if parent.column() > 0:
-            return 0
+        return self.getItem(parent).childCount()
 
-        if not parent.isValid():
-            parent_item = self._root
-        else:
-            parent_item = parent.internalPointer()
-
-        return parent_item.childCount()
-
-    def columnCount(self, parent=None, *args, **kwargs) -> int:
+    def columnCount(self, parent=QModelIndex(), *args, **kwargs) -> int:
         """Override."""
-        if parent.isValid():
-            return parent.internalPointer().columnCount()
         return self._root.columnCount()
+
+    def getItem(self, index):
+        if index.isValid():
+            item = index.internalPointer()
+            if item:
+                return item
+        return self._root
 
     def setupModelData(self):
         """Setup the data for the whole tree."""
         src_categories = dict()
         for ctg, srcs in config.pipeline_sources.items():
             ctg_item = DataSourceTreeItem(
-                [ctg, "", "", "", ""], exclusive=False, parent=self._root)
+                ["", "", ctg, "", "", ""], exclusive=False, parent=self._root)
             self._root.appendChild(ctg_item)
             src_categories[ctg] = ctg_item
 
@@ -390,7 +396,7 @@ class DataSourceItemModel(QAbstractItemModel):
                 for ppt in ppts:
                     # For now, all pipeline data are exclusive
                     src_item = DataSourceTreeItem(
-                        [src, ppt, default_slicer, default_v_range],
+                        [False, 1, src, ppt, default_slicer, default_v_range],
                         exclusive=True,
                         parent=ctg_item)
                     ctg_item.appendChild(src_item)
@@ -398,7 +404,8 @@ class DataSourceItemModel(QAbstractItemModel):
         for ctg, srcs in config.control_sources.items():
             if ctg not in src_categories:
                 ctg_item = DataSourceTreeItem(
-                    [ctg, "", "", "", ""], exclusive=False, parent=self._root)
+                    ["", "", ctg, "", "", ""],
+                    exclusive=False, parent=self._root)
                 self._root.appendChild(ctg_item)
                 src_categories[ctg] = ctg_item
             else:
@@ -410,7 +417,7 @@ class DataSourceItemModel(QAbstractItemModel):
             for src, ppts in srcs.items():
                 for ppt in ppts:
                     ctg_item.appendChild(DataSourceTreeItem(
-                        [src, ppt, default_slicer, default_v_range],
+                        [False, 0, src, ppt, default_slicer, default_v_range],
                         exclusive=False,
                         parent=ctg_item))
 
@@ -428,15 +435,34 @@ class DataSourceItemModel(QAbstractItemModel):
         user_defined = config["SOURCE_USER_DEFINED_CATEGORY"]
         n_user_defined = 4
         assert user_defined not in src_categories
-        ctg_item = DataSourceTreeItem([user_defined, "", "", "", ""],
+        ctg_item = DataSourceTreeItem(["", "", user_defined, "", "", ""],
                                       exclusive=False,
                                       parent=self._root)
         self._root.appendChild(ctg_item)
         for i in range(n_user_defined):
             ctg_item.appendChild(DataSourceTreeItem(
-                [f"Device-ID-{i+1}", f"Property-{i+1}", "", '-inf, inf'],
+                [False, 0, f"Device-ID-{i+1}", f"Property-{i+1}",
+                 "", '-inf, inf'],
                 exclusive=False,
                 parent=ctg_item))
+
+    def updateMatchedSources(self, srcs):
+        """Update availability of selected source items.
+
+        :param list srcs: a list of source items.
+        """
+        if self._matched_srcs != srcs:
+            for i in range(self.rowCount()):
+                parent_index = self.index(i, 0)
+                parent = self.getItem(parent_index)
+                for j in range(parent.childCount()):
+                    index = self.index(j, 0, parent_index)
+                    item = self.getItem(index)
+                    found = f"{item.name()} {item.ppt()}" in srcs
+                    if item.isChecked() and found != item.data(0):
+                        item.setData(found, 0)
+                        self.dataChanged.emit(index, index)
+            self._matched_srcs = srcs
 
 
 class DataSourceListModel(QAbstractListModel):
@@ -645,6 +671,57 @@ class DataSourceWidget(_AbstractCtrlWidget):
     Widgets provide data source management and monitoring.
     """
 
+    class AvailStateDelegate(QStyledItemDelegate):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._brush1 = FColor.mkBrush('g')
+            self._brush2 = FColor.mkBrush('r')
+
+        def paint(self, painter, option, index):
+            """Override."""
+            v = index.data()
+            if isinstance(v, bool):
+                painter.setPen(Qt.NoPen)
+
+                if v:
+                    painter.setBrush(self._brush1)
+                else:
+                    painter.setBrush(self._brush2)
+
+                rect = option.rect
+                h = rect.height()
+                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            else:
+                super().paint(painter, option, index)
+
+    class DataTypeDelegate(QStyledItemDelegate):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+            self._c_brush = FColor.mkBrush('c')
+            self._p_brush = FColor.mkBrush('p')
+
+        def paint(self, painter, option, index):
+            """Override."""
+            v = index.data()
+            if isinstance(v, int):
+                painter.setPen(Qt.NoPen)
+
+                if v == 0:
+                    # control data
+                    painter.setBrush(self._c_brush)
+                elif v == 1:
+                    # pipeline data
+                    painter.setBrush(self._p_brush)
+                else:
+                    raise ValueError(f"Unknown data type: {v}")
+
+                rect = option.rect
+                h = rect.height()
+                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            else:
+                super().paint(painter, option, index)
+
     _source_types = {
         "Run directory": DataSource.FILE,
         "ZeroMQ bridge": DataSource.BRIDGE,
@@ -668,20 +745,26 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
         self._src_view = QTreeView()
         self._src_tree_model = DataSourceItemModel(self)
+        self._src_avail_delegate = self.AvailStateDelegate(self)
+        self._src_data_type_delegate = self.DataTypeDelegate(self)
         self._src_device_delegate = LineEditItemDelegate(self)
         self._src_ppt_delegate = LineEditItemDelegate(self)
         self._src_slicer_delegate = SliceItemDelegate(self)
         self._src_boundary_delegate = BoundaryItemDelegate(self)
         self._src_view.setModel(self._src_tree_model)
-        self._src_view.setItemDelegateForColumn(0, self._src_device_delegate)
-        self._src_view.setItemDelegateForColumn(1, self._src_ppt_delegate)
-        self._src_view.setItemDelegateForColumn(2, self._src_slicer_delegate)
-        self._src_view.setItemDelegateForColumn(3, self._src_boundary_delegate)
+        self._src_view.setItemDelegateForColumn(0, self._src_avail_delegate)
+        self._src_view.setItemDelegateForColumn(1, self._src_data_type_delegate)
+        self._src_view.setItemDelegateForColumn(2, self._src_device_delegate)
+        self._src_view.setItemDelegateForColumn(3, self._src_ppt_delegate)
+        self._src_view.setItemDelegateForColumn(4, self._src_slicer_delegate)
+        self._src_view.setItemDelegateForColumn(5, self._src_boundary_delegate)
 
         self._monitor_tb = QTabWidget()
+
         self._avail_src_view = QListView()
         self._avail_src_model = DataSourceListModel()
         self._avail_src_view.setModel(self._avail_src_model)
+
         self._process_mon_view = QTableView()
         self._process_mon_model = ProcessMonitorTableModel()
         self._process_mon_view.setModel(self._process_mon_model)
@@ -697,8 +780,10 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
         self._mon = MonProxy()
 
+        self._raw_srcs = dict()
+        self._matched_srcs = dict()
         self._avail_src_timer = QTimer()
-        self._avail_src_timer.timeout.connect(self.updateSourceList)
+        self._avail_src_timer.timeout.connect(self.updateAvailableSources)
         self._avail_src_timer.start(config["SOURCE_AVAIL_UPDATE_TIMER"])
 
         self._process_mon_timer = QTimer()
@@ -729,9 +814,13 @@ class DataSourceWidget(_AbstractCtrlWidget):
         self._con_view.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch)
 
+        self._src_view.setIndentation(self._src_view.indentation()/2)
         self._src_view.expandToDepth(1)
-        self._src_view.resizeColumnToContents(0)
-        self._src_view.resizeColumnToContents(1)
+        for i in range(4):
+            self._src_view.resizeColumnToContents(i)
+        for i in range(2):
+            self._src_view.header().setSectionResizeMode(
+                i, QHeaderView.Fixed)
 
     def initConnections(self):
         """Override."""
@@ -749,10 +838,16 @@ class DataSourceWidget(_AbstractCtrlWidget):
             return False
         return True
 
-    def updateSourceList(self):
-        available_sources = self._mon.get_available_sources()
-        if available_sources is not None:  # for unittest
-            self._avail_src_model.setupModelData(list(available_sources.keys()))
+    def loadMetaData(self):
+        """Override."""
+        pass
+
+    def updateAvailableSources(self):
+        ret = self._mon.get_available_sources()
+        if ret is not None:
+            raw, matched = ret
+            self._avail_src_model.setupModelData(raw)
+            self._src_tree_model.updateMatchedSources(matched)
 
     def updateProcessInfo(self):
         info = []

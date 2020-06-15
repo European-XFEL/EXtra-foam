@@ -11,8 +11,8 @@ import numpy as np
 
 from extra_foam.pipeline.data_model import MovingAverageArray
 
-from .special_analysis_base import profiler, ProcessingError, QThreadWorker
 from .config import _PIXEL_DTYPE
+from .special_analysis_base import profiler, ProcessingError, QThreadWorker
 
 
 class GotthardPpProcessor(QThreadWorker):
@@ -70,7 +70,7 @@ class GotthardPpProcessor(QThreadWorker):
     def sources(self):
         """Override."""
         return [
-            (self._output_channel, self._ppt),
+            (self._output_channel, self._ppt, 1),
         ]
 
     @profiler("Gotthard Processor (pump-probe)")

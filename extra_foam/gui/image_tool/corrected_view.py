@@ -93,6 +93,8 @@ class CorrectedView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._corrected = ImageAnalysis(hide_axis=False)
+        self._corrected.setTitle("Averaged over train")
+
         self._roi_proj_plot = RoiProjPlot()
         self._roi_hist = RoiHist()
 

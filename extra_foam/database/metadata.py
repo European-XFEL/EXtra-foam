@@ -51,6 +51,7 @@ class Metadata(metaclass=MetaMetadata):
     META_PROC = "meta:proc:meta"
     GLOBAL_PROC = "meta:proc:global"
     IMAGE_PROC = "meta:proc:image"
+    IMAGE_TRANSFORM_PROC = "meta:proc:image_transform"
     GEOMETRY_PROC = "meta:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "meta:proc:azimuthal_integration"
     PUMP_PROBE_PROC = "meta:proc:pump_probe"
@@ -133,28 +134,29 @@ class MetaProxy(_AbstractProxy):
     def add_data_source(self, item):
         """Add a data source.
 
-        :param SourceItem item: source item.
+        :param tuple item: a tuple which can be used to construct a SourceItem.
         """
-        key = f"{item.name} {item.property}"
+        ctg, name, modules, ppt, slicer, vrange, ktype = item
+        key = f"{name} {ppt}"
         return self._db.pipeline().execute_command(
-            'HMSET', key, 'category', item.category,
-                          'name', item.name,
-                          'modules', str(item.modules),  # list -> str
-                          'property', item.property,
-                          'slicer', item.slicer,
-                          'vrange', item.vrange).execute_command(
+            'HSET', key, 'category', ctg,
+                         'name', name,
+                         'modules', modules,
+                         'property', ppt,
+                         'slicer', slicer,
+                         'vrange', vrange,
+                         'ktype', ktype).execute_command(
             'PUBLISH', Metadata.DATA_SOURCE, key).execute()
 
     @redis_except_handler
-    def remove_data_source(self, item):
+    def remove_data_source(self, src):
         """Remove a data source.
 
-        :param SourceItem item: source item.
+        :param str src: data source.
         """
-        key = f"{item.name} {item.property}"
         return self._db.pipeline().execute_command(
-            'DEL', key).execute_command(
-            'PUBLISH', Metadata.DATA_SOURCE, key).execute()
+            'DEL', src).execute_command(
+            'PUBLISH', Metadata.DATA_SOURCE, src).execute()
 
     @redis_except_handler
     def take_snapshot(self, name):

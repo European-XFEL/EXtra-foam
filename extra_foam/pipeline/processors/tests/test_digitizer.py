@@ -43,7 +43,7 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
 
         # pipeline source with unknown property
         item = SourceItem(category, 'digitizer1:network', [], 'data.intensityTD',
-                          slice(None, None), (0, 1000))
+                          slice(None, None), (0, 1000), 1)
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
         meta[src] = {'train_id': 12346}
@@ -60,11 +60,11 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
             if ch in self._adq_channels:
                 item = SourceItem(category, 'digitizer1:network', [],
                                   f'digitizers.channel_1_{ch}.apd.pulseIntegral',
-                                  slice(None, None), integral_vrange)
+                                  slice(None, None), integral_vrange, 1)
             else:
                 item = SourceItem(category, 'digitizer1:channel_2.output', [],
                                   f'data.peaks',
-                                  slice(None, None), integral_vrange)
+                                  slice(None, None), integral_vrange, 1)
             catalog.clear()
 
             catalog.add_item(item)
