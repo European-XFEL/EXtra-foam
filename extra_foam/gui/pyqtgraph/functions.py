@@ -77,7 +77,8 @@ def siScale(x, minVal=1e-25, allowUnicode=True):
             pref = SI_PREFIXES[m+8]
         else:
             pref = SI_PREFIXES_ASCII[m+8]
-    p = .001**m
+    m1 = -3*m
+    p = 10.**m1
     
     return (p, pref)
 
@@ -388,14 +389,15 @@ def glColor(*args, **kargs):
 
     
 
-def makeArrowPath(headLen=20, tipAngle=20, tailLen=20, tailWidth=3, baseAngle=0):
+def makeArrowPath(headLen=20, headWidth=None, tipAngle=20, tailLen=20, tailWidth=3, baseAngle=0):
     """
     Construct a path outlining an arrow with the given dimensions.
     The arrow points in the -x direction with tip positioned at 0,0.
-    If *tipAngle* is supplied (in degrees), it overrides *headWidth*.
+    If *headWidth* is supplied, it overrides *tipAngle* (in degrees).
     If *tailLen* is None, no tail will be drawn.
     """
-    headWidth = headLen * np.tan(tipAngle * 0.5 * np.pi/180.)
+    if headWidth is None:
+        headWidth = headLen * np.tan(tipAngle * 0.5 * np.pi/180.)
     path = QtGui.QPainterPath()
     path.moveTo(0,0)
     path.lineTo(headLen, -headWidth)
@@ -1261,30 +1263,10 @@ def makeQImage(imgData, alpha=None, copy=True, transpose=True):
         
     if QT_LIB in ['PySide', 'PySide2']:
         ch = ctypes.c_char.from_buffer(imgData, 0)
-        
-        # Bug in PySide + Python 3 causes refcount for image data to be improperly 
-        # incremented, which leads to leaked memory. As a workaround, we manually
-        # reset the reference count after creating the QImage.
-        # See: https://bugreports.qt.io/browse/PYSIDE-140
-        
-        # Get initial reference count (PyObject struct has ob_refcnt as first element)
-        rcount = ctypes.c_long.from_address(id(ch)).value
         img = QtGui.QImage(ch, imgData.shape[1], imgData.shape[0], imgFormat)
-        if sys.version[0] == '3':
-            # Reset refcount only on python 3. Technically this would have no effect
-            # on python 2, but this is a nasty hack, and checking for version here 
-            # helps to mitigate possible unforseen consequences.
-            ctypes.c_long.from_address(id(ch)).value = rcount
     else:
-        #addr = ctypes.addressof(ctypes.c_char.from_buffer(imgData, 0))
         ## PyQt API for QImage changed between 4.9.3 and 4.9.6 (I don't know exactly which version it was)
         ## So we first attempt the 4.9.6 API, then fall back to 4.9.3
-        #addr = ctypes.c_char.from_buffer(imgData, 0)
-        #try:
-            #img = QtGui.QImage(addr, imgData.shape[1], imgData.shape[0], imgFormat)
-        #except TypeError:  
-            #addr = ctypes.addressof(addr)
-            #img = QtGui.QImage(addr, imgData.shape[1], imgData.shape[0], imgFormat)
         try:
             img = QtGui.QImage(imgData.ctypes.data, imgData.shape[1], imgData.shape[0], imgFormat)
         except:
@@ -1297,16 +1279,6 @@ def makeQImage(imgData, alpha=None, copy=True, transpose=True):
                 
     img.data = imgData
     return img
-    #try:
-        #buf = imgData.data
-    #except AttributeError:  ## happens when image data is non-contiguous
-        #buf = imgData.data
-        
-    #profiler()
-    #qimage = QtGui.QImage(buf, imgData.shape[1], imgData.shape[0], imgFormat)
-    #profiler()
-    #qimage.data = imgData
-    #return qimage
 
 def imageToArray(img, copy=False, transpose=True):
     """
@@ -2350,13 +2322,61 @@ def invertQTransform(tr):
             raise Exception("Transform is not invertible.")
         return inv[0]
     
+
+def pseudoScatter(data, spacing=None, shuffle=True, bidir=False, method='exact'):
+    """Return an array of position values needed to make beeswarm or column scatter plots.
+
+    Used for examining the distribution of values in an array.
     
-def pseudoScatter(data, spacing=None, shuffle=True, bidir=False):
-    """
-    Used for examining the distribution of values in a set. Produces scattering as in beeswarm or column scatter plots.
-    
-    Given a list of x-values, construct a set of y-values such that an x,y scatter-plot
+    Given an array of x-values, construct an array of y-values such that an x,y scatter-plot
     will not have overlapping points (it will look similar to a histogram).
+    """
+    if method == 'exact':
+        return _pseudoScatterExact(data, spacing=spacing, shuffle=shuffle, bidir=bidir)
+    elif method == 'histogram':
+        return _pseudoScatterHistogram(data, spacing=spacing, shuffle=shuffle, bidir=bidir)
+
+
+def _pseudoScatterHistogram(data, spacing=None, shuffle=True, bidir=False):
+    """Works by binning points into a histogram and spreading them out to fill the bin.
+
+    Faster method, but can produce blocky results.
+    """
+    inds = np.arange(len(data))
+    if shuffle:
+        np.random.shuffle(inds)
+
+    data = data[inds]
+
+    if spacing is None:
+        spacing = 2.*np.std(data)/len(data)**0.5
+
+    yvals = np.empty(len(data))
+
+    dmin = data.min()
+    dmax = data.max()
+    nbins = int((dmax-dmin) / spacing) + 1
+    bins = np.linspace(dmin, dmax, nbins)
+    dx = bins[1] - bins[0]
+    dbins = ((data - bins[0]) / dx).astype(int)
+    binCounts = {}
+
+    for i,j in enumerate(dbins):
+        c = binCounts.get(j, -1) + 1
+        binCounts[j] = c
+        yvals[i] = c
+
+    if bidir is True:
+        for i in range(nbins):
+            yvals[dbins==i] -= binCounts.get(i, 0) * 0.5
+
+    return yvals[np.argsort(inds)]  ## un-shuffle values before returning
+
+
+def _pseudoScatterExact(data, spacing=None, shuffle=True, bidir=False):
+    """Works by stacking points up one at a time, searching for the lowest position available at each point.
+
+    This method produces nice, smooth results but can be prohibitively slow for large datasets.
     """
     inds = np.arange(len(data))
     if shuffle:
