@@ -23,13 +23,13 @@ jobs:
       env: PYTHON_VERSION="3.7.5" COMPILER="gcc" GCCv="7"
     - stage: full linux
       os: linux
+      env: PYTHON_VERSION="3.7.5" COMPILER="gcc" GCCv="8"
+    - stage: full linux
+      os: linux
       env: PYTHON_VERSION="3.7.5" COMPILER="gcc" GCCv="7"
     - stage: full linux
       os: linux
       env: PYTHON_VERSION="3.7.5" COMPILER="gcc" GCCv="6"
-    - stage: full linux
-      os: linux
-      env: PYTHON_VERSION="3.6.9" COMPILER="gcc" GCCv="7"
     - stage: full linux
       os: linux
       env: PYTHON_VERSION="3.6.9" COMPILER="gcc" GCCv="6"
