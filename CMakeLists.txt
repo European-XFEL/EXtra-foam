@@ -147,6 +147,17 @@ if(BUILD_FOAM_TESTS)
 endif()
 
 # ============
+# Build flags
+# ============
+
+if(CMAKE_CXX_COMPILER_VERSION)
+    set(FOAM_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (version ${CMAKE_CXX_COMPILER_VERSION})")
+else()
+    set(FOAM_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
+endif()
+string(STRIP "${FOAM_COMPILER_STR}" FOAM_COMPILER_STR)
+
+# ============
 # Installation
 # ============
 
