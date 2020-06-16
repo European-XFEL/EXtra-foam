@@ -4,10 +4,6 @@
 # All rights reserved.                                            #
 ###################################################################
 
-if(NOT CMAKE_CXX_FLAGS MATCHES "-march")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-endif()
-
 # Download and unpack googletest at configure time
 configure_file(downloadGTest.cmake.in googletest-download/CMakeLists.txt)
 
@@ -60,6 +56,20 @@ set(_FOAM_UNITTEST_TARGETS_NEED_BLAS
     test_blas)
 
 set(CMAKE_BUILD_RPATH "${CMAKE_PREFIX_PATH}/lib")
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    if(NOT CMAKE_CXX_FLAGS MATCHES "-march")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "7")
+        # solve the linker error with test_tbb.cpp:
+        #     undefined reference to symbol 'clock_gettime@@GLIBC_2.2.5'
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lrt")
+    endif()
+endif()
 
 foreach(pathname IN LISTS _FOAM_UNITTESTS)
     get_filename_component(filename ${pathname} NAME)
