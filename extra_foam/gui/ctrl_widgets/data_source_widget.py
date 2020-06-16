@@ -793,7 +793,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
     def initUI(self):
         """Override."""
         self._monitor_tb.setTabPosition(QTabWidget.TabPosition.South)
-        self._monitor_tb.addTab(self._avail_src_view, "Available sources")
+        self._monitor_tb.addTab(self._avail_src_view, "Source monitor")
         self._monitor_tb.addTab(self._process_mon_view, "Process monitor")
 
         splitter = QSplitter(Qt.Vertical)
