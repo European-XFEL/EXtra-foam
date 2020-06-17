@@ -11,6 +11,7 @@ Contents:
    introduction
    installation
    start
+   trouble_shooting
    config_file
    main_gui
    image_tool

@@ -63,7 +63,5 @@ Install C++ API of **EXtra-foam** only
 .. code-block:: bash
 
     $ mkdir build && cd build
-    $ cmake -DFOAM_USE_TBB=ON -DXTENSOR_USE_TBB=ON
-            -DFOAM_USE_XSIMD=ON -DXTENSOR_USE_XSIMD=ON -march=native
-            -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
+    $ cmake -DFOAM_USE_XSIMD=ON -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
     $ make && make install

@@ -12,6 +12,9 @@ by functionality and a log window.
 Data source
 -----------
 
+Bridge client connections
+"""""""""""""""""""""""""
+
 **EXtra-foam** supports different kind of data flow. Unless you are very familiar with the
 **EXtra-foam** and Karabo, it is recommended to use the scenario 1 depicted in :ref:`data flow`.
 Namely, only one connection should be checked.
@@ -31,34 +34,58 @@ Namely, only one connection should be checked.
 | ``Port``                   | Port number of the TCP connection.                                 |
 +----------------------------+--------------------------------------------------------------------+
 
+Data source tree
+""""""""""""""""
+
 .. image:: images/data_source_tree.png
-   :width: 640
 
-In the data source tree, one can select which source items (a source item is defined by both the
-*Source name* and *Property*) are required in the analysis. The available sources are monitored
-and displayed in the *Available sources* widget below. However, for properties, you will need some
-instrument-domain knowledge. Users are not allowed to add/remove source items to/from the tree in
-the GUI. However, they can be configured via :ref:`config file`. Nevertheless, one can still
-make use of "User-defined" source to define a control data source item dynamically.
+In the data source tree, one can select which data source items (the ID of a data source item is
+defined by both the *Source name* and the *Property*) are required in the analysis. Data source
+items can be configured via :ref:`config file`. Users are not allowed to add/delete data source
+items in the GUI, i.e. add or delete rows in the tree. Alternatively, users can modify an existing
+data source item *when it is checked*.
 
-For each data source item, one can also set up the following attribute when applicable.
+When a data source item is checked and is matched (found together with other data source items
+with the same train ID), the indicator on the first column of the tree will turn green. The indicator
+will turn red if the data source item is not able to be matched for a while or it is unchecked.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
+| ``Type``                   | Pipeline data or control data.                                     |
++----------------------------+--------------------------------------------------------------------+
+| ``Source name``            | Karabo device or output channel name                               |
++----------------------------+--------------------------------------------------------------------+
+| ``Property``               | Property of the given device or output channel                     |
++----------------------------+--------------------------------------------------------------------+
 | ``Pulse slicer``           | The input will be used to construct a *slice* object in Python     |
 |                            | which is used to select the specified pulse pattern in a train     |
 |                            | from a pipeline data.                                              |
 +----------------------------+--------------------------------------------------------------------+
 | ``Value range``            | Value range filter of the corresponding source. When it applies to |
-|                            | pipeline data, it will apply data filtering pulse-by-pulse. When   |
-|                            | it applies to control data, it will then apply data filtering      |
+|                            | a pipeline data, it will apply data filtering pulse-by-pulse. When |
+|                            | it applies to a control data, it will then apply data filtering    |
 |                            | train-by-train. *Not all pipeline data support it*                 |
 +----------------------------+--------------------------------------------------------------------+
 
-.. Note::
 
-    One can modify a data source item only when it is checked.
+Source monitor
+""""""""""""""
+
+.. image:: images/source_monitor.png
+
+Source monitor is used to display sources names (Karabo device and output channel) received by the Karabo
+bridge client. Different from the (match/unmatched) indicator in the data source tree, it also shows
+sources which do not exist in the data source tree. When a modular source (e.g. DSSC data) is selected
+and matched, it displays individual names of the received modules. However, the source monitor does
+not show property names for speed, as a Karabo device can have dozens of control data. The property
+names of a Karabo device or an output channel can be found in the Karabo GUI when you are performing
+online analysis in the hutch, or in the :ref:`File streamer` when you are streaming data from files.
+
+.. note::
+
+    The Karabo bridge client will only start to receive data when the green `Start bridge` button is
+    checked and the data source item of the main detector is selected.
 
 
 General analysis
