@@ -26,6 +26,7 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..misc_widgets import FColor
 from ..mediator import Mediator
 from ...database import MonProxy
+from ...database import Metadata as mt
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes
@@ -286,12 +287,7 @@ class DataSourceItemModel(QAbstractItemModel):
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
-                old_src_name = item.name()
-                old_ppt = item.ppt()
                 item.setData(value, index.column())
-                # remove registered item with the old device ID and property
-                self.source_item_toggled_sgn.emit(
-                    False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
             ctg = item.parent().name()
@@ -831,6 +827,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
         except ValueError as e:
             logger.error(e)
             return False
+
         return True
 
     def loadMetaData(self):
