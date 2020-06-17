@@ -1,5 +1,5 @@
 from ..Point import Point
-from ..Qt import QtCore
+from ..Qt import QtCore, QtGui
 import weakref
 from .. import ptime as ptime
 

@@ -1,6 +1,7 @@
 from ..Qt import QtGui, QtCore
 from . import ArrowItem
 import numpy as np
+from ..Point import Point
 import weakref
 from .GraphicsObject import GraphicsObject
 

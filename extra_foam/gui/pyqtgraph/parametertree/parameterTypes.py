@@ -8,7 +8,7 @@ from ..colormap import ColorMap
 #from ..widgets.GradientWidget import GradientWidget ## creates import loop
 from .. import pixmaps as pixmaps
 from .. import functions as fn
-import os
+import os, sys
 from ..pgcollections import OrderedDict
 
 class WidgetParameterItem(ParameterItem):
@@ -612,7 +612,10 @@ class ActionParameterItem(ParameterItem):
         self.layout = QtGui.QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layoutWidget.setLayout(self.layout)
-        self.button = QtGui.QPushButton(param.name())
+        title = param.opts.get('title', None)
+        if title is None:
+            title = param.name()
+        self.button = QtGui.QPushButton(title)
         #self.layout.addSpacing(100)
         self.layout.addWidget(self.button)
         self.layout.addStretch()
