@@ -18,6 +18,7 @@ Dependencies
 In your Anaconda_ environment, run the following commands:
 
 .. code-block:: bash
+
     # install gcc-6.1
     $ conda install -c omgarcia gcc-6
     $ conda install -c anaconda libstdcxx-ng

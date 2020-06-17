@@ -169,10 +169,10 @@ class MetaProxy(_AbstractProxy):
         datetime_str = datetime.fromtimestamp(timestamp[0]).strftime(
             "%m/%d/%Y, %H:%M:%S")
 
-        cfg = self._read_configuration()
+        cfg = self._read_analysis_setup()
         cfg[Metadata.META_PROC]["timestamp"] = datetime_str
         cfg[Metadata.META_PROC]["description"] = ""
-        self._write_configuration(cfg, None, name)
+        self._write_analysis_setup(cfg, None, name)
         return name, datetime_str, ""
 
     @redis_except_handler
@@ -181,7 +181,7 @@ class MetaProxy(_AbstractProxy):
 
         :param str name: name of the snapshot.
         """
-        self._write_configuration(self._read_configuration(name), name, None)
+        self._write_analysis_setup(self._read_analysis_setup(name), name, None)
 
     @redis_except_handler
     def copy_snapshot(self, old, new):
@@ -190,7 +190,7 @@ class MetaProxy(_AbstractProxy):
         :param str old: name of the old snapshot.
         :param str new: name of the new snapshot.
         """
-        self._write_configuration(self._read_configuration(old), old, new)
+        self._write_analysis_setup(self._read_analysis_setup(old), old, new)
 
     @redis_except_handler
     def remove_snapshot(self, name):
@@ -207,8 +207,8 @@ class MetaProxy(_AbstractProxy):
     def rename_snapshot(self, old, new):
         """Rename a metadata snapshot.
 
-        :param str old: old configuration name.
-        :param str new: new configuration name.
+        :param str old: old analysis setup name.
+        :param str new: new analysis setup name.
         """
         for k in Metadata.processor_keys:
             try:
@@ -216,10 +216,10 @@ class MetaProxy(_AbstractProxy):
             except redis.ResponseError:
                 pass
 
-    def _read_configuration(self, name=None):
-        """Read a configuration from Redis.
+    def _read_analysis_setup(self, name=None):
+        """Read a analysis setup from Redis.
 
-        :param str name: configuration name.
+        :param str name: analysis setup name.
         """
         cfg = dict()
         for k in Metadata.processor_keys:
@@ -228,12 +228,12 @@ class MetaProxy(_AbstractProxy):
             cfg[k] = self.hget_all(k)
         return cfg
 
-    def _write_configuration(self, cfg, old, new):
-        """Write a configuration into Redis.
+    def _write_analysis_setup(self, cfg, old, new):
+        """Write a analysis setup into Redis.
 
-        :param dict cfg: configuration.
-        :param str old: old configuration name.
-        :param str new: new configuration name.
+        :param dict cfg: analysis setup.
+        :param str old: old analysis setup name.
+        :param str new: new analysis setup name.
         """
         invalid_keys = []
         for k, v in cfg.items():
@@ -257,42 +257,42 @@ class MetaProxy(_AbstractProxy):
 
         if invalid_keys:
             self.warning(
-                f"Invalid keys when writing configuration: {invalid_keys}")
+                f"Invalid keys when writing analysis setup: {invalid_keys}")
 
-    def dump_configurations(self, lst):
-        """Dump all GUI configurations into file.
+    def dump_all_setups(self, lst):
+        """Dump all listed analysis setups into file.
 
-        :param list lst: a list of (name, description) of configurations in the
-            Configurator widget.
+        :param list lst: a list of (name, description) of analysis setup in the
+            AnalysisSetupManager widget.
         """
         filepath = config.setup_file
         with open(filepath, 'w') as fp:
-            configurations = OrderedDict()
+            setups = OrderedDict()
             for name, description in lst:
-                configurations[name] = self._read_configuration(name)
+                setups[name] = self._read_analysis_setup(name)
                 meta_key = f"{Metadata.META_PROC}:{name}"
-                configurations[name][meta_key]["description"] = description
+                setups[name][meta_key]["description"] = description
 
-            if configurations:
+            if setups:
                 try:
-                    yaml.dump(configurations, fp, Dumper=yaml.Dumper)
+                    yaml.dump(setups, fp, Dumper=yaml.Dumper)
                 except (ScannerError, ParserError) as e:
                     self.error(f"Invalid setup file: {filepath}\n{repr(e)}")
 
-    def load_configurations(self):
-        """Load all GUI configurations from file."""
+    def load_all_setups(self):
+        """Load analysis setups from file."""
         filepath = config.setup_file
         lst = []
         if osp.isfile(filepath):
             with open(filepath, 'r') as fp:
                 try:
-                    configurations = yaml.load(fp, Loader=yaml.Loader)
-                    for name, cfg in configurations.items():
+                    setups = yaml.load(fp, Loader=yaml.Loader)
+                    for name, cfg in setups.items():
                         meta_key = f"{Metadata.META_PROC}:{name}"
                         try:
                             timestamp = cfg[meta_key]["timestamp"]
                         except KeyError:
-                            self.error(f"Invalid configuration: {name}! "
+                            self.error(f"Invalid analysis setup: {name}! "
                                        f"timestamp is missing")
                             continue
 
@@ -302,7 +302,7 @@ class MetaProxy(_AbstractProxy):
                             description = ""
 
                         lst.append((name, timestamp, description))
-                        self._write_configuration(cfg, name, name)
+                        self._write_analysis_setup(cfg, name, name)
 
                 except (ScannerError, ParserError) as e:
                     self.error(f"Invalid setup file: {filepath}\n{repr(e)}")

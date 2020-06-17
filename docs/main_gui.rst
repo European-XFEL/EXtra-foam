@@ -148,49 +148,56 @@ Statistics analysis
 See :ref:`statistics analysis`
 
 
-Configurator
-------------
+Analysis setup manager
+----------------------
 
-.. image:: images/configurator.png
-   :width: 640
+.. image:: images/analysis_setup_manager.png
 
-*Configurator* is a new feature introduced in version 0.8.1, it allows users to save and load
+
+*Analysis setup manager* is a new feature introduced in version 0.8.1, it allows users to save and load
 different analysis setups (a snapshot in the Redis database) conveniently. To apply a setup,
-simply **double-click** the name of the snapshot listed in the table. Please distinguish it
+simply **double-click** the name of the setup listed in the table. Please distinguish it
 from :ref:`config file`, which is mainly used for data source management. Due to the historical
-reason, some setups in the :ref:`config file` can also be saved and loaded via the configurator,
+reason, some setups in the :ref:`config file` can also be saved and loaded via the *Analysis setup manager*,
 like ``photon energy``, ``sample distance``, etc. :ref:`config file` defines the default setups
-which will be overwritten when a setup snapshot is applied. The default setups can be recovered by
-clicking the ``Reset to default`` button.
+which will be overwritten when a setup in the *Analysis setup manager* is applied. The default setups
+can be recovered by clicking the ``Reset to default`` button.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Take snapshot``          | Take a snapshot of the current setup and store in ``Last saved``.  |
+| ``Take snapshot``          | Take a snapshot of the current parameters and store them in        |
+|                            | ``Last saved``.                                                    |
 +----------------------------+--------------------------------------------------------------------+
-| ``Reset to default``       | Reset the current setup to default. ``Last saved`` will not be     |
-|                            | affected.                                                          |
+| ``Reset to default``       | Reset the current parameters to default. ``Last saved`` will not   |
+|                            | be affected.                                                       |
 +----------------------------+--------------------------------------------------------------------+
-| ``Save setups in file``    | Save all the snapshots listed in the table to file. All the        |
-|                            | snapshots in the setup file will be lost.                          |
+| ``Save all to file``       | Save all the setups listed in the table to file. The data          |
+|                            | in the setup file will be overwritten.                             |
 +----------------------------+--------------------------------------------------------------------+
-| ``Load setups from file``  | Load all the snapshots from file. In case of name conflict, the    |
-|                            | listed snapshot in the table will be overwritten.                  |
+| ``Load from file``         | Load setups from file. In case of name conflict, the               |
+|                            | listed setups in the table will be overwritten.                    |
 +----------------------------+--------------------------------------------------------------------+
 
-When right-clicking the name of a snapshot, a menu will show up:
+When right-clicking the name of a snapshot, a context menu will show up:
+
+.. image:: images/analysis_setup_manager_context_menu.png
+
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Copy snapshot``          | Make a copy of the snapshot.                                       |
+| ``Take snapshot``          | Take a snapshot of the parameters and store them in both the       |
+|                            | ``Last saved`` and the selected analysis setups.                   |
 +----------------------------+--------------------------------------------------------------------+
-| ``Delete snapshot``        | Delete the snapshot.                                               |
+| ``Copy``                   | Make a copy of the selected analysis setup.                        |
 +----------------------------+--------------------------------------------------------------------+
-| ``Rename snapshot``        | Rename the snapshot.                                               |
+| ``Delete``                 | Delete the selected analysis setup.                                |
++----------------------------+--------------------------------------------------------------------+
+| ``Rename``                 | Rename the selected analysis setup.                                |
 +----------------------------+--------------------------------------------------------------------+
 
 .. warning::
 
-    *Configurator* is still in the testing phase and we are collecting feedbacks from users.
+    *Analysis setup manager* is still in the testing phase and we are collecting feedbacks from users.
     It should be noted that there is no backup recovery mechanism for now.

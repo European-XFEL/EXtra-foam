@@ -8,10 +8,10 @@ from extra_foam.database.metadata import Metadata, MetaMetadata
 from extra_foam.database import MetaProxy, MonProxy
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import start_redis_server
-from extra_foam.gui.misc_widgets.configurator import Configurator
+from extra_foam.gui.misc_widgets.analysis_setup_manager import AnalysisSetupManager
 
-LAST_SAVED = Configurator.LAST_SAVED
-DEFAULT = Configurator.DEFAULT
+LAST_SAVED = AnalysisSetupManager.LAST_SAVED
+DEFAULT = AnalysisSetupManager.DEFAULT
 
 _tmp_cfg_dir = tempfile.mkdtemp()
 
@@ -185,14 +185,14 @@ class TestDataProxy(unittest.TestCase):
         self._meta.hmset(f"{Metadata.IMAGE_PROC}:efg", image_proc_data)
 
         try:
-            self._meta.dump_configurations([("Last saved", ''), ("abc", "abc setup"), ("efg", "efg setup")])
+            self._meta.dump_all_setups([("Last saved", ''), ("abc", "abc setup"), ("efg", "efg setup")])
 
             self._meta.remove_snapshot("Last saved")
             self._meta.remove_snapshot("abc")
             self._meta.remove_snapshot("efg")
             self.assertDictEqual({}, self._meta.hget_all(f"{Metadata.IMAGE_PROC}:Last saved"))
 
-            lst = self._meta.load_configurations()
+            lst = self._meta.load_all_setups()
 
             self._meta.error.assert_called_once()
             self.assertListEqual([('Last saved', '2020-03-03 03:03:03', ''),
