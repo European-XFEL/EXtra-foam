@@ -3,7 +3,11 @@ from ...Qt import QtCore, QtGui, QT_LIB
 from ...python2_3 import asUnicode
 from ...WidgetGroup import WidgetGroup
 
-if QT_LIB == 'PyQt5':
+if QT_LIB == 'PyQt4':
+    from .axisCtrlTemplate_pyqt import Ui_Form as AxisCtrlTemplate
+elif QT_LIB == 'PySide':
+    from .axisCtrlTemplate_pyside import Ui_Form as AxisCtrlTemplate
+elif QT_LIB == 'PyQt5':
     from .axisCtrlTemplate_pyqt5 import Ui_Form as AxisCtrlTemplate
 elif QT_LIB == 'PySide2':
     from .axisCtrlTemplate_pyside2 import Ui_Form as AxisCtrlTemplate
@@ -67,14 +71,14 @@ class ViewBoxMenu(QtGui.QMenu):
         self.leftMenu = QtGui.QMenu("Mouse Mode")
         group = QtGui.QActionGroup(self)
         
-        # FIXME: patch in EXtra-foam
+        # FIXME: EXtra-foam patch start
         pan = QtGui.QAction("Pan", self.leftMenu)
         zoom = QtGui.QAction("Zoom", self.leftMenu)
         self.leftMenu.addAction(pan)
         self.leftMenu.addAction(zoom)
         pan.triggered.connect(self.setPanMode)
         zoom.triggered.connect(self.setZoomMode)
-        # FIXME
+        # FIXME: EXtra-foam patch end
 
         pan.setCheckable(True)
         zoom.setCheckable(True)
@@ -216,13 +220,13 @@ class ViewBoxMenu(QtGui.QMenu):
         act = self.sender()
         self.exportMethods[str(act.text())]()
 
-    # FIXME: patch in EXtra-foam
+    # FIXME: EXtra-foam patch start
     def setPanMode(self):
         self.view().setLeftButtonAction('pan')
         
     def setZoomMode(self):
         self.view().setLeftButtonAction('rect')
-    # FIXME
+    # FIXME: EXtra-foam patch end
 
     def setViewList(self, views):
         names = ['']
