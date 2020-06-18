@@ -674,25 +674,20 @@ class DataSourceWidget(_AbstractCtrlWidget):
     class AvailStateDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
             super().__init__(parent)
-            self._brush1 = FColor.mkBrush('g')
-            self._brush2 = FColor.mkBrush('r')
+            self._brush = FColor.mkBrush('g')
 
         def paint(self, painter, option, index):
             """Override."""
             v = index.data()
-            if isinstance(v, bool):
-                painter.setPen(Qt.NoPen)
-
-                if v:
-                    painter.setBrush(self._brush1)
-                else:
-                    painter.setBrush(self._brush2)
-
-                rect = option.rect
-                h = rect.height()
-                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            painter.setPen(Qt.NoPen)
+            if v:
+                painter.setBrush(self._brush)
             else:
-                super().paint(painter, option, index)
+                painter.setBrush(Qt.NoBrush)
+
+            rect = option.rect
+            h = rect.height()
+            painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
 
     class DataTypeDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
