@@ -291,9 +291,9 @@ class _Config(dict):
         # (for example, correlation, heatmap, etc.)
         "GUI_PLOT_WITH_STATE_UPDATE_TIMER": 1000,
         # initial (width, height) of the main GUI window
-        "GUI_MAIN_GUI_SIZE": (1680, 1080),
+        "GUI_MAIN_GUI_SIZE": (1720, 1080),
         # initial (width, height) of the image tool window
-        "GUI_IMAGE_TOOL_SIZE": (1680, 1080),
+        "GUI_IMAGE_TOOL_SIZE": (1720, 1080),
         # initial (width, height) of a large plot window
         "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
         # color map in contour plots, valid options are: thermal, flame,
