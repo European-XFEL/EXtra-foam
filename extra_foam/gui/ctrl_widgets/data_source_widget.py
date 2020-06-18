@@ -837,8 +837,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
     def loadMetaData(self):
         """Override."""
-        selected = self._meta.execute_command(
-            'SMEMBERS', mt.DATA_SOURCE_ITEMS)
+        cfg = self._meta.hget_all(mt.DATA_SOURCE_ITEMS)
 
     def updateAvailableSources(self):
         ret = self._mon.get_available_sources()

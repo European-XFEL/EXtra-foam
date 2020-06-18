@@ -194,6 +194,8 @@ class MetaProxy(_AbstractProxy):
         pipe = self.pipeline()
         for k in Metadata.processor_keys:
             pipe.execute_command("DEL", f"{k}:{name}")
+        item_key = Metadata.DATA_SOURCE_ITEMS
+        pipe.execute_command("DEL", f"{item_key}:{name}")
         pipe.execute()
 
     @redis_except_handler
@@ -204,10 +206,19 @@ class MetaProxy(_AbstractProxy):
         :param str new: new analysis setup name.
         """
         for k in Metadata.processor_keys:
+            # if a 'key' does not exist in "RENAME", redis raises
+            # ResponseError. In practice, the 'key' could not be there due to
+            # various reason, e.g., a version update.
             try:
                 self._db.execute_command("RENAME", f"{k}:{old}", f"{k}:{new}")
             except redis.ResponseError:
                 pass
+        item_key = Metadata.DATA_SOURCE_ITEMS
+        try:
+            self._db.execute_command(
+                "RENAME", f"{item_key}:{old}", f"{item_key}:{new}")
+        except redis.ResponseError:
+            pass
 
     def _read_analysis_setup(self, name=None):
         """Read a analysis setup from Redis.
@@ -215,11 +226,10 @@ class MetaProxy(_AbstractProxy):
         :param str name: analysis setup name.
         """
         cfg = dict()
-        for k in Metadata.processor_keys:
+        for k in (*Metadata.processor_keys, Metadata.DATA_SOURCE_ITEMS):
             if name is not None:
                 k = f"{k}:{name}"
             cfg[k] = self.hget_all(k)
-
         return cfg
 
     def _write_analysis_setup(self, cfg, old, new):
@@ -241,7 +251,8 @@ class MetaProxy(_AbstractProxy):
             else:
                 k_new = k_root
 
-            if k_root in Metadata.processor_keys:
+            if k_root in Metadata.processor_keys or \
+                    k_root == Metadata.DATA_SOURCE_ITEMS:
                 if v:
                     self._db.hset(k_new, mapping=v)
                 else:
