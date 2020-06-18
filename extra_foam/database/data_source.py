@@ -89,7 +89,11 @@ class SourceCatalog(abc.Collection):
         return self._categories.get(ctg, OrderedSet())
 
     def add_item(self, *args, **kwargs):
-        """Add a source item to the catalog."""
+        """Add a source item to the catalog.
+
+        If the src already exists, the new item will overwrite
+        the old one.
+        """
         if len(args) == 1:
             item = args[0]  # SourceItem instance
         else:
