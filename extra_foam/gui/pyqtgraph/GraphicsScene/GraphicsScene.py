@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
-import weakref
 import warnings
 
-from ..Qt import QtCore, QtGui
-from ..Point import Point
-from .. import functions as fn
-from .. import ptime as ptime
 from .mouseEvents import *
 from .. import debug as debug
 
@@ -85,9 +80,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
     sigPrepareForPaint = QtCore.Signal()  ## emitted immediately before the scene is about to be rendered
     
     _addressCache = weakref.WeakValueDictionary()
-    
-    ExportDirectory = None
-    
+
     @classmethod
     def registerObject(cls, obj):
         warnings.warn(
@@ -99,8 +92,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         QtGui.QGraphicsScene.__init__(self, parent)
         self.setClickRadius(clickRadius)
         self.setMoveDistance(moveDistance)
-        self.exportDirectory = None
-        
+
         self.clickEvents = []
         self.dragButtons = []
         self.mouseGrabber = None
@@ -110,11 +102,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.lastHoverEvent = None
         self.minDragTime = 0.5  # drags shorter than 0.5 sec are interpreted as clicks
         
-        self.contextMenu = [QtGui.QAction("Export...", self)]
-        self.contextMenu[0].triggered.connect(self.showExportDialog)
-        
-        self.exportDialog = None
-        
+        self.contextMenu = []
+
     def render(self, *args):
         self.prepareForPaint()
         return QtGui.QGraphicsScene.render(self, *args)
@@ -512,12 +501,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def getContextMenus(self, event):
         self.contextMenuItem = event.acceptedItem
         return self.contextMenu
-
-    def showExportDialog(self):
-        if self.exportDialog is None:
-            from . import exportDialog
-            self.exportDialog = exportDialog.ExportDialog(self)
-        self.exportDialog.show(self.contextMenuItem)
 
     @staticmethod
     def translateGraphicsItem(item):
