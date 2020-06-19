@@ -910,7 +910,7 @@ class _SpecialAnalysisBase(QMainWindow):
     @pyqtSlot()
     def _onAutoLevelST(self):
         for view in self._image_views_st:
-            view.updateImageWithAutoLevel()
+            view.updateImage(auto_levels=True)
 
     @pyqtSlot()
     def _onSelectDarkRunDirectoryST(self):

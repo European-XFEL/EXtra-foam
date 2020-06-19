@@ -208,15 +208,13 @@ from .graphicsItems.GraphicsObject import *
 from .graphicsItems.PlotItem import * 
 from .graphicsItems.ROI import *
 from .graphicsItems.InfiniteLine import *
-from .graphicsItems.HistogramLUTItem import * 
-from .graphicsItems.GridItem import * 
+from .graphicsItems.GridItem import *
 from .graphicsItems.GradientLegend import * 
 from .graphicsItems.GraphicsItem import * 
 from .graphicsItems.BarGraphItem import * 
 from .graphicsItems.ViewBox import * 
 from .graphicsItems.ArrowItem import * 
-from .graphicsItems.ImageItem import * 
-from .graphicsItems.AxisItem import * 
+from .graphicsItems.AxisItem import *
 from .graphicsItems.LabelItem import *
 from .graphicsItems.CurvePoint import * 
 from .graphicsItems.GraphicsWidgetAnchor import * 

@@ -7,29 +7,480 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections.abc import Callable
+
 import numpy as np
 
-from PyQt5.QtGui import QColor, QImage, QPainter, QPainterPath, QPicture
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QPoint, QRectF, Qt
+from PyQt5.QtGui import (
+    QColor, QImage, QPainter, QPainterPath, QPicture, QTransform
+)
+from PyQt5.QtCore import (
+    pyqtSignal, pyqtSlot, QPoint, QPointF, QRectF, Qt
+)
+from PyQt5.QtWidgets import QGraphicsGridLayout
 
 from .. import pyqtgraph as pg
+from ..pyqtgraph import Point
+from ..pyqtgraph import functions as fn
 
 from ..misc_widgets import FColor
+from ...algorithms import quick_min_max
 from ...config import config, MaskState
 from ...ipc import ImageMaskPub
 
 
-class ImageItem(pg.ImageItem):
-    """ImageItem with mouseHover event."""
+class HistogramLUTItem(pg.GraphicsWidget):
+    """GraphicsWidget for adjusting the display of an image.
+
+    Implemented based on pyqtgraph.HistogramLUTItem.
+    """
+
+    lut_changed_sgn = pyqtSignal(object)
+
+    def __init__(self, image_item):
+        super().__init__()
+        self._lut = None
+
+        gradient = pg.GradientEditorItem()
+        gradient.setOrientation('right')
+        gradient.loadPreset('grey')
+        self._gradient = gradient
+        self._gradient.show()
+
+        lri = pg.LinearRegionItem([0, 1], 'horizontal', swapMode='block')
+        lri.setZValue(1000)
+        lri.lines[0].addMarker('<|', 0.5)
+        lri.lines[1].addMarker('|>', 0.5)
+        self._lri = lri
+
+        self._hist = pg.PlotCurveItem(pen=(0, 0, 0, 255))
+        self._hist.rotate(90)
+
+        vb = pg.ViewBox(parent=self)
+        vb.setMaximumWidth(152)
+        vb.setMinimumWidth(45)
+        vb.setMouseEnabled(x=False, y=True)
+        vb.addItem(self._hist)
+        vb.addItem(self._lri)
+        vb.enableAutoRange(pg.ViewBox.XYAxes)
+        self._vb = vb
+
+        self._axis = pg.AxisItem(
+            'left', linkView=self._vb, maxTickLength=-10, parent=self)
+
+        self.initUI()
+        self.initConnections()
+
+        image_item.image_changed_sgn.connect(self.onImageChanged)
+        # send function pointer, not the result
+        image_item.setLookupTable(self.getLookupTable)
+        self._image_item = image_item
+        # If image_item._image is None, the following line does not initialize
+        # image_item._levels
+        self.onImageChanged(auto_levels=True)
+        # synchronize levels
+        image_item.setLevels(self.getLevels())
+
+    def initUI(self):
+        layout = QGraphicsGridLayout()
+        layout.setContentsMargins(1, 1, 1, 1)
+        layout.setSpacing(0)
+        layout.addItem(self._axis, 0, 0)
+        layout.addItem(self._vb, 0, 1)
+        layout.addItem(self._gradient, 0, 2)
+        self.setLayout(layout)
+
+    def initConnections(self):
+        self._lri.sigRegionChanged.connect(self.regionChanging)
+        self._lri.sigRegionChangeFinished.connect(self.regionChanged)
+
+        self._gradient.sigGradientChanged.connect(self.gradientChanged)
+
+        self._vb.sigRangeChanged.connect(self.update)
+
+    def paint(self, p, *args):
+        """Override."""
+        pen = self._lri.lines[0].pen
+        rgn = self.getLevels()
+        p1 = self._vb.mapFromViewToItem(
+            self, Point(self._vb.viewRect().center().x(), rgn[0]))
+        p2 = self._vb.mapFromViewToItem(
+            self, Point(self._vb.viewRect().center().x(), rgn[1]))
+
+        rect = self._gradient.mapRectToParent(self._gradient.gradRect.rect())
+        p.setRenderHint(QPainter.Antialiasing)
+
+        for pen in [fn.mkPen((0, 0, 0, 100), width=3), pen]:
+            p.setPen(pen)
+            p.drawLine(p1 + Point(0, 5), rect.bottomLeft())
+            p.drawLine(p2 - Point(0, 5), rect.topLeft())
+            p.drawLine(rect.topLeft(), rect.topRight())
+            p.drawLine(rect.bottomLeft(), rect.bottomRight())
+
+    def gradientChanged(self):
+        if self._gradient.isLookupTrivial():
+            # lambda x: x.astype(np.uint8))
+            self._image_item.setLookupTable(None)
+        else:
+            # send function pointer, not the result
+            self._image_item.setLookupTable(self.getLookupTable)
+
+        self._lut = None
+        self.lut_changed_sgn.emit(self)
+
+    def getLookupTable(self, img=None, n=None, alpha=None):
+        """Return the look-up table."""
+        if self._lut is None:
+            if n is None:
+                n = 256 if img.dtype == np.uint8 else 512
+            self._lut = self._gradient.getLookupTable(n, alpha=alpha)
+        return self._lut
+
+    def regionChanging(self):
+        """One line of the region is being dragged."""
+        self._image_item.setLevels(self.getLevels())
+        self.update()
+
+    def regionChanged(self):
+        """Line dragging has finished."""
+        self._image_item.setLevels(self.getLevels())
+
+    def onImageChanged(self, auto_levels=False):
+        hist, bin_centers = self._image_item.histogram()
+
+        if hist is None:
+            self._hist.setData([], [])
+            return
+
+        self._hist.setData(bin_centers, hist)
+        if auto_levels:
+            self._lri.setRegion((bin_centers[0], bin_centers[-1]))
+        else:
+            # synchronize levels if ImageItem updated its image with
+            # auto_levels = True
+            self._lri.setRegion(self._image_item.getLevels())
+
+    def setColorMap(self, cm):
+        self._gradient.setColorMap(cm)
+
+    def getLevels(self):
+        return self._lri.getRegion()
+
+    def setLevels(self, levels):
+        """Called by HistogramLUTItem."""
+        self._lri.setRegion(levels)
+
+    def saveState(self):
+        return {
+            'gradient': self._gradient.saveState(),
+            'levels': self.getLevels(),
+        }
+
+    def restoreState(self, state):
+        self._gradient.restoreState(state['gradient'])
+        self.setLevels(*state['levels'])
+
+
+class ImageItem(pg.GraphicsObject):
+    """GraphicsObject displaying a 2D image.
+
+    Implemented based on pyqtgraph.ImageItem.
+    """
+
+    image_changed_sgn = pyqtSignal()
+
     mouse_moved_sgn = pyqtSignal(int, int, float)  # (x, y, value)
     draw_started_sgn = pyqtSignal(int, int)  # (x, y)
     draw_region_changed_sgn = pyqtSignal(int, int)  # (x, y)
     draw_finished_sgn = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, image=None):
+        super().__init__()
+
+        self._image = None   # original image data
+        self._qimage = None  # rendered image for display
+
+        self._levels = None  # [min, max]
+        self._auto_level_quantile = 0.99
+        self._lut = None
+        self._ds_rate = (1., 1.)  # down-sample rates
+
+        # In some cases, a modified lookup table is used to handle both
+        # rescaling and LUT more efficiently
+        self._fast_lut = None
+
+        self.setImage(image, auto_levels=True)
 
         self.drawing = False
+
+    def width(self):
+        if self._image is None:
+            return None
+        return self._image.shape[1]
+
+    def height(self):
+        if self._image is None:
+            return None
+        return self._image.shape[0]
+
+    def boundingRect(self):
+        if self._image is None:
+            return QRectF(0., 0., 0., 0.)
+        return QRectF(0., 0., float(self.width()), float(self.height()))
+
+    def setLevels(self, levels):
+        """Set image colormap scaling levels.
+
+        :param tuple levels: (min, max).
+        """
+        if self._levels != levels:
+            self._levels = levels
+            self._fast_lut = None
+            self.setImage(auto_levels=False)
+
+    def getLevels(self):
+        return self._levels
+
+    def setLookupTable(self, lut, update=True):
+        if lut is not self._lut:
+            self._lut = lut
+            self._fast_lut = None
+            if update:
+                self.setImage(auto_levels=False)
+
+    def clear(self):
+        self._image = None
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+        self.update()
+
+    def setImage(self, image=None, auto_levels=False):
+        image_changed = False
+        if image is None:
+            if self._image is None:
+                return
+        else:
+            image_changed = True
+            shape_changed = \
+                self._image is None or image.shape != self._image.shape
+
+            image = image.view(np.ndarray)
+
+            if self._image is None or image.dtype != self._image.dtype:
+                self._fast_lut = None
+
+            self._image = image
+
+            if shape_changed:
+                self.prepareGeometryChange()
+                self.informViewBoundsChanged()
+
+        if auto_levels:
+            self._levels = quick_min_max(
+                self._image, q=self._auto_level_quantile)
+
+        self._qimage = None
+        self.update()
+
+        if image_changed:
+            self.image_changed_sgn.emit()
+
+    def dataTransform(self):
+        """Return data transform.
+
+        The transform maps from this image's input array to its local
+        coordinate system.
+
+        This transform corrects for the transposition that occurs when
+        image data is interpreted in row-major order.
+        """
+        # Might eventually need to account for downsampling / clipping here
+        tr = QTransform()
+        # transpose
+        tr.scale(1, -1)
+        tr.rotate(-90)
+        return tr
+
+    def inverseDataTransform(self):
+        """Return inverse data transform.
+
+        The transform maps from this image's local coordinate system to
+        its input array.
+        """
+        tr = QTransform()
+        # transpose
+        tr.scale(1, -1)
+        tr.rotate(-90)
+        return tr
+
+    def mapToData(self, obj):
+        tr = self.inverseDataTransform()
+        return tr.map(obj)
+
+    def mapFromData(self, obj):
+        tr = self.dataTransform()
+        return tr.map(obj)
+
+    def render(self):
+        """Convert data to QImage for displaying."""
+        if self._image is None or self._image.size == 0:
+            return
+
+        # Request a lookup table
+        if isinstance(self._lut, Callable):
+            lut = self._lut(self._image)
+        else:
+            lut = self._lut
+
+        # Downsample
+
+        # reduce dimensions of image based on screen resolution
+        o = self.mapToDevice(QPointF(0, 0))
+        x = self.mapToDevice(QPointF(1, 0))
+        y = self.mapToDevice(QPointF(0, 1))
+
+        # Check if graphics view is too small to render anything
+        if o is None or x is None or y is None:
+            return
+
+        w = Point(x-o).length()
+        h = Point(y-o).length()
+        if w == 0 or h == 0:
+            self._qimage = None
+            return
+
+        xds = max(1, int(1.0 / w))
+        yds = max(1, int(1.0 / h))
+        # TODO: replace fn.downsample
+        image = fn.downsample(self._image, xds, axis=1)
+        image = fn.downsample(image, yds, axis=0)
+        self._ds_rate = (xds, yds)
+
+        # Check if downsampling reduced the image size to zero due to inf values.
+        if image.size == 0:
+            return
+
+        # if the image data is a small int, then we can combine levels + lut
+        # into a single lut for better performance
+        levels = self._levels
+        if levels is not None and image.dtype in (np.ubyte, np.uint16):
+            if self._fast_lut is None:
+                eflsize = 2**(image.itemsize*8)
+                ind = np.arange(eflsize)
+                minlev, maxlev = levels
+                levdiff = maxlev - minlev
+                # avoid division by 0
+                levdiff = 1 if levdiff == 0 else levdiff
+                if lut is None:
+                    efflut = fn.rescaleData(
+                        ind, scale=255./levdiff, offset=minlev, dtype=np.ubyte)
+                else:
+                    lutdtype = np.min_scalar_type(lut.shape[0]-1)
+                    efflut = fn.rescaleData(
+                        ind, scale=(lut.shape[0]-1)/levdiff,
+                        offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0]-1))
+                    efflut = lut[efflut]
+
+                self._fast_lut = efflut
+            lut = self._fast_lut
+            levels = None
+
+        # TODO: replace fn.makeARGB and fn.makeQImage
+        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels)
+        self._qimage = fn.makeQImage(argb, alpha, transpose=False)
+
+    def paint(self, p, *args):
+        """Override."""
+        if self._image is None:
+            return
+
+        if self._qimage is None:
+            self.render()
+            if self._qimage is None:
+                return
+
+        p.drawImage(QRectF(0, 0, *self._image.shape[::-1]), self._qimage)
+
+    def histogram(self):
+        """Return estimated histogram of image pixels.
+
+        :returns: (hist, bin_centers)
+        """
+        if self._image is None or self._image.size == 0:
+            return None, None
+
+        step = (max(1, int(np.ceil(self._image.shape[0] / 200))),
+                max(1, int(np.ceil(self._image.shape[1] / 200))))
+
+        sliced_data = self._image[::step[0], ::step[1]]
+
+        lb, ub = np.nanmin(sliced_data), np.nanmax(sliced_data)
+
+        if np.isnan(lb) or np.isnan(ub):
+            # the data are all-nan
+            return None, None
+
+        if lb == ub:
+            # degenerate image, arange will fail
+            lb -= 0.5
+            ub += 0.5
+
+        n_bins = 500
+        if sliced_data.dtype.kind in "ui":
+            # step >= 1
+            step = np.ceil((ub - lb) / n_bins)
+            # len(bins) >= 2
+            bins = np.arange(lb, ub + 0.01 * step, step, dtype=np.int)
+        else:
+            # for float data, let numpy select the bins.
+            bins = np.linspace(lb, ub, n_bins)
+
+        hist, bin_edges = np.histogram(sliced_data, bins=bins)
+
+        return hist, (bin_edges[:-1] + bin_edges[1:]) / 2.
+
+    def setPxMode(self, state):
+        """Set ItemIgnoresTransformations flag.
+
+        Set whether the item ignores transformations and draws directly
+        to screen pixels.
+
+        :param bool state: If True, the item will not inherit any scale or
+            rotation transformations from its parent items, but its position
+            will be transformed as usual.
+        """
+        self.setFlag(self.ItemIgnoresTransformations, state)
+
+    @pyqtSlot()
+    def setScaledMode(self):
+        """Slot connected in GraphicsView."""
+        self.setPxMode(False)
+
+    def pixelSize(self):
+        """Override.
+
+        Return scene-size of a single pixel in the image.
+        """
+        br = self.sceneBoundingRect()
+        if self._image is None:
+            return 1, 1
+        return br.width() / self.width(), br.height() / self.height()
+
+    def viewTransformChanged(self):
+        """Override."""
+        o = self.mapToDevice(QPointF(0, 0))
+        x = self.mapToDevice(QPointF(1, 0))
+        y = self.mapToDevice(QPointF(0, 1))
+        w = Point(x-o).length()
+        h = Point(y-o).length()
+        if w == 0 or h == 0:
+            self._qimage = None
+            return
+        xds = max(1, int(1.0 / w))
+        yds = max(1, int(1.0 / h))
+        if (xds, yds) != self._ds_rate:
+            self._qimage = None
+            self.update()
 
     def hoverEvent(self, ev):
         """Override."""
@@ -41,7 +492,7 @@ class ImageItem(pg.ImageItem):
             pos = ev.pos()
             x = int(pos.x())
             y = int(pos.y())
-            value = self.image[y, x]
+            value = self._image[y, x]
 
         self.mouse_moved_sgn.emit(x, y, value)
 
@@ -172,6 +623,7 @@ class MaskItem(pg.GraphicsObject):
         self._image_item.update()
 
     def paint(self, p, *args):
+        """Override."""
         if self._mask is None:
             return
 

@@ -47,8 +47,6 @@ class ImageAnalysis(ImageViewF):
             roi.setLocked(False)
             self._plot_widget.addItem(roi)
 
-        self._hist_widget.setImageItem(self._image_item)
-
         self._require_geometry = config["REQUIRE_GEOMETRY"]
         self._mask_in_modules = None
         self._mask_save_in_modules = False
@@ -76,7 +74,7 @@ class ImageAnalysis(ImageViewF):
             geom.position_all_modules(self._mask_in_modules, out=assembled)
             self._mask_item.setMask(assembled)
 
-        self._updateImage(image, **kwargs)
+        self._updateImageImp(image, **kwargs)
         if image is not None:
             self._mask_item.maybeInitializeMask(image.shape)
 
