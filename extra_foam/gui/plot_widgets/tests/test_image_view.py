@@ -39,7 +39,7 @@ class TestImageView(unittest.TestCase):
         # test setting image to None
         widget.setImage(None)
         self.assertIsNone(widget._image)
-        self.assertIsNone(widget._image_item.image)
+        self.assertIsNone(widget._image_item._image)
 
     def testRoiImageView(self):
         widget = RoiImageView(1)

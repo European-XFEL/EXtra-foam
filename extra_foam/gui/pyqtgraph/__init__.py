@@ -228,16 +228,8 @@ from .graphicsItems.LegendItem import *
 from .graphicsItems.ScatterPlotItem import * 
 from .graphicsItems.ItemGroup import * 
 
-from .widgets.ColorMapWidget import *
-from .widgets.FileDialog import * 
-from .widgets.HistogramLUTWidget import *
-from .widgets.BusyCursor import *
-from .widgets.PlotWidget import * 
-from .widgets.GradientWidget import *
-from .widgets.DataFilterWidget import * 
-from .widgets.SpinBox import * 
-from .widgets.TreeWidget import *
-from .widgets.ColorButton import *
+from .widgets.FileDialog import *
+from .widgets.SpinBox import *
 from .widgets.GraphicsView import *
 
 from .WidgetGroup import *
