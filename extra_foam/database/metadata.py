@@ -62,11 +62,7 @@ class Metadata(metaclass=MetaMetadata):
     FOM_FILTER_PROC = "meta:proc:fom_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
 
-    # The real key depends on the category of the data source. For example,
-    # 'XGM' has the key 'meta:sources:XGM' and 'DSSC' has the key
-    # 'meta:sources:DSSC'.
-    # The value is an unordered set for each source.
-    DATA_SOURCE = "meta:data_source"
+    DATA_SOURCE_ITEMS = "meta:data_source_items"
 
 
 class MetaProxy(_AbstractProxy):
@@ -137,16 +133,12 @@ class MetaProxy(_AbstractProxy):
         :param tuple item: a tuple which can be used to construct a SourceItem.
         """
         ctg, name, modules, ppt, slicer, vrange, ktype = item
-        key = f"{name} {ppt}"
+        item_key = Metadata.DATA_SOURCE_ITEMS
+        src = f"{name} {ppt}"
+        item = f"{ctg};{name};{modules};{ppt};{slicer};{vrange};{ktype}"
         return self._db.pipeline().execute_command(
-            'HSET', key, 'category', ctg,
-                         'name', name,
-                         'modules', modules,
-                         'property', ppt,
-                         'slicer', slicer,
-                         'vrange', vrange,
-                         'ktype', ktype).execute_command(
-            'PUBLISH', Metadata.DATA_SOURCE, key).execute()
+            'HSET', item_key, src, item).execute_command(
+            'SADD', f"{item_key}:updated", src).execute()
 
     @redis_except_handler
     def remove_data_source(self, src):
@@ -154,9 +146,10 @@ class MetaProxy(_AbstractProxy):
 
         :param str src: data source.
         """
+        item_key = Metadata.DATA_SOURCE_ITEMS
         return self._db.pipeline().execute_command(
-            'DEL', src).execute_command(
-            'PUBLISH', Metadata.DATA_SOURCE, src).execute()
+            'HDEL', item_key, src).execute_command(
+            'SADD', f"{item_key}:updated", src).execute()
 
     @redis_except_handler
     def take_snapshot(self, name):
@@ -226,6 +219,7 @@ class MetaProxy(_AbstractProxy):
             if name is not None:
                 k = f"{k}:{name}"
             cfg[k] = self.hget_all(k)
+
         return cfg
 
     def _write_analysis_setup(self, cfg, old, new):

@@ -278,7 +278,7 @@ class MainGUI(QMainWindow):
 
         self._cw.addWidget(self._left_cw_container)
         self._cw.addWidget(self._right_cw_container)
-        self._cw.setSizes([self._WIDTH * 0.5, self._WIDTH * 0.5])
+        self._cw.setSizes([self._WIDTH * 0.6, self._WIDTH * 0.4])
 
     def initLeftUI(self):
         self._left_cw.setTabPosition(QTabWidget.TabPosition.West)
@@ -296,16 +296,13 @@ class MainGUI(QMainWindow):
         self._right_cw.addWidget(self._ctrl_panel_cw)
         self._right_cw.addWidget(self._util_panel_container)
 
-        self._ctrl_panel_cw.setFixedHeight(
-            self._ctrl_panel_cw.minimumSizeHint().height())
-
         self._right_cw_container.setWidget(self._right_cw)
         self._right_cw_container.setWidgetResizable(True)
 
     def initCtrlUI(self):
         self.initGeneralAnalysisUI()
 
-        self._ctrl_panel_cw.addTab(self._analysis_cw, "Analysis setup")
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis setup")
 
     def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()

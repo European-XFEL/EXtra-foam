@@ -26,6 +26,7 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..misc_widgets import FColor
 from ..mediator import Mediator
 from ...database import MonProxy
+from ...database import Metadata as mt
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes
@@ -286,12 +287,7 @@ class DataSourceItemModel(QAbstractItemModel):
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
-                old_src_name = item.name()
-                old_ppt = item.ppt()
                 item.setData(value, index.column())
-                # remove registered item with the old device ID and property
-                self.source_item_toggled_sgn.emit(
-                    False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
             ctg = item.parent().name()
@@ -674,25 +670,20 @@ class DataSourceWidget(_AbstractCtrlWidget):
     class AvailStateDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
             super().__init__(parent)
-            self._brush1 = FColor.mkBrush('g')
-            self._brush2 = FColor.mkBrush('r')
+            self._brush = FColor.mkBrush('g')
 
         def paint(self, painter, option, index):
             """Override."""
             v = index.data()
-            if isinstance(v, bool):
-                painter.setPen(Qt.NoPen)
-
-                if v:
-                    painter.setBrush(self._brush1)
-                else:
-                    painter.setBrush(self._brush2)
-
-                rect = option.rect
-                h = rect.height()
-                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            painter.setPen(Qt.NoPen)
+            if v:
+                painter.setBrush(self._brush)
             else:
-                super().paint(painter, option, index)
+                painter.setBrush(Qt.NoBrush)
+
+            rect = option.rect
+            h = rect.height()
+            painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
 
     class DataTypeDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
@@ -836,6 +827,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
         except ValueError as e:
             logger.error(e)
             return False
+
         return True
 
     def loadMetaData(self):

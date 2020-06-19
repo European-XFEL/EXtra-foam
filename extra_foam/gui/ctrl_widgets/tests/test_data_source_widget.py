@@ -212,35 +212,23 @@ class TestDataSourceWidget(unittest.TestCase, _RawDataMixin):
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change device ID
         model.setData(model.index(0, 2, dssc_ctg), 'A+', Qt.EditRole)
-        self.assertEqual(2, len(spy))
-        # check signal for deleting old source
-        self.assertFalse(spy[0][0])
-        self.assertEqual('A a', spy[0][1])
-        # check signal for adding new source
-        self.assertTrue(spy[1][0])
-        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a', '[None, None]', '', 1), spy[1][1])
+        self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a', '[None, None]', '', 1), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change property
         model.setData(model.index(0, 3, dssc_ctg), 'a-', Qt.EditRole)
-        self.assertEqual(2, len(spy))
-        # check signal for deleting old source
-        self.assertFalse(spy[0][0])
-        self.assertEqual('A+ a', spy[0][1])
-        # check signal for adding new source
-        self.assertTrue(spy[1][0])
-        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None]', '', 1), spy[1][1])
+        self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None]', '', 1), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
         model.setData(model.index(0, 4, dssc_ctg), '::2', Qt.EditRole)
-        self.assertEqual(2, len(spy))
-        # check signal for deleting old source
-        self.assertFalse(spy[0][0])
-        # deleting does not check slicer
-        # check signal for adding new source
-        self.assertTrue(spy[1][0])
-        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None, 2]', '', 1), spy[1][1])
+        self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('DSSC', 'A+', '[]', 'a-', '[None, None, 2]', '', 1), spy[0][1])
 
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change a DSSC source
@@ -325,13 +313,9 @@ class TestDataSourceWidget(unittest.TestCase, _RawDataMixin):
         spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
         # change slicer
         model.setData(model.index(1, 5, xgm_ctg), '-1, 1', Qt.EditRole)
-        self.assertEqual(2, len(spy))
-        # delete old source
-        self.assertFalse(spy[0][0])
-        # deleting does not check range
-        # add new source
-        self.assertTrue(spy[1][0])
-        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-1.0, 1.0)', 0), spy[1][1])
+        self.assertEqual(1, len(spy))
+        self.assertTrue(spy[0][0])
+        self.assertTupleEqual(('XGM', 'XA', '[]', 'flux', '', '(-1.0, 1.0)', 0), spy[0][1])
 
     @patch.dict(config._data, {"PULSE_RESOLVED": False})
     @patch.object(ConfigWrapper, "pipeline_sources", new_callable=PropertyMock)

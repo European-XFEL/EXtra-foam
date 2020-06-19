@@ -18,7 +18,6 @@ from .f_queue import SimpleQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
 from ..utils import profiler, run_in_thread
-from ..ipc import RedisSubscriber
 from ..ipc import process_logger as logger
 from ..database import (
     MetaProxy, MonProxy, SourceCatalog
@@ -115,8 +114,6 @@ class _PipeOutBase(_PipeBase):
 class KaraboBridge(_PipeInBase, _RedisParserMixin):
     """Karabo bridge client which is an input pipe."""
 
-    _sub = RedisSubscriber(mt.DATA_SOURCE)
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -126,22 +123,26 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
     def _update_source_items(self):
         """Updated requested source items."""
-        sub = self._sub
-        while True:
-            msg = sub.get_message(ignore_subscribe_messages=True)
-            if msg is None:
-                break
+        item_key = mt.DATA_SOURCE_ITEMS
+        updated_key = f"{item_key}:updated"
+        items, updated, _ = self._meta.pipeline().execute_command(
+            'HGETALL', item_key).execute_command(
+            'SMEMBERS', updated_key).execute_command(
+            'DEL', updated_key).execute()
 
-            src = msg['data']
-            item = self._meta.hget_all(src)
-            if item:
+        if updated:
+            new_srcs = []
+            for src in updated:
+                if src not in items:
+                    self._catalog.remove_item(src)
+                    logger.debug(f"Source item unregistered: {src}")
+                else:
+                    new_srcs.append(src)
+
+            for new_src in new_srcs:
                 # add a new source item
-                ctg = item['category']
-                name = item['name']
-                modules = item['modules']
-                ppt = item['property']
-                slicer = item['slicer']
-                vrange = item['vrange']
+                ctg, name, modules, ppt, slicer, vrange, ktype = \
+                    items[new_src].split(";")
                 self._catalog.add_item(
                     ctg,
                     name,
@@ -150,20 +151,10 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     ppt,
                     self.str2slice(slicer) if slicer else None,
                     self.str2tuple(vrange) if vrange else None,
-                    int(item['ktype'])
+                    int(ktype)
                 )
-                logger.debug(f"Source item registered: {name} {ppt} ({ctg})")
-            else:
-                # remove a source item
-                if src not in self._catalog:
-                    # Raised when there were two checked items in
-                    # the data source tree with the same "device ID"
-                    # and "property". The item has already been
-                    # deleted when one of them was unchecked.
-                    logger.error("Duplicated data source items")
-                    continue
-                self._catalog.remove_item(src)
-                logger.debug(f"Source item unregistered: {src}")
+                logger.debug(f"Source item registered/updated: "
+                             f"{name} {ppt} ({ctg})")
 
     def _update_connection(self, proxy):
         cons = self._meta.hget_all(mt.CONNECTION)
@@ -196,7 +187,6 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
             # this cannot be in a thread since SourceCatalog is not thread-safe
             self._update_source_items()
-
             if self.running and proxy.client is not None:
                 if not self._catalog.main_detector:
                     # skip the pipeline if the main detector is not specified
