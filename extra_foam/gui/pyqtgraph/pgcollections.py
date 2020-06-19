@@ -14,17 +14,8 @@ import threading
 import sys
 import copy
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    # fallback: try to use the ordereddict backport when using python 2.6
-    from ordereddict import OrderedDict
-
-try:
-    from collections.abc import Sequence
-except ImportError:
-    # fallback for python < 3.3
-    from collections import Sequence
+from collections import OrderedDict
+from collections.abc import Sequence
 
 
 class ReverseDict(dict):

@@ -28,6 +28,8 @@ class ParameterTree(TreeWidget):
         self.header().setResizeMode(QtGui.QHeaderView.ResizeToContents)
         self.setHeaderHidden(not showHeader)
         self.itemChanged.connect(self.itemChangedEvent)
+        self.itemExpanded.connect(self.itemExpandedEvent)
+        self.itemCollapsed.connect(self.itemCollapsedEvent)
         self.lastSel = None
         self.setRootIsDecorated(False)
         
@@ -134,7 +136,15 @@ class ParameterTree(TreeWidget):
     def itemChangedEvent(self, item, col):
         if hasattr(item, 'columnChangedEvent'):
             item.columnChangedEvent(col)
-            
+
+    def itemExpandedEvent(self, item):
+        if hasattr(item, 'expandedChangedEvent'):
+            item.expandedChangedEvent(True)
+
+    def itemCollapsedEvent(self, item):
+        if hasattr(item, 'expandedChangedEvent'):
+            item.expandedChangedEvent(False)
+
     def selectionChanged(self, *args):
         sel = self.selectedItems()
         if len(sel) != 1:

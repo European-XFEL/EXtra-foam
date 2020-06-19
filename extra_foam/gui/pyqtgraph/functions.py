@@ -1112,13 +1112,16 @@ def makeARGB(data, lut=None, levels=None, scale=None, useRGBA=False):
     else:
         dtype = np.min_scalar_type(lut.shape[0]-1)
 
+    # FIXME: EXtra-foam patch start
     # awkward, but fastest numpy native nan evaluation
     #
-    nanMask = None
-    if data.dtype.kind == 'f' and np.isnan(data.min()):
-        nanMask = np.isnan(data)
-        if data.ndim > 2:
-            nanMask = np.any(nanMask, axis=-1)
+    # nanMask = None
+    # if data.dtype.kind == 'f' and np.isnan(data.min()):
+    #     nanMask = np.isnan(data)
+    #     if data.ndim > 2:
+    #         nanMask = np.any(nanMask, axis=-1)
+    # FIXME: EXtra-foam patch end
+
     # Apply levels if given
     if levels is not None:
         if isinstance(levels, np.ndarray) and levels.ndim == 2:
@@ -1188,10 +1191,12 @@ def makeARGB(data, lut=None, levels=None, scale=None, useRGBA=False):
     else:
         alpha = True
 
+    # FIXME: EXtra-foam patch start
     # apply nan mask through alpha channel
-    if nanMask is not None:
-        alpha = True
-        imgData[nanMask, 3] = 0
+    # if nanMask is not None:
+    #     alpha = True
+    #     imgData[nanMask, 3] = 0
+    # FIXME: EXtra-foam patch end
 
     profile()
     return imgData, alpha
