@@ -2,12 +2,11 @@ import pytest
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 import tempfile
-import time
 
 import numpy as np
 
 from extra_foam.gui import mkQApp
-from extra_foam.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
+from extra_foam.gui.plot_widgets.image_items import ImageItem, MaskItem, RectROI
 from extra_foam.gui.plot_widgets.image_view_base import ImageViewF, TimedImageViewF
 from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
@@ -15,30 +14,23 @@ from extra_foam.gui.plot_widgets.image_views import (
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.logger import logger
 
+from . import _display
+
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
-
-# For debug
-_VISUALIZE = False
-
-
-def _display():
-    if _VISUALIZE:
-        app.processEvents()
-        time.sleep(1)
 
 
 class TestImageView:
     def testComponents(self):
         widget = ImageViewF(has_roi=True)
-        plot_items = widget._plot_widget._plot_item.items
-        assert isinstance(plot_items[0], ImageItem)
+        items = widget._plot_widget._plot_area._vb.addedItems
+        assert isinstance(items[0], ImageItem)
         for i in range(1, 5):
-            assert isinstance(plot_items[i], RectROI)
+            assert isinstance(items[i], RectROI)
 
         widget = ImageViewF()
-        assert len(widget._plot_widget._plot_item.items) == 1
+        assert len(widget._plot_widget._plot_area._items) == 1
 
         with pytest.raises(TypeError, match="numpy array"):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
@@ -47,7 +39,7 @@ class TestImageView:
     def testSetImage(self, dtype):
         widget = ImageViewF(has_roi=True)
 
-        if _VISUALIZE:
+        if _display():
             widget.show()
 
         _display()
@@ -104,11 +96,11 @@ class TestImageAnalysis(unittest.TestCase):
 
     def testGeneral(self):
         widget = ImageAnalysis()
-        plot_items = widget._plot_widget._plot_item.items
-        self.assertIsInstance(plot_items[0], ImageItem)
-        self.assertIsInstance(plot_items[1], MaskItem)
+        items = widget._plot_widget._plot_area._vb.addedItems
+        self.assertIsInstance(items[0], ImageItem)
+        self.assertIsInstance(items[1], MaskItem)
         for i in range(2, 6):
-            self.assertIsInstance(plot_items[i], RectROI)
+            self.assertIsInstance(items[i], RectROI)
 
     def testSetImage(self):
         widget = ImageAnalysis()
@@ -157,8 +149,8 @@ class TestImageAnalysis(unittest.TestCase):
 
     @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getSaveFileName')
     @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getOpenFileName')
-    @patch("extra_foam.gui.plot_widgets.plot_items.MaskItem.setMask")
-    @patch("extra_foam.gui.plot_widgets.plot_items.ImageMaskPub")
+    @patch("extra_foam.gui.plot_widgets.image_items.MaskItem.setMask")
+    @patch("extra_foam.gui.plot_widgets.image_items.ImageMaskPub")
     def testSaveLoadImageMask(self, mocked_pub, mocked_set_mask, mocked_open, mocked_save):
 
         def save_mask_in_file(_fp, arr):

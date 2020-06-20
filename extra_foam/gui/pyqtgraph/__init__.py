@@ -199,17 +199,13 @@ if __version__ is None and not hasattr(sys, 'frozen') and sys.version_info[0] ==
           #excludes=['MatplotlibWidget', 'RawImageWidget', 'RemoteGraphicsView'])
 
 from .graphicsItems.GraphicsWidget import *
-from .graphicsItems.ScaleBar import * 
-from .graphicsItems.PlotDataItem import * 
-from .graphicsItems.GraphItem import * 
-from .graphicsItems.TextItem import * 
+from .graphicsItems.PlotDataItem import *
+from .graphicsItems.TextItem import *
 from .graphicsItems.UIGraphicsItem import *
 from .graphicsItems.GraphicsObject import * 
-from .graphicsItems.PlotItem import * 
 from .graphicsItems.ROI import *
 from .graphicsItems.InfiniteLine import *
-from .graphicsItems.GridItem import *
-from .graphicsItems.GradientLegend import * 
+from .graphicsItems.GradientLegend import *
 from .graphicsItems.GraphicsItem import * 
 from .graphicsItems.BarGraphItem import * 
 from .graphicsItems.ViewBox import * 
@@ -219,20 +215,17 @@ from .graphicsItems.LabelItem import *
 from .graphicsItems.CurvePoint import * 
 from .graphicsItems.GraphicsWidgetAnchor import * 
 from .graphicsItems.PlotCurveItem import * 
-from .graphicsItems.ButtonItem import * 
-from .graphicsItems.GradientEditorItem import * 
+from .graphicsItems.GradientEditorItem import *
 from .graphicsItems.LinearRegionItem import *
 from .graphicsItems.LegendItem import *
 from .graphicsItems.ScatterPlotItem import * 
 from .graphicsItems.ItemGroup import * 
 
-from .widgets.FileDialog import *
 from .widgets.SpinBox import *
 from .widgets.GraphicsView import *
 
 from .WidgetGroup import *
 from .Point import Point
-from .Vector import Vector
 from .SRTTransform import SRTTransform
 from .functions import *
 from .SignalProxy import *

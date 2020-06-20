@@ -10,13 +10,14 @@ All rights reserved.
 import abc
 
 import numpy as np
-from PyQt5.QtCore import pyqtSlot, QSize, Qt, QTimer
+from PyQt5.QtCore import pyqtSlot, Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
 from .. import pyqtgraph as pg
 
+from .graphics_widgets import HistogramLUTItem
 from .plot_widget_base import PlotWidgetF
-from .plot_items import HistogramLUTItem, ImageItem, RectROI
+from .image_items import ImageItem, RectROI
 from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
 from ...config import config
@@ -31,7 +32,7 @@ class HistogramLUTWidget(pg.GraphicsView):
             raise TypeError
 
         self._item = HistogramLUTItem(image_item)
-        self.setCentralItem(self._item)
+        self.setCentralWidget(self._item)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.setMinimumWidth(95)
 
@@ -64,7 +65,7 @@ class ImageViewF(QWidget):
         """Initialization.
 
         :param bool has_roi: True for adding 4 ROIs on top of the other
-            PlotItems.
+            plot items.
         :param bool hide_axis: True for hiding left and bottom axes.
         :param tuple roi_position: Initial upper-left corner position (x, y)
             of the first ROI.
@@ -258,7 +259,7 @@ class ImageViewF(QWidget):
         self._plot_widget.setTitle(title, *args, **kwargs)
 
     def invertY(self, *args, **kwargs):
-        self._plot_widget._plot_item.invertY(*args, **kwargs)
+        self._plot_widget._plot_area.invertY(*args, **kwargs)
 
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)
@@ -266,9 +267,12 @@ class ImageViewF(QWidget):
     def removeItem(self, *args, **kwargs):
         self._plot_widget.removeItem(*args, **kwargs)
 
-    def close(self):
-        self.parent().unregisterPlotWidget(self)
-        super().close()
+    def closeEvent(self, event):
+        """Override."""
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWidget(self)
+        super().closeEvent(event)
 
 
 class TimedImageViewF(ImageViewF):

@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QSizePolicy
 
 from .. import pyqtgraph as pg
 
+from .graphics_widgets import PlotArea
 from .plot_items import (
     BarGraphItem, CurvePlotItem, StatisticsBarItem
 )
@@ -34,7 +35,7 @@ class PlotWidgetF(pg.GraphicsView):
     This base class should be used to display plots except images.
     For displaying images, please refer to ImageViewF class.
     """
-    # signals wrapped from PlotItem / ViewBox
+    # signals wrapped from PlotArea / ViewBox
     sigRangeChanged = pyqtSignal(object, object)
     sigTransformChanged = pyqtSignal(object)
 
@@ -48,12 +49,10 @@ class PlotWidgetF(pg.GraphicsView):
 
         self._title = ""
 
-        # pg.PlotItem is a QGraphicsWidget
-        self._plot_item = pg.PlotItem(**kargs)
-        # set 'centralWidget' for GraphicsView and add the item to
-        # GraphicsScene
-        self.setCentralItem(self._plot_item)
+        self._plot_area = PlotArea(**kargs)
+        self.setCentralWidget(self._plot_area)
 
+        # Move Indicator to PlotArea
         self._show_indicator = show_indicator
         if show_indicator:
             self._v_line = pg.InfiniteLine(angle=90, movable=False)
@@ -62,31 +61,29 @@ class PlotWidgetF(pg.GraphicsView):
             self._v_line.hide()
             self._h_line.hide()
             self._indicator.hide()
-            self._plot_item.addItem(self._v_line, ignoreBounds=True)
-            self._plot_item.addItem(self._h_line, ignoreBounds=True)
-            self._plot_item.scene().addItem(self._indicator)
+            self._plot_area.addItem(self._v_line, ignore_bounds=True)
+            self._plot_area.addItem(self._h_line, ignore_bounds=True)
+            self._plot_area.scene().addItem(self._indicator)
 
             # rateLimit should be fast enough to be able to capture
             # the leaveEvent
-            self._proxy = pg.SignalProxy(self._plot_item.scene().sigMouseMoved,
+            self._proxy = pg.SignalProxy(self._plot_area.scene().sigMouseMoved,
                                          rateLimit=60, slot=self.onMouseMoved)
 
         self._vb2 = None  # ViewBox for y2 axis
 
-        self._plot_item.sigRangeChanged.connect(self.viewRangeChanged)
+        self._plot_area.range_changed_sgn.connect(self.viewRangeChanged)
 
         if parent is not None and hasattr(parent, 'registerPlotWidget'):
             parent.registerPlotWidget(self)
 
-    def clear(self):
-        """Remove all the items in the PlotItem object."""
-        plot_item = self._plot_item
-        for i in plot_item.items[:]:
-            plot_item.removeItem(i)
+    def removeAllItems(self):
+        """Remove all the items in the PlotArea object."""
+        self._plot_area.removeAllItems()
 
     def reset(self):
-        """Clear the data of all the items in the PlotItem object."""
-        for item in self._plot_item.items:
+        """Clear the data of all the items in the PlotArea object."""
+        for item in self._plot_area._items:
             try:
                 item.setData([], [])
             except TypeError:
@@ -106,21 +103,21 @@ class PlotWidgetF(pg.GraphicsView):
         raise NotImplementedError
 
     def close(self):
-        self._plot_item.close()
-        self._plot_item = None
+        self._plot_area.close()
+        self._plot_area = None
         self.setParent(None)
         super().close()
 
     def addItem(self, *args, **kwargs):
-        """Explicitly call PlotItem.addItem.
+        """Explicitly call PlotArea.addItem.
 
         This method must be here to override the addItem method in
         GraphicsView. Otherwise, people may misuse the addItem method.
         """
-        self._plot_item.addItem(*args, **kwargs)
+        self._plot_area.addItem(*args, **kwargs)
 
     def removeItem(self, *args, **kwargs):
-        self._plot_item.removeItem(*args, **kwargs)
+        self._plot_area.removeItem(*args, **kwargs)
 
     def plotCurve(self, *args, y2=False, **kwargs):
         """Add and return a new curve plot."""
@@ -131,7 +128,7 @@ class PlotWidgetF(pg.GraphicsView):
                 self.createY2()
             self._vb2.addItem(item)
         else:
-            self._plot_item.addItem(item)
+            self._plot_area.addItem(item)
 
         return item
 
@@ -140,7 +137,7 @@ class PlotWidgetF(pg.GraphicsView):
         if 'pen' not in kwargs:
             kwargs['pen'] = FColor.mkPen(None)
         item = pg.ScatterPlotItem(*args, **kwargs)
-        self._plot_item.addItem(item)
+        self._plot_area.addItem(item)
         return item
 
     def plotBar(self, x=None, y=None, width=1.0, y2=False, **kwargs):
@@ -152,7 +149,7 @@ class PlotWidgetF(pg.GraphicsView):
                 self.createY2()
             self._vb2.addItem(item)
         else:
-            self._plot_item.addItem(item)
+            self._plot_area.addItem(item)
 
         return item
 
@@ -165,7 +162,7 @@ class PlotWidgetF(pg.GraphicsView):
                 self.createY2()
             self._vb2.addItem(item)
         else:
-            self._plot_item.addItem(item)
+            self._plot_area.addItem(item)
 
         return item
 
@@ -176,11 +173,11 @@ class PlotWidgetF(pg.GraphicsView):
 
     def createY2(self):
         vb = pg.ViewBox()
-        plot_item = self._plot_item
+        plot_item = self._plot_area
         plot_item.scene().addItem(vb)
         plot_item.getAxis('right').linkToView(vb)
-        vb.setXLink(self._plot_item.vb)
-        self._plot_item.vb.sigResized.connect(self.updateY2View)
+        vb.setXLink(self._plot_area._vb)
+        self._plot_area._vb.sigResized.connect(self.updateY2View)
         self._vb2 = vb
 
     def updateY2View(self):
@@ -188,45 +185,45 @@ class PlotWidgetF(pg.GraphicsView):
         if vb is None:
             return
         # update ViewBox-y2 to match ViewBox-y
-        vb.setGeometry(self._plot_item.vb.sceneBoundingRect())
+        vb.setGeometry(self._plot_area._vb.sceneBoundingRect())
         # not sure this is required
-        # vb.linkedViewChanged(self._plot_item.vb, vb.XAxis)
+        # vb.linkedViewChanged(self._plot_area.vb, vb.XAxis)
 
     def setAspectLocked(self, *args, **kwargs):
-        self._plot_item.setAspectLocked(*args, **kwargs)
+        self._plot_area.setAspectLocked(*args, **kwargs)
 
     def setLabel(self, *args, **kwargs):
-        self._plot_item.setLabel(*args, **kwargs)
+        self._plot_area.setLabel(*args, **kwargs)
 
     def setTitle(self, *args, **kwargs):
-        self._plot_item.setTitle(*args, **kwargs)
+        self._plot_area.setTitle(*args, **kwargs)
 
     def addLegend(self, *args, **kwargs):
-        self._plot_item.addLegend(*args, **kwargs)
+        self._plot_area.addLegend(*args, **kwargs)
 
     def hideAxis(self):
         for v in ["left", 'bottom']:
-            self._plot_item.hideAxis(v)
+            self._plot_area.showAxis(v, False)
 
     def showAxis(self):
         for v in ["left", 'bottom']:
-            self._plot_item.showAxis(v)
+            self._plot_area.showAxis(v, True)
 
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 
     def saveState(self):
-        return self._plot_item.saveState()
+        return self._plot_area.saveState()
 
     def restoreState(self, state):
-        return self._plot_item.restoreState(state)
+        return self._plot_area.restoreState(state)
 
     def onMouseMoved(self, ev):
         pos = ev[0]
         y_shift = 45  # move text to the top of the mouse cursor
         self._indicator.setPos(pos.x(), pos.y() - y_shift)
 
-        m_pos = self._plot_item.vb.mapSceneToView(pos)
+        m_pos = self._plot_area._vb.mapSceneToView(pos)
         x, y = m_pos.x(), m_pos.y()
         self._v_line.setPos(x)
         self._h_line.setPos(y)
@@ -247,11 +244,12 @@ class PlotWidgetF(pg.GraphicsView):
             self._h_line.hide()
             self._indicator.hide()
 
-    def closeEvent(self, QCloseEvent):
+    def closeEvent(self, event):
+        """Override."""
         parent = self.parent()
         if parent is not None:
             parent.unregisterPlotWidget(self)
-        super().closeEvent(QCloseEvent)
+        super().closeEvent(event)
 
 
 class TimedPlotWidgetF(PlotWidgetF):

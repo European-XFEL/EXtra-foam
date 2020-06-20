@@ -14,7 +14,7 @@ import numpy as np
 from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
-from .plot_items import MaskItem
+from .image_items import MaskItem
 from ..items import GeometryItem
 from ...config import config
 from ...file_io import write_image, read_numpy_array
@@ -40,7 +40,7 @@ class ImageAnalysis(ImageViewF):
         self._mask_item = MaskItem(self._image_item)
 
         # re-add items to keep the order
-        self._plot_widget.clear()
+        self._plot_widget.removeAllItems()
         self._plot_widget.addItem(self._image_item)
         self._plot_widget.addItem(self._mask_item)
         for roi in self._rois:

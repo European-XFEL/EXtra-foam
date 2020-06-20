@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 )
 
-from ..plot_widgets.plot_items import RectROI
+from ..plot_widgets import RectROI
 from ..ctrl_widgets import _AbstractCtrlWidget, SmartLineEdit
 from ..misc_widgets import FColor
 from ...database import Metadata as mt

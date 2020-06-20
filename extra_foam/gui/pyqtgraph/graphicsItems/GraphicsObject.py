@@ -1,9 +1,11 @@
+import abc
+
 from ..Qt import QtGui, QtCore, QT_LIB
 if QT_LIB in ['PyQt4', 'PyQt5']:
     import sip
 from .GraphicsItem import GraphicsItem
 
-__all__ = ['GraphicsObject']
+__all__ = ['GraphicsObject', 'PlotItem']
 class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
     """
     **Bases:** :class:`GraphicsItem <pyqtgraph.graphicsItems.GraphicsItem>`, :class:`QtGui.QGraphicsObject`
@@ -11,6 +13,7 @@ class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
     Extension of QGraphicsObject with some useful methods (provided by :class:`GraphicsItem <pyqtgraph.graphicsItems.GraphicsItem>`)
     """
     _qtBaseClass = QtGui.QGraphicsObject
+
     def __init__(self, *args):
         self.__inform_view_on_changes = True
         QtGui.QGraphicsObject.__init__(self, *args)
@@ -37,3 +40,19 @@ class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
             ret = sip.cast(ret, QtGui.QGraphicsItem)
 
         return ret
+
+
+class PlotItem(GraphicsObject):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    def setData(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def name(self):
+        """An identity of the PlotItem.
+
+        Used in LegendItem.
+        """
+        return ""

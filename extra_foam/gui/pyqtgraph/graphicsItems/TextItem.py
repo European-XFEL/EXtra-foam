@@ -141,13 +141,6 @@ class TextItem(GraphicsObject):
         offset = (br - tl) * self.anchor
         self.textItem.setPos(-offset)
         
-        ### Needed to maintain font size when rendering to image with increased resolution
-        #self.textItem.resetTransform()
-        ##self.textItem.rotate(self.angle)
-        #if self._exportOpts is not False and 'resolutionScale' in self._exportOpts:
-            #s = self._exportOpts['resolutionScale']
-            #self.textItem.scale(s, s)
-        
     def boundingRect(self):
         return self.textItem.mapToParent(self.textItem.boundingRect()).boundingRect()
 

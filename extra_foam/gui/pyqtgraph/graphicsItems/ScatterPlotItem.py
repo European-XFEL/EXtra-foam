@@ -10,7 +10,7 @@ from ..Qt import QtGui, QtCore, QT_LIB
 from ..Point import Point
 from .. import functions as fn
 from .GraphicsItem import GraphicsItem
-from .GraphicsObject import GraphicsObject
+from .GraphicsObject import PlotItem
 from .. import getConfigOption
 from ..pgcollections import OrderedDict
 from .. import debug
@@ -237,7 +237,7 @@ class SymbolAtlas(object):
 
 
 
-class ScatterPlotItem(GraphicsObject):
+class ScatterPlotItem(PlotItem):
     """
     Displays a set of x/y points. Instances of this class are created
     automatically as part of PlotDataItem; these rarely need to be instantiated
@@ -263,7 +263,7 @@ class ScatterPlotItem(GraphicsObject):
         Accepts the same arguments as setData()
         """
         profiler = debug.Profiler()
-        GraphicsObject.__init__(self)
+        PlotItem.__init__(self)
 
         self.picture = None   # QPicture used for rendering when pxmode==False
         self.fragmentAtlas = SymbolAtlas()
@@ -744,13 +744,9 @@ class ScatterPlotItem(GraphicsObject):
 
     def viewTransformChanged(self):
         self.prepareGeometryChange()
-        GraphicsObject.viewTransformChanged(self)
+        PlotItem.viewTransformChanged(self)
         self.bounds = [None, None]
         self.data['targetRect'] = None
-
-    def setExportMode(self, *args, **kwds):
-        GraphicsObject.setExportMode(self, *args, **kwds)
-        self.invalidate()
 
     def mapPointsToDevice(self, pts):
         # Map point locations to device
