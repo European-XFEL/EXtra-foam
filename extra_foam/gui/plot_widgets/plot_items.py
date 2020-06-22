@@ -41,7 +41,7 @@ class CurvePlotItem(pg.PlotItem):
 
         self._path = None
         # Schedules a redraw of the area covered by rect in this item.
-        self.update()
+        self.prepareGeometryChange()
         self.informViewBoundsChanged()
 
     def preparePath(self):
@@ -54,8 +54,6 @@ class CurvePlotItem(pg.PlotItem):
                 p.lineTo(px, py)
 
         self._path = p
-        # Prepares the item for a geometry change.
-        self.prepareGeometryChange()
 
     def paint(self, painter, *args):
         """Override."""
@@ -105,7 +103,7 @@ class BarGraphItem(pg.PlotItem):
             raise ValueError("'x' and 'y' data have different lengths!")
 
         self._picture = None
-        self.update()
+        self.prepareGeometryChange()
         self.informViewBoundsChanged()
 
     def drawPicture(self):
@@ -125,7 +123,6 @@ class BarGraphItem(pg.PlotItem):
             p.drawRect(QRectF(x - width/2, 0, width, y))
 
         p.end()
-        self.prepareGeometryChange()
 
     def paint(self, painter, *args):
         """Override."""
@@ -181,7 +178,7 @@ class StatisticsBarItem(pg.PlotItem):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
         self._path = None
-        self.update()
+        self.prepareGeometryChange()
         self.informViewBoundsChanged()
 
     def setBeam(self, w):
@@ -213,7 +210,6 @@ class StatisticsBarItem(pg.PlotItem):
                 p.lineTo(x, y)
 
         self._path = p
-        self.prepareGeometryChange()
 
     def paint(self, painter, *args):
         """Override."""
