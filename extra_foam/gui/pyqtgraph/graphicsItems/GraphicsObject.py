@@ -1,5 +1,7 @@
 import abc
 
+import numpy as np
+
 from ..Qt import QtGui, QtCore, QT_LIB
 if QT_LIB in ['PyQt4', 'PyQt5']:
     import sip
@@ -14,9 +16,9 @@ class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
     """
     _qtBaseClass = QtGui.QGraphicsObject
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.__inform_view_on_changes = True
-        QtGui.QGraphicsObject.__init__(self, *args)
+        QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
         self.setFlag(self.ItemSendsGeometryChanges)
         GraphicsItem.__init__(self)
         
@@ -43,16 +45,76 @@ class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
 
 
 class PlotItem(GraphicsObject):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self._graph = None  # QPainterPath
+
+        self._name = "" if name is None else name
+
+        self._log_x_mode = False
+        self._log_y_mode = False
 
     @abc.abstractmethod
     def setData(self, *args, **kwargs):
         raise NotImplementedError
+
+    def updateGraph(self):
+        self._graph = None
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+
+    @abc.abstractmethod
+    def _prepareGraph(self):
+        raise NotImplementedError
+
+    def paint(self, p, *args):
+        """Override."""
+        if self._graph is None:
+            self._prepareGraph()
+
+        p.setPen(self._pen)
+        p.drawPath(self._graph)
+
+    def boundingRect(self):
+        """Override."""
+        if self._graph is None:
+            self._prepareGraph()
+        return self._graph.boundingRect()
+
+    def setLogX(self, state):
+        """Set log mode for x axis."""
+        self._log_x_mode = state
+        self.updateGraph()
+
+    def setLogY(self, state):
+        """Set log mode for y axis."""
+        self._log_y_mode = state
+        self.updateGraph()
+
+    def _transformData(self):
+        """Transform and return the internal data to log scale.
+
+        Child class should re-implement this method if it has a
+        different internal data structure.
+        """
+        return (self.toLogScale(self._x) if self._log_x_mode else self._x,
+                self.toLogScale(self._y) if self._log_y_mode else self._y)
+
+    @staticmethod
+    def toLogScale(arr, policy=None):
+        """Convert array result to logarithmic scale."""
+        ret = np.nan_to_num(arr)
+        ret[ret < 0] = 0
+        return np.log10(ret + 1)
 
     def name(self):
         """An identity of the PlotItem.
 
         Used in LegendItem.
         """
-        return ""
+        return self._name
+
+    def drawSample(self, p):
+        """Draw a sample used in LegendItem."""
+        pass

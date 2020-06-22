@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
+from PyQt5.QtCore import QPointF, QRectF
+
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF
 from extra_foam.gui.plot_widgets.plot_items import (
@@ -37,6 +39,15 @@ class TestPlotItems(unittest.TestCase):
         item.setData(np.arange(10), np.arange(10))
         _display()
 
+        # test log mode
+        item.setLogX(True)
+        _display()
+        self.assertEqual(QRectF(0, 0, 1.0, 9.0), item.boundingRect())
+        item.setLogY(True)
+        _display()
+        self.assertEqual(QRectF(0, 0, 1.0, 1.0), item.boundingRect())
+
+        # clear data
         item.setData([], [])
         _display()
 
@@ -50,6 +61,15 @@ class TestPlotItems(unittest.TestCase):
         item.setData(np.arange(10), np.arange(10))
         _display()
 
+        # test log mode
+        item.setLogX(True)
+        _display()
+        self.assertEqual(QRectF(-1.0, 0, 3.0, 9.0), item.boundingRect())
+        item.setLogY(True)
+        _display()
+        self.assertEqual(QRectF(-1.0, 0, 3.0, 1.0), item.boundingRect())
+
+        # clear data
         item.setData([], [])
         _display()
 
@@ -73,5 +93,17 @@ class TestPlotItems(unittest.TestCase):
         item.setData(np.arange(10), y, y_min=y_min, y_max=y_max)
         _display()
 
+        # test log mode
+        item.setLogX(True)
+        _display()
+        self.assertEqual(QRectF(-0.5, -1.0, 2.0, 11.0), item.boundingRect())
+        item.setLogY(True)
+        _display()
+        self.assertEqual(QPointF(-0.5, 0.0), item.boundingRect().topLeft())
+        self.assertEqual(1.5, item.boundingRect().bottomRight().x())
+        self.assertGreater(1.1, item.boundingRect().bottomRight().y())
+        self.assertLess(1.0, item.boundingRect().bottomRight().y())
+
+        # clear data
         item.setData([], [])
         _display()

@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from PyQt5.QtGui import QPainter, QPainterPath, QPicture
 from PyQt5.QtCore import QRectF
 
@@ -18,11 +20,10 @@ from ..misc_widgets import FColor
 class CurvePlotItem(pg.PlotItem):
     """CurvePlotItem."""
 
-    def __init__(self, x=None, y=None, *, pen=None):
+    def __init__(self, x=None, y=None, *, pen=None,
+                 name=None, parent=None):
         """Initialization."""
-        super().__init__()
-
-        self._path = None
+        super().__init__(name=name, parent=parent)
 
         self._x = None
         self._y = None
@@ -39,47 +40,39 @@ class CurvePlotItem(pg.PlotItem):
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
 
-        self._path = None
-        # Schedules a redraw of the area covered by rect in this item.
-        self.prepareGeometryChange()
-        self.informViewBoundsChanged()
+        self.updateGraph()
 
-    def preparePath(self):
+    def _prepareGraph(self):
+        """Override."""
         p = QPainterPath()
 
-        x, y = self._x, self._y
+        # TODO: use QDataStream to improve performance
+        x, y = self._transformData()
         if len(x) >= 2:
             p.moveTo(x[0], y[0])
             for px, py in zip(x[1:], y[1:]):
                 p.lineTo(px, py)
 
-        self._path = p
+        self._graph = p
 
-    def paint(self, painter, *args):
+    def drawSample(self, p):
         """Override."""
-        if self._path is None:
-            self.preparePath()
-
-        painter.setPen(self._pen)
-        painter.drawPath(self._path)
-
-    def boundingRect(self):
-        """Override."""
-        if self._path is None:
-            self.preparePath()
-        return self._path.boundingRect()
+        p.setPen(self._pen)
+        # Legend sample has a bounding box of (0, 0, 20, 20)
+        p.drawLine(0, 11, 20, 11)
 
 
 class BarGraphItem(pg.PlotItem):
     """BarGraphItem"""
-    def __init__(self, x=None, y=None, *, width=1.0, pen=None, brush=None):
+    def __init__(self, x=None, y=None, *, width=1.0, pen=None, brush=None,
+                 name=None, parent=None):
         """Initialization."""
-        super().__init__()
-
-        self._picture = None
+        super().__init__(name=name, parent=parent)
 
         self._x = None
         self._y = None
+
+        self._name = name
 
         if width > 1.0 or width <= 0:
             width = 1.0
@@ -102,56 +95,63 @@ class BarGraphItem(pg.PlotItem):
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
 
-        self._picture = None
-        self.prepareGeometryChange()
-        self.informViewBoundsChanged()
+        self.updateGraph()
 
-    def drawPicture(self):
-        self._picture = QPicture()
-        p = QPainter(self._picture)
+    def _prepareGraph(self):
+        """Override."""
+        self._graph = QPicture()
+        p = QPainter(self._graph)
         p.setPen(self._pen)
         p.setBrush(self._brush)
 
+        x, y = self._transformData()
         # Now it works for bar plot with equalized gaps
         # TODO: extend it
-        if len(self._x) > 1:
-            width = self._width * (self._x[1] - self._x[0])
+        if len(x) > 1:
+            width = self._width * (x[1] - x[0])
         else:
             width = self._width
 
-        for x, y in zip(self._x, self._y):
-            p.drawRect(QRectF(x - width/2, 0, width, y))
+        for px, py in zip(x, y):
+            p.drawRect(QRectF(px - width/2, 0, width, py))
 
         p.end()
 
     def paint(self, painter, *args):
         """Override."""
-        if self._picture is None:
+        if self._graph is None:
             self.drawPicture()
-        self._picture.play(painter)
+        self._graph.play(painter)
 
     def boundingRect(self):
         """Override."""
-        if self._picture is None:
-            self.drawPicture()
-        return QRectF(self._picture.boundingRect())
+        return QRectF(super().boundingRect())
+
+    def drawSample(self, p):
+        """Override."""
+        p.setBrush(self._brush)
+        p.setPen(self._pen)
+        # Legend sample has a bounding box of (0, 0, 20, 20)
+        p.drawRect(QRectF(2, 2, 18, 18))
 
 
 class StatisticsBarItem(pg.PlotItem):
     """StatisticsBarItem."""
 
     def __init__(self, x=None, y=None, *, y_min=None, y_max=None, beam=None,
-                 line=False, pen=None):
+                 line=False, pen=None,
+                 name=None, parent=None):
         """Initialization.
 
         Note: y is not used for now.
         """
-        super().__init__()
-
-        self._path = None
+        super().__init__(name=name, parent=parent)
 
         self._x = None
         self._y = None
+
+        self._name = name
+
         self._y_min = None
         self._y_max = None
 
@@ -177,50 +177,48 @@ class StatisticsBarItem(pg.PlotItem):
         if not len(self._y) == len(self._y_min) == len(self._y_max):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
-        self._path = None
-        self.prepareGeometryChange()
-        self.informViewBoundsChanged()
+
+        self.updateGraph()
 
     def setBeam(self, w):
         self._beam = w
 
-    def isEmptyGraph(self):
-        return not bool(len(self._x))
-
-    def preparePath(self):
+    def _prepareGraph(self):
         p = QPainterPath()
 
+        x, y, y_min, y_max = self._transformData()
         beam = self._beam
-        for x, u, l in zip(self._x, self._y_min, self._y_max):
+        for px, u, l in zip(x, y_min, y_max):
             # plot the lower horizontal lines
-            p.moveTo(x - beam / 2., l)
-            p.lineTo(x + beam / 2., l)
+            p.moveTo(px - beam / 2., l)
+            p.lineTo(px + beam / 2., l)
 
             # plot the vertical line
-            p.moveTo(x, l)
-            p.lineTo(x, u)
+            p.moveTo(px, l)
+            p.lineTo(px, u)
 
             # plot the upper horizontal line
-            p.moveTo(x - beam / 2., u)
-            p.lineTo(x + beam / 2., u)
+            p.moveTo(px - beam / 2., u)
+            p.lineTo(px + beam / 2., u)
 
-        if self._line and len(self._x) > 2:
-            p.moveTo(self._x[-1], self._y[-1])
-            for x, y in zip(reversed(self._x[:-1]), reversed(self._y[:-1])):
-                p.lineTo(x, y)
+        if self._line and len(x) > 2:
+            p.moveTo(x[-1], y[-1])
+            for px, py in zip(reversed(x[:-1]), reversed(y[:-1])):
+                p.lineTo(px, py)
 
-        self._path = p
+        self._graph = p
 
-    def paint(self, painter, *args):
+    def drawSample(self, p):
         """Override."""
-        if self._path is None:
-            self.preparePath()
+        p.setPen(self._pen)
 
-        painter.setPen(self._pen)
-        painter.drawPath(self._path)
+        # Legend sample has a bounding box of (0, 0, 20, 20)
+        p.drawLine(2, 2, 8, 2)  # lower horizontal line
+        p.drawLine(5, 2, 5, 18)  # vertical line
+        p.drawLine(2, 18, 8, 18)  # upper horizontal line
 
-    def boundingRect(self):
+    def _transformData(self):
         """Override."""
-        if self._path is None:
-            self.preparePath()
-        return self._path.boundingRect()
+        y_min = self.toLogScale(self._y_min) if self._log_y_mode else self._y_min
+        y_max = self.toLogScale(self._y_max) if self._log_y_mode else self._y_max
+        return super()._transformData() + (y_min, y_max)

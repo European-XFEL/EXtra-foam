@@ -41,7 +41,7 @@ class ImageItem(pg.GraphicsObject):
     draw_finished_sgn = pyqtSignal()
 
     def __init__(self, image=None, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._image = None   # original image data
         self._qimage = None  # rendered image for display
@@ -380,7 +380,7 @@ class MaskItem(pg.GraphicsObject):
 
         :param ImageItem item: a reference to the masked image item.
         """
-        super().__init__(parent)
+        super().__init__(parent=parent)
         if not isinstance(item, ImageItem):
             raise TypeError("Input item must be an ImageItem instance.")
 

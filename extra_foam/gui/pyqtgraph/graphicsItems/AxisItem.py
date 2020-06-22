@@ -291,7 +291,7 @@ class AxisItem(GraphicsWidget):
         self.label.setHtml(self.labelString())
         self._adjustSize()
         self.picture = None
-        self.update()
+        self.resizeEvent()
 
     def labelString(self):
         if self.labelUnits == '':

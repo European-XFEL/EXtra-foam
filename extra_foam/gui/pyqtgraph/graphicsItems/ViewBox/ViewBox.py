@@ -1387,11 +1387,8 @@ class ViewBox(GraphicsWidget):
             useY = True
 
             # FIXME: EXtra-foam patch start
-            try:
-                if item.isEmptyGraph():
-                    continue
-            except AttributeError:
-                pass
+            if item.boundingRect().isEmpty():
+                continue
             # FIXME: EXtra-foam patch end
 
             if hasattr(item, 'dataBounds'):

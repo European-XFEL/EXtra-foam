@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from itertools import starmap, repeat
+from itertools import repeat
 try:
     from itertools import imap
 except ImportError:
@@ -9,7 +9,6 @@ import weakref
 from ..Qt import QtGui, QtCore, QT_LIB
 from ..Point import Point
 from .. import functions as fn
-from .GraphicsItem import GraphicsItem
 from .GraphicsObject import PlotItem
 from .. import getConfigOption
 from ..pgcollections import OrderedDict
@@ -279,6 +278,8 @@ class ScatterPlotItem(PlotItem):
             'compositionMode': None,
             'name': None,
         }
+        if 'name' in kargs:
+            self.opts['name'] = kargs['name']
 
         self.setPen(fn.mkPen(getConfigOption('foreground')), update=False)
         self.setBrush(fn.mkBrush(100,100,150), update=False)
@@ -781,8 +782,6 @@ class ScatterPlotItem(PlotItem):
         cmode = self.opts.get('compositionMode', None)
         if cmode is not None:
             p.setCompositionMode(cmode)
-        #p.setPen(fn.mkPen('r'))
-        #p.drawRect(self.boundingRect())
 
         if self._exportOpts is not False:
             aa = self._exportOpts.get('antialias', True)
@@ -876,12 +875,7 @@ class ScatterPlotItem(PlotItem):
                 s2y *= ph
             if x > sx-s2x and x < sx+s2x and y > sy-s2y and y < sy+s2y:
                 pts.append(s)
-                #print "HIT:", x, y, sx, sy, s2x, s2y
-            #else:
-                #print "No hit:", (x, y), (sx, sy)
-                #print "       ", (sx-s2x, sy-s2y), (sx+s2x, sy+s2y)
         return pts[::-1]
-
 
     def mouseClickEvent(self, ev):
         if ev.button() == QtCore.Qt.LeftButton:
@@ -891,10 +885,17 @@ class ScatterPlotItem(PlotItem):
                 ev.accept()
                 self.sigClicked.emit(self, self.ptsClicked)
             else:
-                #print "no spots"
                 ev.ignore()
         else:
             ev.ignore()
+
+    def drawSample(self, p):
+        """Override."""
+        opts = self.opts
+        symbol = opts.get('symbol', None)
+        if symbol is not None:
+            p.translate(10, 10)
+            drawSymbol(p, symbol, opts['size'], fn.mkPen(opts['pen']), fn.mkBrush(opts['brush']))
 
 
 class SpotItem(object):

@@ -35,6 +35,11 @@ class TestImageView:
         with pytest.raises(TypeError, match="numpy array"):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
 
+        # test log X/Y menu is disabled
+        menu = widget._plot_widget._plot_area.getContextMenus(None)
+        assert len(menu) == 1
+        assert menu[0].title() == "Grid"
+
     @pytest.mark.parametrize("dtype", [np.uint8, np.int, np.float32])
     def testSetImage(self, dtype):
         widget = ImageViewF(has_roi=True)

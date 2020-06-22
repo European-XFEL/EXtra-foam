@@ -52,6 +52,7 @@ class PlotWidgetF(pg.GraphicsView):
         self._plot_area = PlotArea(**kargs)
         self.setCentralWidget(self._plot_area)
 
+        # TODO: improve indicator implementation
         # Move Indicator to PlotArea
         self._show_indicator = show_indicator
         if show_indicator:
@@ -77,19 +78,11 @@ class PlotWidgetF(pg.GraphicsView):
         if parent is not None and hasattr(parent, 'registerPlotWidget'):
             parent.registerPlotWidget(self)
 
-    def removeAllItems(self):
-        """Remove all the items in the PlotArea object."""
-        self._plot_area.removeAllItems()
-
     def reset(self):
         """Clear the data of all the items in the PlotArea object."""
-        for item in self._plot_area._items:
-            try:
-                item.setData([], [])
-            except TypeError:
-                # FIXME: better solution
-                pass
+        self._plot_area.clearAllPlotItems()
 
+        # TODO: improve vb2 implementation
         if self._vb2 is not None:
             for item in self._vb2.addedItems:
                 try:
@@ -121,7 +114,7 @@ class PlotWidgetF(pg.GraphicsView):
 
     def plotCurve(self, *args, y2=False, **kwargs):
         """Add and return a new curve plot."""
-        item = pg.PlotCurveItem(*args, **kwargs)
+        item = CurvePlotItem(*args, **kwargs)
 
         if y2:
             if self._vb2 is None:
@@ -176,6 +169,7 @@ class PlotWidgetF(pg.GraphicsView):
         plot_item = self._plot_area
         plot_item.scene().addItem(vb)
         plot_item.getAxis('right').linkToView(vb)
+        # TODO: improve
         vb.setXLink(self._plot_area._vb)
         self._plot_area._vb.sigResized.connect(self.updateY2View)
         self._vb2 = vb
@@ -185,9 +179,14 @@ class PlotWidgetF(pg.GraphicsView):
         if vb is None:
             return
         # update ViewBox-y2 to match ViewBox-y
+        # TODO: improve
         vb.setGeometry(self._plot_area._vb.sceneBoundingRect())
         # not sure this is required
         # vb.linkedViewChanged(self._plot_area.vb, vb.XAxis)
+
+    def removeAllItems(self):
+        """Remove all the items in the PlotArea object."""
+        self._plot_area.removeAllItems()
 
     def setAspectLocked(self, *args, **kwargs):
         self._plot_area.setAspectLocked(*args, **kwargs)
@@ -202,27 +201,36 @@ class PlotWidgetF(pg.GraphicsView):
         self._plot_area.addLegend(*args, **kwargs)
 
     def hideAxis(self):
+        """Hide x and y axis."""
         for v in ["left", 'bottom']:
             self._plot_area.showAxis(v, False)
 
     def showAxis(self):
+        """Show x and y axis."""
         for v in ["left", 'bottom']:
             self._plot_area.showAxis(v, True)
 
+    def hideLegend(self):
+        """Hide legend."""
+        self._plot_area.showLegend(False)
+
+    def showLegend(self):
+        """Show legend."""
+        self._plot_area.showLegend(True)
+
+    def disableLogMenu(self):
+        """Disable log X/Y context menu."""
+        self._plot_area.enableLogMenu(False)
+
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
-
-    def saveState(self):
-        return self._plot_area.saveState()
-
-    def restoreState(self, state):
-        return self._plot_area.restoreState(state)
 
     def onMouseMoved(self, ev):
         pos = ev[0]
         y_shift = 45  # move text to the top of the mouse cursor
         self._indicator.setPos(pos.x(), pos.y() - y_shift)
 
+        # TODO: improve
         m_pos = self._plot_area._vb.mapSceneToView(pos)
         x, y = m_pos.x(), m_pos.y()
         self._v_line.setPos(x)
