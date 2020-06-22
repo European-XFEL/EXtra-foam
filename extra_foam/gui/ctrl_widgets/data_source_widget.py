@@ -281,13 +281,17 @@ class DataSourceItemModel(QAbstractItemModel):
                                 self.dataChanged.emit(index.sibling(i, 0),
                                                       index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
-                                    False,
-                                    f'{item_sb.name()} {item_sb.ppt()}')
+                                    False, f'{item_sb.name()} {item_sb.ppt()}')
                                 break
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
+                old_src_name = item.name()
+                old_ppt = item.ppt()
                 item.setData(value, index.column())
+                # remove registered item with the old device ID and property
+                self.source_item_toggled_sgn.emit(
+                    False, f'{old_src_name} {old_ppt}')
 
             main_det = config["DETECTOR"]
             ctg = item.parent().name()
