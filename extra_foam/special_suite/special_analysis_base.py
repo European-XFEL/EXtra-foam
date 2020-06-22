@@ -642,7 +642,7 @@ class QThreadKbClient(_BaseQThreadClient):
             "timeout": config["CLIENT_TIME_OUT"]
         }
         if self._client_instance_type == KaraboGateClient:
-            kwargs["connect"] =  False
+            kwargs["connect"] = False
 
         with self._client_instance_type(self._endpoint_st, **kwargs) as client:
             self.log.info(f"Connected to {self._endpoint_st}")
@@ -699,7 +699,7 @@ class QThreadKbClient(_BaseQThreadClient):
                     continue
 
                 try:
-                    correlated, dropped = self._transformer_st.correlate(data)
+                    correlated, _, dropped = self._transformer_st.correlate(data)
                     for tid, err in dropped:
                         self.log.error(err)
                 except Exception as e:
