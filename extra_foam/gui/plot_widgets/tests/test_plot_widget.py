@@ -23,10 +23,10 @@ class TestPlotWidget(unittest.TestCase):
         self._widget.plotBar()
         self._widget.plotStatisticsBar()
 
-        self.assertEqual(len(self._widget._plot_item.items), 4)
+        self.assertEqual(len(self._widget._plot_area._items), 4)
 
-        self._widget.clear()
-        self.assertFalse(self._widget._plot_item.items)
+        self._widget.removeAllItems()
+        self.assertFalse(self._widget._plot_area._items)
 
     def testCurvePlot(self):
         plot = self._widget.plotCurve(np.arange(3), np.arange(1, 4, 1))

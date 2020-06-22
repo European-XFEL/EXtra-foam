@@ -121,7 +121,7 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         self.assertIn(win._view, win._image_views_st)
         self.assertIn(win._view_with_roi, win._image_views_st)
 
-        with patch.object(win._view, "updateImageWithAutoLevel") as update_image:
+        with patch.object(win._view, "updateImage") as update_image:
             QTest.mouseClick(win._com_ctrl_st.auto_level_btn, Qt.LeftButton)
             update_image.assert_called_once()
 

@@ -6,7 +6,7 @@ except:
     HAVE_OPENGL = False
 
 import numpy as np
-from .GraphicsObject import GraphicsObject
+from .GraphicsObject import PlotItem
 from .. import functions as fn
 from ..Point import Point
 import struct, sys
@@ -14,7 +14,7 @@ from .. import getConfigOption
 from .. import debug
 
 __all__ = ['PlotCurveItem']
-class PlotCurveItem(GraphicsObject):
+class PlotCurveItem(PlotItem):
 
 
     """
@@ -51,7 +51,7 @@ class PlotCurveItem(GraphicsObject):
                         clicked on. Defaults to False.
         ==============  =======================================================
         """
-        GraphicsObject.__init__(self, kargs.get('parent', None))
+        PlotItem.__init__(self, kargs.get('parent', None))
         self.clear()
 
         ## this is disastrous for performance.
@@ -225,41 +225,6 @@ class PlotCurveItem(GraphicsObject):
     def viewTransformChanged(self):
         self.invalidateBounds()
         self.prepareGeometryChange()
-
-    #def boundingRect(self):
-        #if self._boundingRect is None:
-            #(x, y) = self.getData()
-            #if x is None or y is None or len(x) == 0 or len(y) == 0:
-                #return QtCore.QRectF()
-
-
-            #if self.opts['shadowPen'] is not None:
-                #lineWidth = (max(self.opts['pen'].width(), self.opts['shadowPen'].width()) + 1)
-            #else:
-                #lineWidth = (self.opts['pen'].width()+1)
-
-
-            #pixels = self.pixelVectors()
-            #if pixels == (None, None):
-                #pixels = [Point(0,0), Point(0,0)]
-
-            #xmin = x.min()
-            #xmax = x.max()
-            #ymin = y.min()
-            #ymax = y.max()
-
-            #if self.opts['fillLevel'] is not None:
-                #ymin = min(ymin, self.opts['fillLevel'])
-                #ymax = max(ymax, self.opts['fillLevel'])
-
-            #xmin -= pixels[0].x() * lineWidth
-            #xmax += pixels[0].x() * lineWidth
-            #ymin -= abs(pixels[1].y()) * lineWidth
-            #ymax += abs(pixels[1].y()) * lineWidth
-
-            #self._boundingRect = QtCore.QRectF(xmin, ymin, xmax-xmin, ymax-ymin)
-        #return self._boundingRect
-
 
     def invalidateBounds(self):
         self._boundingRect = None
@@ -513,10 +478,6 @@ class PlotCurveItem(GraphicsObject):
         else:
             p.drawPath(path)
         profiler('drawPath')
-
-        #print "Render hints:", int(p.renderHints())
-        #p.setPen(QtGui.QPen(QtGui.QColor(255,0,0)))
-        #p.drawRect(self.boundingRect())
 
     def paintGL(self, p, opt, widget):
         p.beginNativePainting()

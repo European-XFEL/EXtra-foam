@@ -133,8 +133,8 @@ def _get_outer_edges(arr, range):
 
         if v_min == v_max:
             # np.histogram convention
-            v_min = v_min - 0.5
-            v_max = v_max + 0.5
+            v_min -= 0.5
+            v_max += 0.5
     elif not np.isfinite(v_max):
         if arr.size == 0:
             v_max = v_min + 1.0
@@ -166,10 +166,10 @@ def compute_statistics(data):
     return np.mean(data), np.median(data), np.std(data)
 
 
-def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
+def nanhist_with_stats(data, bin_range=(-np.inf, np.inf), n_bins=10):
     """Compute nan-histogram and nan-statistics of an array.
 
-    :param numpy.ndarray roi: image ROI.
+    :param numpy.ndarray data: image ROI.
     :param tuple bin_range: (lb, ub) of histogram.
     :param int n_bins: number of bins of histogram.
 
@@ -181,7 +181,7 @@ def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
 
     # TODO: the following three steps can be merged into one to improve
     #       the performance.
-    filtered = roi.copy()
+    filtered = data.copy()
     mask_image_data(filtered, threshold_mask=bin_range)
     filtered = filtered[~np.isnan(filtered)]
 

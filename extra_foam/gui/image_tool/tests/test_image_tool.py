@@ -485,11 +485,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["gain/file/path"]):
                 QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)
-                time.sleep(0.1)  # wait to write into redis
                 self.assertEqual("gain/file/path", widget.gain_fp_le.text())
 
-                n_attempts = 0
                 # repeat to prevent random failure at Travis
+                n_attempts = 0
                 while n_attempts < 10:
                     n_attempts += 1
                     gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
@@ -498,21 +497,35 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                     time.sleep(0.001)
 
                 np.testing.assert_array_equal(gain, gain_gt)
+                self.assertTrue(gain_updated)
                 self.assertFalse(offset_updated)
                 self.assertIsNone(offset)
 
                 QTest.mouseClick(widget.remove_gain_btn, Qt.LeftButton)
                 self.assertEqual("", widget.gain_fp_le.text())
-                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                # repeat to prevent random failure at Travis
+                n_attempts = 0
+                while n_attempts < 10:
+                    n_attempts += 1
+                    gain_updated, gain, _, _ = proc._cal_sub.update()
+                    if gain_updated:
+                        break
+                    time.sleep(0.01)
                 self.assertTrue(gain_updated)
                 self.assertIsNone(gain)
 
             with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["offset/file/path"]):
                 QTest.mouseClick(widget.load_offset_btn, Qt.LeftButton)
-                time.sleep(0.1)  # wait to write data into redis
                 self.assertEqual("offset/file/path", widget.offset_fp_le.text())
-                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                # repeat to prevent random failure at Travis
+                n_attempts = 0
+                while n_attempts < 10:
+                    n_attempts += 1
+                    gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                    if offset_updated:
+                        break
+                    time.sleep(0.01)
                 self.assertFalse(gain_updated)
                 self.assertIsNone(gain)
                 self.assertTrue(offset_updated)
@@ -520,7 +533,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
                 QTest.mouseClick(widget.remove_offset_btn, Qt.LeftButton)
                 self.assertEqual("", widget.offset_fp_le.text())
-                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                # repeat to prevent random failure at Travis
+                n_attempts = 0
+                while n_attempts < 10:
+                    n_attempts += 1
+                    _, _, offset_updated, offset = proc._cal_sub.update()
+                    if offset_updated:
+                        break
+                    time.sleep(0.01)
                 self.assertTrue(offset_updated)
                 self.assertIsNone(offset)
 

@@ -14,16 +14,15 @@ except ImportError:
     HAVE_OPENGL = False
 
 from ..Point import Point
-import sys, os
+import sys
 import warnings
-from .FileDialog import FileDialog
 from ..GraphicsScene import GraphicsScene
 import numpy as np
 from .. import functions as fn
-from .. import debug as debug
 from .. import getConfigOption
 
 __all__ = ['GraphicsView']
+
 
 class GraphicsView(QtGui.QGraphicsView):
     """Re-implementation of QGraphicsView that removes scrollbars and allows unambiguous control of the 
@@ -45,7 +44,6 @@ class GraphicsView(QtGui.QGraphicsView):
     sigDeviceTransformChanged = QtCore.Signal(object)
     sigMouseReleased = QtCore.Signal(object)
     sigSceneMouseMoved = QtCore.Signal(object)
-    #sigRegionChanged = QtCore.Signal(object)
     sigScaleChanged = QtCore.Signal(object)
     lastFileDir = None
     
@@ -113,16 +111,11 @@ class GraphicsView(QtGui.QGraphicsView):
         # GraphicsScene must have parent or expect crashes!
         self.sceneObj = GraphicsScene(parent=self)
         self.setScene(self.sceneObj)
-        
-        ## Workaround for PySide crash
-        ## This ensures that the scene will outlive the view.
-        if QT_LIB == 'PySide':
-            self.sceneObj._view_ref_workaround = self
-        
+
         ## by default we set up a central widget with a grid layout.
         ## this can be replaced if needed.
         self.centralWidget = None
-        self.setCentralItem(QtGui.QGraphicsWidget())
+        self.setCentralWidget(QtGui.QGraphicsWidget())
         self.centralLayout = QtGui.QGraphicsGridLayout()
         self.centralWidget.setLayout(self.centralLayout)
         
@@ -157,8 +150,7 @@ class GraphicsView(QtGui.QGraphicsView):
     def render(self, *args, **kwds):
         self.scene().prepareForPaint()
         return QtGui.QGraphicsView.render(self, *args, **kwds)
-        
-    
+
     def close(self):
         self.centralWidget = None
         self.scene().clear()
@@ -181,11 +173,7 @@ class GraphicsView(QtGui.QGraphicsView):
     def keyPressEvent(self, ev):
         self.scene().keyPressEvent(ev)  ## bypass view, hand event directly to scene
                                         ## (view likes to eat arrow key events)
-        
-        
-    def setCentralItem(self, item):
-        return self.setCentralWidget(item)
-        
+
     def setCentralWidget(self, item):
         """Sets a QGraphicsWidget to automatically fill the entire view (the item will be automatically
         resize whenever the GraphicsView is resized)."""
@@ -303,9 +291,7 @@ class GraphicsView(QtGui.QGraphicsView):
         range = QtCore.QRectF(tl.x(), tl.y(), w, h)
         GraphicsView.setRange(self, range, padding=0)
         self.sigScaleChanged.connect(image.setScaledMode)
-        
-        
-        
+
     def lockXRange(self, v1):
         if not v1 in self.lockedViewports:
             self.lockedViewports.append(v1)

@@ -1,11 +1,12 @@
+import pytest
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 import tempfile
 
 import numpy as np
 
-from extra_foam.gui import mkQApp, pyqtgraph
-from extra_foam.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
+from extra_foam.gui import mkQApp
+from extra_foam.gui.plot_widgets.image_items import ImageItem, MaskItem, RectROI
 from extra_foam.gui.plot_widgets.image_view_base import ImageViewF, TimedImageViewF
 from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
@@ -13,33 +14,47 @@ from extra_foam.gui.plot_widgets.image_views import (
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.logger import logger
 
+from . import _display
+
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
 
 
-class TestImageView(unittest.TestCase):
-    def testGeneral(self):
+class TestImageView:
+    def testComponents(self):
         widget = ImageViewF(has_roi=True)
-        plot_items = widget._plot_widget._plot_item.items
-        self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
+        items = widget._plot_widget._plot_area._vb.addedItems
+        assert isinstance(items[0], ImageItem)
         for i in range(1, 5):
-            self.assertIsInstance(plot_items[i], RectROI)
+            assert isinstance(items[i], RectROI)
 
         widget = ImageViewF()
-        self.assertEqual(1, len(widget._plot_widget._plot_item.items))
+        assert len(widget._plot_widget._plot_area._items) == 1
 
-        with self.assertRaisesRegex(TypeError, "numpy array"):
+        with pytest.raises(TypeError, match="numpy array"):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
 
+    @pytest.mark.parametrize("dtype", [np.uint8, np.int, np.float32])
+    def testSetImage(self, dtype):
+        widget = ImageViewF(has_roi=True)
+
+        if _display():
+            widget.show()
+
+        _display()
+
         # test setting a valid image
-        widget.setImage(np.random.randn(4, 4))
-        widget.updateImageWithAutoLevel()  # test not raise
+        img = np.arange(64).reshape(8, 8).astype(dtype)
+        widget.setImage(img)  # auto_levels = False
+        _display()
 
         # test setting image to None
         widget.setImage(None)
-        self.assertIsNone(widget._image)
-        self.assertIsNone(widget._image_item.image)
+        assert widget._image is None
+        assert widget._image_item._image is None
+
+        _display()
 
     def testRoiImageView(self):
         widget = RoiImageView(1)
@@ -48,7 +63,7 @@ class TestImageView(unittest.TestCase):
         processed.image.masked_mean = np.ones((3, 3))
 
         # invalid ROI rect
-        self.assertListEqual(RectRoiGeom.INVALID, list(processed.roi.geom1.geometry))
+        assert list(processed.roi.geom1.geometry) == RectRoiGeom.INVALID
         widget.updateF(processed)
         widget.setImage.assert_not_called()
 
@@ -81,11 +96,11 @@ class TestImageAnalysis(unittest.TestCase):
 
     def testGeneral(self):
         widget = ImageAnalysis()
-        plot_items = widget._plot_widget._plot_item.items
-        self.assertIsInstance(plot_items[0], ImageItem)
-        self.assertIsInstance(plot_items[1], MaskItem)
+        items = widget._plot_widget._plot_area._vb.addedItems
+        self.assertIsInstance(items[0], ImageItem)
+        self.assertIsInstance(items[1], MaskItem)
         for i in range(2, 6):
-            self.assertIsInstance(plot_items[i], RectROI)
+            self.assertIsInstance(items[i], RectROI)
 
     def testSetImage(self):
         widget = ImageAnalysis()
@@ -134,8 +149,8 @@ class TestImageAnalysis(unittest.TestCase):
 
     @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getSaveFileName')
     @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getOpenFileName')
-    @patch("extra_foam.gui.plot_widgets.plot_items.MaskItem.setMask")
-    @patch("extra_foam.gui.plot_widgets.plot_items.ImageMaskPub")
+    @patch("extra_foam.gui.plot_widgets.image_items.MaskItem.setMask")
+    @patch("extra_foam.gui.plot_widgets.image_items.ImageMaskPub")
     def testSaveLoadImageMask(self, mocked_pub, mocked_set_mask, mocked_open, mocked_save):
 
         def save_mask_in_file(_fp, arr):
