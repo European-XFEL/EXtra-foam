@@ -66,9 +66,18 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._resolution = 0
 
             self._plot.setData(item.x, y)
-            if y_slave is not None and len(y_slave) > 0:
+            # The following code looks awkward but it is by far
+            # the best solution. The user could choose to deactivate
+            # the master-slave mode and keep the slave data there.
+            # In this case, a legend is still required. Therefore,
+            # we cannot toggle the legend by the signal from the
+            # master-slave checkbox in the GUI.
+            if y_slave is not None:
                 self._plot_slave.setData(item.x_slave, y_slave)
-                self.showLegend()
+                if len(y_slave) > 0:
+                    self.showLegend()
+                else:
+                    self.hideLegend()
             else:
                 self.hideLegend()
         else:
@@ -84,11 +93,14 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._resolution = resolution
 
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
-            if y_slave is not None and len(y_slave.avg) > 0:
+            if y_slave is not None:
                 self._plot_slave.setData(
                     item.x_slave, y_slave.avg,
                     y_min=y_slave.min, y_max=y_slave.max)
-                self.showLegend()
+                if len(y_slave.avg) > 0:
+                    self.showLegend()
+                else:
+                    self.hideLegend()
             else:
                 self.hideLegend()
 
