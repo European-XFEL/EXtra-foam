@@ -362,21 +362,19 @@ class PlotArea(pg.GraphicsWidget):
 
     @pyqtSlot(bool)
     def _onLogXChanged(self, state):
-        self.getAxis("top").setLogMode(state)
-        self.getAxis("bottom").setLogMode(state)
-        self.updateGeometry()
-
         for item in self._plot_items:
             item.setLogX(state)
+        self.getAxis("top").setLogMode(state)
+        self.getAxis("bottom").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
     @pyqtSlot(bool)
     def _onLogYChanged(self, state):
-        self.getAxis("left").setLogMode(state)
-        self.getAxis("right").setLogMode(state)
-        self.updateGeometry()
-
         for item in self._plot_items:
             item.setLogY(state)
+        self.getAxis("left").setLogMode(state)
+        self.getAxis("right").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
     def addItem(self, item, ignore_bounds=False):
         """Add a graphics item to ViewBox."""
@@ -460,7 +458,7 @@ class PlotArea(pg.GraphicsWidget):
             self._legend.setParentItem(self._vb)
 
             for item in self._plot_items:
-                self._legend.addItem(item)
+                self._legend.addItem(item, item.name())
 
         return self._legend
 

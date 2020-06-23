@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
+from collections import deque
 
 import numpy as np
 
@@ -21,6 +22,8 @@ app = mkQApp()
 
 class BenchmarkImageViewSpeed:
     def __init__(self):
+        self._dt = deque(maxlen=60)
+
         self._timer = QTimer()
         self._timer.timeout.connect(self.update)
 
@@ -40,9 +43,9 @@ class BenchmarkImageViewSpeed:
         self._count += 1
 
         now = time.time()
-        dt = now - self._prev_t
+        self._dt.append(now - self._prev_t)
         self._prev_t = now
-        fps = 1.0/dt
+        fps = len(self._dt) / sum(self._dt)
 
         self._view.setTitle(f"{fps:.2f} fps")
 

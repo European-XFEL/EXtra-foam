@@ -656,13 +656,13 @@ class ViewBox(GraphicsWidget):
         """
         self.setRange(xRange=[min, max], update=update, padding=padding)
 
-    def autoRange(self, padding=None, items=None, item=None):
+    def autoRange(self, padding=None, items=None, item=None, disableAutoRange=True):
         """
         Set the range of the view box to make all children visible.
         Note that this is not the same as enableAutoRange, which causes the view to
         automatically auto-range whenever its contents are changed.
 
-        ==============  ============================================================
+        ==============  ====o========================================================
         **Arguments:**
         padding         The fraction of the total data range to add on to the final
                         visible range. By default, this value is set between 0.02
@@ -678,7 +678,7 @@ class ViewBox(GraphicsWidget):
             bounds = self.mapFromItemToView(item, item.boundingRect()).boundingRect()
 
         if bounds is not None:
-            self.setRange(bounds, padding=padding)
+            self.setRange(bounds, padding=padding, disableAutoRange=disableAutoRange)
 
     def suggestPadding(self, axis):
         l = self.width() if axis==0 else self.height()
@@ -1614,14 +1614,7 @@ class ViewBox(GraphicsWidget):
         if self.border is not None:
             bounds = self.shape()
             p.setPen(self.border)
-            #p.fillRect(bounds, QtGui.QColor(0, 0, 0))
             p.drawPath(bounds)
-
-        #p.setPen(fn.mkPen('r'))
-        #path = QtGui.QPainterPath()
-        #path.addRect(self.targetRect())
-        #tr = self.mapFromView(path)
-        #p.drawPath(tr)
 
     def updateBackground(self):
         bg = self.state['background']

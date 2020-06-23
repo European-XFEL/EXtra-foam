@@ -8,6 +8,8 @@ if QT_LIB in ['PyQt4', 'PyQt5']:
 from .GraphicsItem import GraphicsItem
 
 __all__ = ['GraphicsObject', 'PlotItem']
+
+
 class GraphicsObject(GraphicsItem, QtGui.QGraphicsObject):
     """
     **Bases:** :class:`GraphicsItem <pyqtgraph.graphicsItems.GraphicsItem>`, :class:`QtGui.QGraphicsObject`
@@ -48,7 +50,7 @@ class PlotItem(GraphicsObject):
     def __init__(self, name=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._graph = None  # QPainterPath
+        self._graph = None
 
         self._name = "" if name is None else name
 
@@ -62,21 +64,20 @@ class PlotItem(GraphicsObject):
     def _parseInputData(self, x, y, **kwargs):
         """Convert input to np.array and apply shape check."""
         if isinstance(x, list):
-            self._x = np.array(x)
+            x = np.array(x)
         elif x is None:
-            self._x = np.array([])
-        else:
-            self._x = x
+            x = np.array([])
 
         if isinstance(y, list):
-            self._y = np.array(y)
+            y = np.array(y)
         elif y is None:
-            self._y = np.array([])
-        else:
-            self._y = y
+            y = np.array([])
 
-        if len(self._x) != len(self._y):
+        if len(x) != len(y):
             raise ValueError("'x' and 'y' data have different lengths!")
+
+        # do not set data unless they pass the sanity check!
+        self._x, self._y = x, y
 
     @abc.abstractmethod
     def data(self):
@@ -95,7 +96,6 @@ class PlotItem(GraphicsObject):
         """Override."""
         if self._graph is None:
             self._prepareGraph()
-
         p.setPen(self._pen)
         p.drawPath(self._graph)
 

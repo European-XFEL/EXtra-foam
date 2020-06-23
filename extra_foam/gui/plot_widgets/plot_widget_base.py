@@ -18,7 +18,7 @@ from .. import pyqtgraph as pg
 
 from .graphics_widgets import PlotArea
 from .plot_items import (
-    BarGraphItem, CurvePlotItem, StatisticsBarItem
+    BarGraphItem, CurvePlotItem, ScatterPlotItem, StatisticsBarItem
 )
 from ..misc_widgets import FColor
 from ...config import config
@@ -126,9 +126,7 @@ class PlotWidgetF(pg.GraphicsView):
 
     def plotScatter(self, *args, **kwargs):
         """Add and return a new scatter plot."""
-        if 'pen' not in kwargs:
-            kwargs['pen'] = FColor.mkPen(None)
-        item = pg.ScatterPlotItem(*args, **kwargs)
+        item = ScatterPlotItem(*args, **kwargs)
         self._plot_area.addItem(item)
         return item
 

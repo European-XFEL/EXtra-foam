@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from PyQt5.QtTest import QTest, QSignalSpy
-from PyQt5.QtCore import Qt
 
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.graphics_widgets import (
@@ -12,7 +11,7 @@ from extra_foam.gui.plot_widgets.image_items import (
     ImageItem, MaskItem, RectROI
 )
 from extra_foam.gui.plot_widgets.plot_items import (
-    CurvePlotItem, BarGraphItem, StatisticsBarItem
+    CurvePlotItem, BarGraphItem, ScatterPlotItem, StatisticsBarItem
 )
 from extra_foam.gui import pyqtgraph as pg
 from extra_foam.logger import logger
@@ -107,7 +106,8 @@ class TestPlotArea(unittest.TestCase):
         area.addItem(StatisticsBarItem())
         curve_plot_item = CurvePlotItem()
         area.addItem(curve_plot_item)
-        area.addItem(pg.ScatterPlotItem())
+        scatter_plot_item = ScatterPlotItem()
+        area.addItem(ScatterPlotItem())
         area.setAnnotationList([0], [0], [1])
 
         self.assertEqual(4, len(area._plot_items))
