@@ -23,7 +23,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         x_label, y_label = plot_labels[AnalysisType.AZIMUTHAL_INTEG]
         self.setLabel('bottom', x_label)

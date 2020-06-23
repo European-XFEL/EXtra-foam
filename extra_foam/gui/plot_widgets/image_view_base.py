@@ -81,8 +81,8 @@ class ImageViewF(QWidget):
         if has_roi:
             self._initializeROIs(roi_position, roi_size)
 
-        self._plot_widget = PlotWidgetF()
-        self._plot_widget.disableLogMenu()
+        self._plot_widget = PlotWidgetF(enable_meter=False,
+                                        enable_transform=False)
 
         self._cached_title = None
         # use the public interface for caching

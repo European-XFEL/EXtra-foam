@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from PyQt5.QtTest import QTest
+from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
 from extra_foam.gui import mkQApp
@@ -36,7 +36,7 @@ class TestPlotArea(unittest.TestCase):
         area = self._area
 
         self.assertEqual(4, len(area._axes))
-        for name, pos in [('left', (2, 0)), ('bottom', (3, 1))]:
+        for name, pos in [('left', (3, 0)), ('bottom', (4, 1))]:
             left_axis = area._axes[name]
             self.assertIsInstance(left_axis['item'], pg.AxisItem)
             self.assertTrue(left_axis['item'].isVisible())
@@ -89,7 +89,7 @@ class TestPlotArea(unittest.TestCase):
     def testForwardMethod(self):
         area = self._area
 
-        for method in ["setAspectLocked", "invertY", "invertX"]:
+        for method in ["setAspectLocked", "invertY", "invertX", "mapSceneToView"]:
             with patch.object(area._vb, method) as mocked:
                 getattr(area, method)()
                 mocked.assert_called_once()
@@ -150,12 +150,27 @@ class TestPlotArea(unittest.TestCase):
         event = object()
         menus = self._area.getContextMenus(event)
 
-        self.assertEqual(2, len(menus))
-        self.assertEqual("Grid", menus[0].title())
-        self.assertEqual("Transform", menus[1].title())
+        self.assertEqual(3, len(menus))
+        self.assertEqual("Meter", menus[0].title())
+        self.assertEqual("Grid", menus[1].title())
+        self.assertEqual("Transform", menus[2].title())
+
+        # test "Meter" actions
+        meter_actions = menus[0].actions()
+        self.assertFalse(area._show_meter)
+        self.assertFalse(area._meter.isVisible())
+        spy = QSignalSpy(area.cross_toggled_sgn)
+        meter_actions[0].defaultWidget().setChecked(True)
+        self.assertTrue(area._show_meter)
+        self.assertTrue(area._meter.isVisible())
+        self.assertEqual(1, len(spy))
+        meter_actions[0].defaultWidget().setChecked(False)
+        self.assertFalse(area._show_meter)
+        self.assertFalse(area._meter.isVisible())
+        self.assertEqual(2, len(spy))
 
         # test "Grid" actions
-        grid_actions = menus[0].actions()
+        grid_actions = menus[1].actions()
         alpha = area._grid_opacity_sld.value()
         grid_actions[0].defaultWidget().setChecked(True)
         self.assertEqual(alpha, area.getAxis("bottom").grid)
@@ -165,7 +180,7 @@ class TestPlotArea(unittest.TestCase):
         # test "Transform" actions
         plot_item = CurvePlotItem()
         area.addItem(plot_item)
-        transform_actions = menus[1].actions()
+        transform_actions = menus[2].actions()
         with patch.object(plot_item, "updateGraph") as mocked:
             transform_actions[0].defaultWidget().setChecked(True)
             self.assertTrue(area.getAxis("bottom").logMode)
@@ -179,6 +194,17 @@ class TestPlotArea(unittest.TestCase):
             self.assertTrue(area.getAxis("right").logMode)
             self.assertTrue(plot_item._log_y_mode)
             mocked.assert_called_once()
+
+        area._enable_meter = False
+        menus = self._area.getContextMenus(event)
+        self.assertEqual(2, len(menus))
+        self.assertEqual("Grid", menus[0].title())
+        self.assertEqual("Transform", menus[1].title())
+
+        area._enable_transform = False
+        menus = self._area.getContextMenus(event)
+        self.assertEqual(1, len(menus))
+        self.assertEqual("Grid", menus[0].title())
 
 
 class TestHistogramLUTItem(unittest.TestCase):

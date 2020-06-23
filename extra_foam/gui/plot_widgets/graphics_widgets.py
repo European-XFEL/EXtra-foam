@@ -185,7 +185,13 @@ class PlotArea(pg.GraphicsWidget):
     # Emitted when the ViewBox X range has changed
     sigXRangeChanged = pyqtSignal(object, object)
 
-    def __init__(self, name=None, parent=None):
+    cross_toggled_sgn = pyqtSignal(bool)
+
+    _METER_ROW = 0
+    _TITLE_ROW = 1
+
+    def __init__(self, name=None, *,
+                 enable_meter=True, enable_transform=True, parent=None):
         super().__init__(parent=parent)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -200,9 +206,13 @@ class PlotArea(pg.GraphicsWidget):
 
         self._legend = None
         self._axes = {}
+        self._meter = pg.LabelItem(
+            '', size='11pt', justify='left', color='6A3D9A', parent=self)
         self._title = pg.LabelItem('', size='11pt', parent=self)
 
         # context menu
+        self._show_cross_cb = QCheckBox("Cross cursor")
+
         self._show_x_grid_cb = QCheckBox("Show X Grid")
         self._show_y_grid_cb = QCheckBox("Show Y Grid")
         self._grid_opacity_sld = QSlider(Qt.Horizontal)
@@ -215,7 +225,10 @@ class PlotArea(pg.GraphicsWidget):
         self._log_y_cb = QCheckBox("Log Y")
 
         self._menu = None
-        self._enable_log_menu = True
+        self._enable_transform = enable_transform
+        self._enable_meter = enable_meter
+
+        self._show_meter = False
 
         self._layout = QGraphicsGridLayout()
 
@@ -229,13 +242,11 @@ class PlotArea(pg.GraphicsWidget):
         layout.setHorizontalSpacing(0)
         layout.setVerticalSpacing(0)
 
-        layout.addItem(self._title, 0, 1)
-        layout.addItem(self._vb, 2, 1)
+        layout.addItem(self._meter, self._METER_ROW, 1)
+        layout.addItem(self._title, self._TITLE_ROW, 1)
+        layout.addItem(self._vb, 3, 1)
 
-        self._initAxisItems()
-        self.setTitle()
-
-        for i in range(4):
+        for i in range(5):
             layout.setRowPreferredHeight(i, 0)
             layout.setRowMinimumHeight(i, 0)
             layout.setRowSpacing(i, 0)
@@ -252,12 +263,18 @@ class PlotArea(pg.GraphicsWidget):
 
         self.setLayout(layout)
 
+        self._initAxisItems()
+        self.setTitle()
+        self.showMeter(self._show_meter)
+
         self._initContextMenu()
 
     def initConnections(self):
         self._vb.sigRangeChanged.connect(self.range_changed_sgn)
         self._vb.sigXRangeChanged.connect(self.sigXRangeChanged)
         self._vb.sigYRangeChanged.connect(self.sigYRangeChanged)
+
+        self._show_cross_cb.toggled.connect(self._onShowCrossChanged)
 
         self._show_x_grid_cb.toggled.connect(self._onShowGridChanged)
         self._show_y_grid_cb.toggled.connect(self._onShowGridChanged)
@@ -268,11 +285,17 @@ class PlotArea(pg.GraphicsWidget):
 
     def _initContextMenu(self):
         self._menu = [
+            QMenu("Meter"),
             QMenu("Grid"),
             QMenu("Transform")
         ]
 
-        grid_menu = self._menu[0]
+        meter_menu = self._menu[0]
+        cross_act = QWidgetAction(meter_menu)
+        cross_act.setDefaultWidget(self._show_cross_cb)
+        meter_menu.addAction(cross_act)
+
+        grid_menu = self._menu[1]
         show_x_act = QWidgetAction(grid_menu)
         show_x_act.setDefaultWidget(self._show_x_grid_cb)
         grid_menu.addAction(show_x_act)
@@ -288,7 +311,7 @@ class PlotArea(pg.GraphicsWidget):
         opacity_act.setDefaultWidget(widget)
         grid_menu.addAction(opacity_act)
 
-        transform_menu = self._menu[1]
+        transform_menu = self._menu[2]
         log_x_act = QWidgetAction(transform_menu)
         log_x_act.setDefaultWidget(self._log_x_cb)
         transform_menu.addAction(log_x_act)
@@ -297,10 +320,10 @@ class PlotArea(pg.GraphicsWidget):
         transform_menu.addAction(log_y_act)
 
     def _initAxisItems(self):
-        for orient, pos in (('top', (1, 1)),
-                            ('bottom', (3, 1)),
-                            ('left', (2, 0)),
-                            ('right', (2, 2))):
+        for orient, pos in (('top', (2, 1)),
+                            ('bottom', (4, 1)),
+                            ('left', (3, 0)),
+                            ('right', (3, 2))):
             axis = pg.AxisItem(orientation=orient, parent=self)
 
             axis.linkToView(self._vb)
@@ -319,6 +342,11 @@ class PlotArea(pg.GraphicsWidget):
         for item in self._plot_items:
             # TODO: introduce a method which set empty data
             item.setData([], [])
+
+    @pyqtSlot(bool)
+    def _onShowCrossChanged(self, state):
+        self.showMeter(state)
+        self.cross_toggled_sgn.emit(state)
 
     @pyqtSlot()
     def _onShowGridChanged(self):
@@ -385,12 +413,13 @@ class PlotArea(pg.GraphicsWidget):
 
     def getContextMenus(self, event):
         """Override."""
-        if self._enable_log_menu:
-            return self._menu
-        return self._menu[:-1]
-
-    def enableLogMenu(self, enable):
-        self._enable_log_menu = enable
+        start = 0
+        end = len(self._menu)
+        if not self._enable_transform:
+            end -= 1
+        if not self._enable_meter:
+            start += 1
+        return self._menu[start:end]
 
     def getAxis(self, axis):
         """Return the specified AxisItem.
@@ -449,18 +478,47 @@ class PlotArea(pg.GraphicsWidget):
         """
         self.getAxis(axis).showLabel(show)
 
+    def showMeter(self, show=True):
+        """Show or hide the meter bar.
+
+        :param bool show: whether to show the meter bar.
+        """
+        row = self._METER_ROW
+        if not show:
+            self._meter.setMaximumHeight(0)
+            self._layout.setRowFixedHeight(row, 0)
+            self._meter.setVisible(False)
+        else:
+            self._meter.setMaximumHeight(30)
+            self._layout.setRowFixedHeight(row, 30)
+            self._meter.setVisible(True)
+
+        self._show_meter = show
+
+    def setMeter(self, pos):
+        """Set the meter of the plot."""
+        if not self._show_meter:
+            return
+
+        if pos is None:
+            self._meter.setText("")
+        else:
+            x, y = pos
+            self._meter.setText(f"x = {x}, y = {y}")
+
     def setTitle(self, title=None, **args):
         """Set the title of the plot.
 
         :param str title: text to display along the axis. HTML allowed.
         """
+        row = self._TITLE_ROW
         if title is None:
             self._title.setMaximumHeight(0)
-            self._layout.setRowFixedHeight(0, 0)
+            self._layout.setRowFixedHeight(row, 0)
             self._title.setVisible(False)
         else:
             self._title.setMaximumHeight(30)
-            self._layout.setRowFixedHeight(0, 30)
+            self._layout.setRowFixedHeight(row, 30)
             self._title.setText(title, **args)
             self._title.setVisible(True)
 
@@ -472,3 +530,6 @@ class PlotArea(pg.GraphicsWidget):
 
     def invertX(self, *args, **kwargs):
         self._vb.invertX(*args, **kwargs)
+
+    def mapSceneToView(self, *args, **kwargs):
+        return self._vb.mapSceneToView(*args, **kwargs)

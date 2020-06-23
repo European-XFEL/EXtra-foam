@@ -11,7 +11,7 @@ import abc
 
 import numpy as np
 
-from PyQt5.QtCore import pyqtSignal, QTimer
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtWidgets import QSizePolicy
 
 from .. import pyqtgraph as pg
@@ -40,7 +40,9 @@ class PlotWidgetF(pg.GraphicsView):
     sigTransformChanged = pyqtSignal(object)
 
     def __init__(self, parent=None, *,
-                 background='default', show_indicator=False, **kargs):
+                 background='default',
+                 enable_meter=True,
+                 enable_transform=True):
         """Initialization."""
         super().__init__(parent, background=background)
 
@@ -49,23 +51,20 @@ class PlotWidgetF(pg.GraphicsView):
 
         self._title = ""
 
-        self._plot_area = PlotArea(**kargs)
+        self._plot_area = PlotArea(enable_meter=enable_meter,
+                                   enable_transform=enable_transform)
         self.setCentralWidget(self._plot_area)
+        self._plot_area.cross_toggled_sgn.connect(self.onCrossToggled)
 
-        # TODO: improve indicator implementation
-        # Move Indicator to PlotArea
-        self._show_indicator = show_indicator
-        if show_indicator:
+        self._v_line = None
+        self._h_line = None
+        if enable_meter:
             self._v_line = pg.InfiniteLine(angle=90, movable=False)
             self._h_line = pg.InfiniteLine(angle=0, movable=False)
-            self._indicator = pg.TextItem(color=FColor.k)
             self._v_line.hide()
             self._h_line.hide()
-            self._indicator.hide()
             self._plot_area.addItem(self._v_line, ignore_bounds=True)
             self._plot_area.addItem(self._h_line, ignore_bounds=True)
-            self._plot_area.scene().addItem(self._indicator)
-
             # rateLimit should be fast enough to be able to capture
             # the leaveEvent
             self._proxy = pg.SignalProxy(self._plot_area.scene().sigMouseMoved,
@@ -218,39 +217,24 @@ class PlotWidgetF(pg.GraphicsView):
         """Show legend."""
         self._plot_area.showLegend(True)
 
-    def disableLogMenu(self):
-        """Disable log X/Y context menu."""
-        self._plot_area.enableLogMenu(False)
-
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 
-    def onMouseMoved(self, ev):
-        pos = ev[0]
-        y_shift = 45  # move text to the top of the mouse cursor
-        self._indicator.setPos(pos.x(), pos.y() - y_shift)
+    @pyqtSlot(bool)
+    def onCrossToggled(self, state):
+        if state:
+            self._v_line.show()
+            self._h_line.show()
+        else:
+            self._v_line.hide()
+            self._h_line.hide()
 
-        # TODO: improve
-        m_pos = self._plot_area._vb.mapSceneToView(pos)
+    def onMouseMoved(self, pos):
+        m_pos = self._plot_area.mapSceneToView(pos[0])
         x, y = m_pos.x(), m_pos.y()
         self._v_line.setPos(x)
         self._h_line.setPos(y)
-
-        self._indicator.setText(f"x={x}\ny={y}")
-
-    def enterEvent(self, ev):
-        """Override."""
-        if self._show_indicator:
-            self._v_line.show()
-            self._h_line.show()
-            self._indicator.show()
-
-    def leaveEvent(self, ev):
-        """Override."""
-        if self._show_indicator:
-            self._v_line.hide()
-            self._h_line.hide()
-            self._indicator.hide()
+        self._plot_area.setMeter((x, y))
 
     def closeEvent(self, event):
         """Override."""

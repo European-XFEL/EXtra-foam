@@ -81,7 +81,7 @@ class GotthardPpFomMeanPlot(PlotWidgetF):
     Visualize averaged VFOM over a train as well as its moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Averaged FOM over train")
         self.setLabel('left', "ADU")
@@ -105,7 +105,7 @@ class GotthardPpFomPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -139,7 +139,7 @@ class GotthardPpRawPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -172,7 +172,7 @@ class GotthardPpDarkPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 

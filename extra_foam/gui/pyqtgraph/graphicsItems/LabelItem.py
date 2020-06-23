@@ -111,8 +111,7 @@ class LabelItem(GraphicsWidget, GraphicsWidgetAnchor):
         self.item.resetTransform()
         self.item.rotate(angle)
         self.updateMin()
-        
-        
+
     def updateMin(self):
         bounds = self.itemRect()
         self.setMinimumWidth(bounds.width())
@@ -133,10 +132,3 @@ class LabelItem(GraphicsWidget, GraphicsWidgetAnchor):
         
     def itemRect(self):
         return self.item.mapRectToParent(self.item.boundingRect())
-        
-    #def paint(self, p, *args):
-        #p.setPen(fn.mkPen('r'))
-        #p.drawRect(self.rect())
-        #p.setPen(fn.mkPen('g'))
-        #p.drawRect(self.itemRect())
-        

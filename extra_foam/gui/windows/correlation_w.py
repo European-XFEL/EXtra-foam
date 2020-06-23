@@ -29,7 +29,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = idx
 

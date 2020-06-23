@@ -3,6 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+from PyQt5.QtTest import QTest
+from PyQt5.QtCore import QPoint
+
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF, TimedPlotWidgetF
 from extra_foam.logger import logger
@@ -20,6 +23,8 @@ class TestPlotWidget(unittest.TestCase):
     def testAddPlots(self):
         widget = self._widget
 
+        self.assertEqual(len(self._widget._plot_area._items), 2)
+
         # test Legend
         widget.addLegend()
         widget.plotCurve(name="curve")
@@ -27,7 +32,7 @@ class TestPlotWidget(unittest.TestCase):
         widget.plotBar(name="bar")
         widget.plotStatisticsBar(name="statistics")
 
-        self.assertEqual(len(self._widget._plot_area._items), 4)
+        self.assertEqual(len(self._widget._plot_area._items), 6)
 
     def testForwardMethod(self):
         widget = self._widget
@@ -102,6 +107,16 @@ class TestPlotWidget(unittest.TestCase):
         # test if y_min/ymax have different lengths
         with self.assertRaises(ValueError):
             plot.setData([1, 2, 3], [1, 2, 3], y_min=[0, 0, 0], y_max=[2, 2])
+
+    def testCrossCursor(self):
+        widget = self._widget
+        self.assertFalse(widget._v_line.isVisible())
+        self.assertFalse(widget._h_line.isVisible())
+        widget._plot_area._show_cross_cb.setChecked(True)
+        self.assertTrue(widget._v_line.isVisible())
+        self.assertTrue(widget._h_line.isVisible())
+
+        # TODO: test mouse move
 
 
 class TestTimedPlotWidgetF(unittest.TestCase):
