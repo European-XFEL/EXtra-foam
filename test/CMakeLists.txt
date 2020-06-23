@@ -71,6 +71,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     endif()
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+
 foreach(pathname IN LISTS _FOAM_UNITTESTS)
     get_filename_component(filename ${pathname} NAME)
     string(REPLACE ".cpp" "" targetname ${filename})

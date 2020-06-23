@@ -35,7 +35,7 @@ namespace foam
 struct DetectorBase
 {
   using VectorType = xt::xtensor_fixed<double, xt::xshape<3>>;
-  using ShapeType = std::array<int, 2>;
+  using ShapeType = std::array<size_t, 2>;
 };
 
 struct JungFrau : public DetectorBase
@@ -129,6 +129,7 @@ class DetectorGeometry
 public:
 
   using ShapeType = typename Detector::ShapeType;
+  using CenterType = std::array<int, 2>;
   using VectorType = typename Detector::VectorType;
   using OrientationType = xt::xtensor<double, 2>;
   using PositionType = xt::xtensor<double, 2>;
@@ -143,7 +144,7 @@ private:
   OrientationType orients_;
   std::pair<PositionType, PositionType> corner_pos_;
   ShapeType a_shape_;
-  ShapeType a_center_;
+  CenterType a_center_;
 
 public:
 
@@ -238,7 +239,7 @@ public:
   /**
    * Return the center (x, y) of the assembled image.
    */
-  const ShapeType& assembledCenter() const;
+  const CenterType& assembledCenter() const;
 
   /**
    * Return the number of modules.
@@ -332,7 +333,7 @@ DetectorGeometry<Detector>::DetectorGeometry(size_t n_rows,
   auto w = static_cast<double>(Detector::module_shape[1]);
   auto h = static_cast<double>(Detector::module_shape[0]);
 
-  for (int im = 0; im < n_modules_; ++im)
+  for (size_t im = 0; im < n_modules_; ++im)
   {
     // calculate the position of the diagonal corner
     corner_pos_.second(im, 0) = corner_pos_.first(im, 0) + w * orients_(im, 0);
@@ -376,14 +377,14 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
 {
   auto ss = src.shape();
   auto ds = dst.shape();
-  this->checkShapeForAssembling(
-    std::array<int, 4>({1, static_cast<int>(ss[0]), static_cast<int>(ss[1]), static_cast<int>(ss[2])}),
-    std::array<int, 4>({1, static_cast<int>(ds[0]), static_cast<int>(ds[1])}));
+  // the shape dtype of xt::pytensor is npy_intp
+  checkShapeForAssembling(std::array<size_t, 4>({1, static_cast<size_t>(ss[0]), static_cast<size_t>(ss[1]), static_cast<size_t>(ss[2])}),
+                          std::array<size_t, 3>({1, static_cast<size_t>(ds[0]), static_cast<size_t>(ds[1])}));
 
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
 
-  for (int im = 0; im < n_modules_; ++im)
+  for (size_t im = 0; im < n_modules_; ++im)
   {
     positionModule(
       xt::view(src, im, xt::all(), xt::all()),
@@ -402,14 +403,14 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
 
   auto ms = src[0].shape();
   auto ds = dst.shape();
-  this->checkShapeForAssembling(
-    std::array<int, 4>({1, static_cast<int>(src.size()), static_cast<int>(ms[0]), static_cast<int>(ms[1])}),
-    std::array<int, 4>({1, static_cast<int>(ds[0]), static_cast<int>(ds[1])}));
+  // the shape dtype of xt::pytensor is npy_intp
+  this->checkShapeForAssembling(std::array<size_t, 4>({1, src.size(), static_cast<size_t>(ms[0]), static_cast<size_t>(ms[1])}),
+                                std::array<size_t, 3>({1, static_cast<size_t>(ds[0]), static_cast<size_t>(ds[1])}));
 
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
 
-  for (int im = 0; im < n_modules_; ++im)
+  for (size_t im = 0; im < n_modules_; ++im)
   {
     positionModule(
       src[im],
@@ -429,11 +430,11 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
   auto ds = dst.shape();
   this->checkShapeForAssembling(ss, ds);
 
-  int n_pulses = ss[0];
+  size_t n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules_, 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
       for(int im=block.rows().begin(); im != block.rows().end(); ++im)
@@ -441,9 +442,9 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
         for(int ip=block.cols().begin(); ip != block.cols().end(); ++ip)
         {
 #else
-      for (int im = 0; im < n_modules_; ++im)
+      for (size_t im = 0; im < n_modules_; ++im)
         {
-        for (int ip = 0; ip < n_pulses; ++ip)
+        for (size_t ip = 0; ip < n_pulses; ++ip)
         {
 #endif
           auto&& dst_view = xt::view(dst, ip, xt::all(), xt::all());
@@ -466,18 +467,16 @@ template<typename M, typename E, EnableIf<std::decay_t<M>, IsModulesVector>, Ena
 void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore_asic_edge) const
 {
   auto ms = src[0].shape();
-  auto ss = std::array<int, 4> {static_cast<int>(ms[0]),
-                                static_cast<int>(src.size()),
-                                static_cast<int>(ms[1]),
-                                static_cast<int>(ms[2])};
+  // the shape dtype of xt::pytensor is npy_intp
+  auto ss = std::array<size_t, 4> { static_cast<size_t>(ms[0]), src.size(), static_cast<size_t>(ms[1]), static_cast<size_t>(ms[2]) };
   auto ds = dst.shape();
   this->checkShapeForAssembling(ss, ds);
 
-  int n_pulses = ss[0];
+  size_t n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules_, 0, n_pulses),
     [&src, &dst, &p0, &p1, ignore_asic_edge, this] (const tbb::blocked_range2d<int> &block)
     {
       for(int im=block.rows().begin(); im != block.rows().end(); ++im)
@@ -485,9 +484,9 @@ void DetectorGeometry<Detector>::positionAllModules(M&& src, E& dst, bool ignore
         for(int ip=block.cols().begin(); ip != block.cols().end(); ++ip)
         {
 #else
-      for (int im = 0; im < n_modules_; ++im)
+      for (size_t im = 0; im < n_modules_; ++im)
       {
-        for (int ip = 0; ip < n_pulses; ++ip)
+        for (size_t ip = 0; ip < n_pulses; ++ip)
         {
 #endif
           auto&& dst_view = xt::view(dst, ip, xt::all(), xt::all());
@@ -511,9 +510,9 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
 {
   auto ss = src.shape();
   auto ds = dst.shape();
-  checkShapeForDismantling(
-    std::array<int, 4>({1, static_cast<int>(ss[0]), static_cast<int>(ss[1])}),
-    std::array<int, 4>({1, static_cast<int>(ds[0]), static_cast<int>(ds[1]), static_cast<int>(ds[2])}));
+  // the shape dtype of xt::pytensor is npy_intp
+  checkShapeForDismantling(std::array<size_t, 3>({1, static_cast<size_t>(ss[0]), static_cast<size_t>(ss[1])}),
+                           std::array<size_t, 4>({1, static_cast<size_t>(ds[0]), static_cast<size_t>(ds[1]), static_cast<size_t>(ds[2])}));
 
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
@@ -536,11 +535,11 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
   auto ds = dst.shape();
   checkShapeForDismantling(ss, ds);
 
-  int n_pulses = ss[0];
+  size_t n_pulses = ss[0];
   auto p0 = corner_pos_.first / Detector::pixel_size;
   auto p1 = corner_pos_.second / Detector::pixel_size;
 #if defined(FOAM_USE_TBB)
-  tbb::parallel_for(tbb::blocked_range2d<int>(0, static_cast<int>(n_modules_), 0, n_pulses),
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules_, 0, n_pulses),
     [&src, &dst, &p0, &p1, this] (const tbb::blocked_range2d<int> &block)
     {
       for(int im=block.rows().begin(); im != block.rows().end(); ++im)
@@ -548,9 +547,9 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
         for(int ip=block.cols().begin(); ip != block.cols().end(); ++ip)
         {
 #else
-      for (int im = 0; im < n_modules_; ++im)
+      for (size_t im = 0; im < n_modules_; ++im)
       {
-        for (int ip = 0; ip < n_pulses; ++ip)
+        for (size_t ip = 0; ip < n_pulses; ++ip)
         {
 #endif
           auto&& dst_view = xt::view(dst, ip, im, xt::all(), xt::all());
@@ -570,6 +569,8 @@ void DetectorGeometry<Detector>::dismantleAllModules(M&& src, E& dst) const
 template<typename Detector>
 void DetectorGeometry<Detector>::initModuleOrigins(bool stack_only)
 {
+  if (n_columns_ > 2) throw std::invalid_argument("Number of columns can be either 1 or 2!");
+
   corner_pos_.first = PositionType::from_shape({n_modules_, 3});
   corner_pos_.second = PositionType::from_shape({n_modules_, 3});
 
@@ -577,18 +578,19 @@ void DetectorGeometry<Detector>::initModuleOrigins(bool stack_only)
 
   auto w = static_cast<double>(Detector::module_shape[1]);
   auto h = static_cast<double>(Detector::module_shape[0]);
+  auto n_modules = static_cast<int>(n_modules_);
   if (layout_type_ == GeometryLayout::TopRightCW)
   {
-    for (size_t nm = 0; nm < n_modules_; ++nm)
+    for (int nm = 0; nm < n_modules; ++nm)
     {
-      if (nm < n_rows_)
+      if (nm < static_cast<int>(n_rows_))
       {
         corner_pos_.first(nm, 0) = w;
         corner_pos_.first(nm, 1) = - h * nm;
       } else
       {
         corner_pos_.first(nm, 0) = -w;
-        corner_pos_.first(nm, 1) = - h * (n_modules_ - nm);
+        corner_pos_.first(nm, 1) = - h * (n_modules - nm);
       }
       corner_pos_.first(nm, 2) = 0;
     }
@@ -624,7 +626,7 @@ const typename DetectorGeometry<Detector>::ShapeType& DetectorGeometry<Detector>
 }
 
 template<typename Detector>
-const typename DetectorGeometry<Detector>::ShapeType& DetectorGeometry<Detector>::assembledCenter() const
+const typename DetectorGeometry<Detector>::CenterType& DetectorGeometry<Detector>::assembledCenter() const
 {
   return a_center_;
 }
@@ -660,7 +662,7 @@ void DetectorGeometry<Detector>::computeAssembledDim()
   auto max_x = static_cast<int>(std::round(std::max(max_xyz_0[0], max_xyz_1[0])));
   auto max_y = static_cast<int>(std::round(std::max(max_xyz_0[1], max_xyz_1[1])));
 
-  a_shape_ = {max_y - min_y, max_x - min_x};
+  a_shape_ = { static_cast<size_t>(max_y - min_y), static_cast<size_t>(max_x - min_x) };
   a_center_ = {-min_x, -min_y};
 }
 
@@ -683,7 +685,7 @@ void DetectorGeometry<Detector>::checkShapeForAssembling(const SrcShape& ss, con
     throw std::invalid_argument(fmt.str());
   }
 
-  if (ss[2] != Detector::module_shape[0] || ss[3] != Detector::module_shape[1])
+  if ( (ss[2] != Detector::module_shape[0]) || (ss[3] != Detector::module_shape[1]) )
   {
     std::stringstream fmt;
     fmt << "Expected modules with shape (" << Detector::module_shape[0] << ", " << Detector::module_shape[1]
@@ -692,7 +694,7 @@ void DetectorGeometry<Detector>::checkShapeForAssembling(const SrcShape& ss, con
   }
 
   auto as = assembledShape();
-  if (as[0] != ds[1] | as[1] != ds[2])
+  if ( (as[0] != ds[1]) | (as[1] != ds[2]) )
   {
     std::stringstream fmt;
     fmt << "Expected output array with shape (" << as[0] << ", " << as[1]
@@ -711,29 +713,27 @@ void DetectorGeometry<Detector>::positionModule(M&& src, N& dst, T&& p0, T&& p1,
   int edge = 0;
   if (ignore_asic_edge) edge = 1;
 
-  auto x0 = p0(0);
-  auto y0 = p0(1);
+  double x0 = p0(0);
+  double y0 = p0(1);
 
   int ix_dir = (p1(0) - x0 > 0) ? 1 : -1;
   int iy_dir = (p1(1) - y0 > 0) ? 1 : -1;
 
-  int ix0 = 0;
-  int iy0 = 0;
-
-  auto ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
-                            : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
-  auto iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
-                            : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
-
-  for (int i_row = 0; i_row < Detector::asic_grid_shape[0]; ++i_row)
+  for (int i_row = 0; i_row < static_cast<int>(Detector::asic_grid_shape[0]); ++i_row)
   {
-    for (int i_col = 0; i_col < Detector::asic_grid_shape[1]; ++i_col)
+    for (int i_col = 0; i_col < static_cast<int>(Detector::asic_grid_shape[1]); ++i_col)
     {
-      for (size_t iy = ha * i_row + edge, iy_dst = iy0_dst + (ha * i_row + edge) * iy_dir;
-           iy < ha * i_row + ha - edge; ++iy, iy_dst += iy_dir)
+      int ix0 = wa * i_col;
+      int iy0 = ha * i_row;
+
+      int ix0_dst = static_cast<int>(std::round(x0)) + a_center_[0] + ix_dir * wa * i_col;
+      if (ix_dir < 0) --ix0_dst;
+      int iy0_dst = static_cast<int>(std::round(y0)) + a_center_[1] + iy_dir * ha * i_row;
+      if (iy_dir < 0) --iy0_dst;
+
+      for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < ha * i_row + ha - edge; ++iy, iy_dst += iy_dir)
       {
-        for (size_t ix = wa * i_col + edge, ix_dst = ix0_dst + (wa * i_col + edge) * ix_dir;
-             ix < wa * (i_col + 1) - edge; ++ix, ix_dst += ix_dir)
+        for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < wa * (i_col + 1) - edge; ++ix, ix_dst += ix_dir)
         {
           dst(iy_dst, ix_dst) = src(iy, ix);
         }
@@ -752,8 +752,8 @@ void DetectorGeometry<EPix100>::positionModule(M&& src, N& dst, T&& p0, T&& p1, 
   int edge = 0;
   if (ignore_asic_edge) edge = 1;
 
-  auto x0 = p0(0);
-  auto y0 = p0(1);
+  double x0 = p0(0);
+  double y0 = p0(1);
 
   int ix_dir = (p1(0) - x0 > 0) ? 1 : -1;
   int iy_dir = (p1(1) - y0 > 0) ? 1 : -1;
@@ -761,14 +761,14 @@ void DetectorGeometry<EPix100>::positionModule(M&& src, N& dst, T&& p0, T&& p1, 
   int ix0 = 0;
   int iy0 = 0;
 
-  auto ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
-                            : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
-  auto iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
-                            : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
+  int ix0_dst = static_cast<int>(std::round(x0)) + a_center_[0];
+  if (ix_dir < 0) --ix0_dst;
+  int iy0_dst = static_cast<int>(std::round(y0)) + a_center_[1];
+  if (iy_dir < 0) --iy0_dst;
 
-  for (size_t iy = edge, iy_dst = iy0_dst + edge * iy_dir; iy < hm - edge; ++iy, iy_dst += iy_dir)
+  for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < hm - edge; ++iy, iy_dst += iy_dir)
   {
-    for (size_t ix = 0, ix_dst = ix0_dst; ix < wm; ++ix, ix_dst += ix_dir)
+    for (int ix = ix0, ix_dst = ix0_dst; ix < wm; ++ix, ix_dst += ix_dir)
     {
       dst(iy_dst, ix_dst) = src(iy, ix);
     }
@@ -780,7 +780,7 @@ template<typename M>
 void DetectorGeometry<Detector>::maskModuleImp(M& src)
 {
   auto ss = src.shape();
-  if (ss[1] != Detector::module_shape[0] || ss[2] != Detector::module_shape[1])
+  if ( (ss[1] != Detector::module_shape[0]) || (ss[2] != Detector::module_shape[1]) )
   {
     std::stringstream fmt;
     fmt << "Expected module with shape (" << Detector::module_shape[0] << ", " << Detector::module_shape[1]
@@ -793,12 +793,12 @@ void DetectorGeometry<Detector>::maskModuleImp(M& src)
 
   auto nan = std::numeric_limits<typename M::value_type>::quiet_NaN();
 
-  for (int i_row = 0; i_row < Detector::asic_grid_shape[0]; ++i_row)
+  for (size_t i_row = 0; i_row < Detector::asic_grid_shape[0]; ++i_row)
   {
     xt::view(src, xt::all(), i_row * ha, xt::all()) = nan;
     xt::view(src, xt::all(), (i_row + 1) * ha - 1, xt::all()) = nan;
   }
-  for (int i_col = 0; i_col < Detector::asic_grid_shape[1]; ++i_col)
+  for (size_t i_col = 0; i_col < Detector::asic_grid_shape[1]; ++i_col)
   {
     xt::view(src, xt::all(), xt::all(), i_col * wa) = nan;
     xt::view(src, xt::all(), xt::all(), (i_col + 1) * wa - 1) = nan;
@@ -810,7 +810,7 @@ template<typename M>
 void DetectorGeometry<EPix100>::maskModuleImp(M& src)
 {
   auto ss = src.shape();
-  if (ss[1] != EPix100::module_shape[0] || ss[2] != EPix100::module_shape[1])
+  if ( (ss[1] != EPix100::module_shape[0]) || (ss[2] != EPix100::module_shape[1]) )
   {
     std::stringstream fmt;
     fmt << "Expected module with shape (" << EPix100::module_shape[0] << ", " << EPix100::module_shape[1]
@@ -852,7 +852,7 @@ void DetectorGeometry<Detector>::checkShapeForDismantling(const SrcShape& ss, co
   }
 
   auto expected_ss = assembledShape();
-  if (ss[1] != expected_ss[0] || ss[2] != expected_ss[1])
+  if ( (ss[1] != expected_ss[0]) || (ss[2] != expected_ss[1]) )
   {
     std::stringstream fmt;
     fmt << "Expected source image with shape (" << expected_ss[0] << ", " << expected_ss[1]
@@ -860,7 +860,7 @@ void DetectorGeometry<Detector>::checkShapeForDismantling(const SrcShape& ss, co
     throw std::invalid_argument(fmt.str());
   }
 
-  if (ds[1] != n_modules_ | ds[2] != Detector::module_shape[0] | ds[3] != Detector::module_shape[1])
+  if ( (ds[1] != n_modules_) | (ds[2] != Detector::module_shape[0]) | (ds[3] != Detector::module_shape[1]) )
   {
     std::stringstream fmt;
     fmt << "Expected output array with shape ("
@@ -874,21 +874,23 @@ template<typename Detector>
 template<typename M, typename N, typename T>
 void DetectorGeometry<Detector>::dismantleModule(M&& src, N& dst, T&& p0, T&& p1) const
 {
-  auto shape = dst.shape();
-  auto x0 = p0(0);
-  auto y0 = p0(1);
+  int wm = Detector::module_shape[1];
+  int hm = Detector::module_shape[0];
+
+  double x0 = p0(0);
+  double y0 = p0(1);
 
   int ix_dir = (p1(0) - x0 > 0) ? 1 : -1;
   int iy_dir = (p1(1) - y0 > 0) ? 1 : -1;
 
-  auto ix0 = ix_dir > 0 ? static_cast<int>(std::round(x0)) + a_center_[0]
-                        : static_cast<int>(std::round(x0)) + a_center_[0] - 1;
-  auto iy0 = iy_dir > 0 ? static_cast<int>(std::round(y0)) + a_center_[1]
-                        : static_cast<int>(std::round(y0)) + a_center_[1] - 1;
+  size_t ix0 = static_cast<int>(std::round(x0)) + a_center_[0];
+  if (ix_dir < 0) --ix0;
+  size_t iy0 = static_cast<int>(std::round(y0)) + a_center_[1];
+  if (iy_dir < 0) --iy0;
 
-  for (size_t iy = iy0, iy_dst = 0; iy_dst < shape[0]; iy += iy_dir, ++iy_dst)
+  for (int iy = iy0, iy_dst = 0; iy_dst < hm; ++iy_dst, iy += iy_dir)
   {
-    for (size_t ix = ix0, ix_dst = 0; ix_dst < shape[1]; ix += ix_dir, ++ix_dst)
+    for (int ix = ix0, ix_dst = 0; ix_dst < wm; ++ix_dst, ix += ix_dir)
     {
       dst(iy_dst, ix_dst) = src(iy, ix);
     }

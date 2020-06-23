@@ -54,7 +54,7 @@ inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
           value_type sum = 0;
           if (keep.empty())
           {
-            for (auto i=0; i<shape[0]; ++i)
+            for (size_t i=0; i<shape[0]; ++i)
             {
               auto v = src(i, j, k);
               if (! std::isnan(v))
@@ -209,7 +209,6 @@ inline void maskImageDataNan(E& src) {}
 template <typename E, typename N, EnableIf<E, IsImage> = false, EnableIf<N, IsImageMask> = false>
 inline void imageDataNanMask(const E& src, N& out)
 {
-  using value_type = typename E::value_type;
   auto shape = src.shape();
 
   utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
@@ -626,9 +625,9 @@ inline void maskImageDataZero(E& src)
     {
       for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=0; j != shape[1]; ++j)
+        for(size_t j=0; j != shape[1]; ++j)
         {
-          for(int k=0; k != shape[2]; ++k)
+          for(size_t k=0; k != shape[2]; ++k)
           {
             if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
           }
@@ -671,9 +670,9 @@ inline void maskImageDataZero(E& src, T lb, T ub)
     {
       for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=0; j != shape[1]; ++j)
+        for(size_t j=0; j != shape[1]; ++j)
         {
-          for(int k=0; k != shape[2]; ++k)
+          for(size_t k=0; k != shape[2]; ++k)
           {
             auto v = src(i, j, k);
             if (std::isnan(v) || v < lb || v > ub) src(i, j, k) = value_type(0);
@@ -709,9 +708,9 @@ inline void maskImageDataNan(E& src, T lb, T ub)
     {
       for(int i=block.begin(); i != block.end(); ++i)
       {
-        for(int j=0; j != shape[1]; ++j)
+        for(size_t j=0; j != shape[1]; ++j)
         {
-          for(int k=0; k != shape[2]; ++k)
+          for(size_t k=0; k != shape[2]; ++k)
           {
             auto v = src(i, j, k);
             if (std::isnan(v)) continue;
