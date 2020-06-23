@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -17,16 +17,42 @@ class TestPlotWidget(unittest.TestCase):
     def setUp(self):
         self._widget = PlotWidgetF()
 
-    def testGeneral(self):
-        self._widget.plotCurve()
-        self._widget.plotScatter()
-        self._widget.plotBar()
-        self._widget.plotStatisticsBar()
+    def testAddPlots(self):
+        widget = self._widget
+
+        # test Legend
+        widget.addLegend()
+        widget.plotCurve(name="curve")
+        widget.plotScatter(name="scatter")
+        widget.plotBar(name="bar")
+        widget.plotStatisticsBar(name="statistics")
 
         self.assertEqual(len(self._widget._plot_area._items), 4)
 
-        self._widget.removeAllItems()
-        self.assertFalse(self._widget._plot_area._items)
+    def testForwardMethod(self):
+        widget = self._widget
+
+        for method in ["removeAllItems", "setAspectLocked", "setLabel", "setTitle", "setTitle"]:
+            with patch.object(widget._plot_area, method) as mocked:
+                getattr(widget, method)()
+                mocked.assert_called_once()
+
+    def testShowHideAxisLegend(self):
+        widget = self._widget
+
+        widget.showAxis()
+        self.assertTrue(widget._plot_area.getAxis("left").isVisible())
+        self.assertTrue(widget._plot_area.getAxis("left").isVisible())
+        widget.hideAxis()
+        self.assertFalse(widget._plot_area.getAxis("left").isVisible())
+        self.assertFalse(widget._plot_area.getAxis("left").isVisible())
+
+        widget.addLegend()
+        self.assertTrue(widget._plot_area._legend.isVisible())
+        widget.hideLegend()
+        self.assertFalse(widget._plot_area._legend.isVisible())
+        widget.showLegend()
+        self.assertTrue(widget._plot_area._legend.isVisible())
 
     def testCurvePlot(self):
         plot = self._widget.plotCurve(np.arange(3), np.arange(1, 4, 1))

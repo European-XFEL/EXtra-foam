@@ -21,6 +21,8 @@ from PyQt5.QtWidgets import (
 from .. import pyqtgraph as pg
 from ..pyqtgraph import Point
 from ..pyqtgraph import functions as fn
+from ..plot_widgets.plot_items import CurvePlotItem
+from ..misc_widgets import FColor
 
 
 class HistogramLUTItem(pg.GraphicsWidget):
@@ -47,7 +49,7 @@ class HistogramLUTItem(pg.GraphicsWidget):
         lri.lines[1].addMarker('|>', 0.5)
         self._lri = lri
 
-        self._hist = pg.PlotCurveItem(pen=(0, 0, 0, 255))
+        self._hist = CurvePlotItem(pen=FColor.mkPen('k'))
         self._hist.rotate(90)
 
         vb = pg.ViewBox(parent=self)
@@ -189,6 +191,7 @@ class PlotArea(pg.GraphicsWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self._items = set()
+        self._plot_items = set()
 
         self._vb = pg.ViewBox(parent=self)
 
@@ -207,7 +210,12 @@ class PlotArea(pg.GraphicsWidget):
         self._grid_opacity_sld.setMaximum(255)
         self._grid_opacity_sld.setValue(160)
         self._grid_opacity_sld.setSingleStep(1)
+
+        self._log_x_cb = QCheckBox("Log X")
+        self._log_y_cb = QCheckBox("Log Y")
+
         self._menu = None
+        self._enable_log_menu = True
 
         self._layout = QGraphicsGridLayout()
 
@@ -255,9 +263,13 @@ class PlotArea(pg.GraphicsWidget):
         self._show_y_grid_cb.toggled.connect(self._onShowGridChanged)
         self._grid_opacity_sld.sliderReleased.connect(self._onShowGridChanged)
 
+        self._log_x_cb.toggled.connect(self._onLogXChanged)
+        self._log_y_cb.toggled.connect(self._onLogYChanged)
+
     def _initContextMenu(self):
         self._menu = [
             QMenu("Grid"),
+            QMenu("Transform")
         ]
 
         grid_menu = self._menu[0]
@@ -275,6 +287,14 @@ class PlotArea(pg.GraphicsWidget):
         widget.setLayout(layout)
         opacity_act.setDefaultWidget(widget)
         grid_menu.addAction(opacity_act)
+
+        transform_menu = self._menu[1]
+        log_x_act = QWidgetAction(transform_menu)
+        log_x_act.setDefaultWidget(self._log_x_cb)
+        transform_menu.addAction(log_x_act)
+        log_y_act = QWidgetAction(transform_menu)
+        log_y_act.setDefaultWidget(self._log_y_cb)
+        transform_menu.addAction(log_y_act)
 
     def _initAxisItems(self):
         for orient, pos in (('top', (1, 1)),
@@ -294,6 +314,12 @@ class PlotArea(pg.GraphicsWidget):
     def getViewBox(self):
         return self._vb
 
+    def clearAllPlotItems(self):
+        """Clear data on all the plot items."""
+        for item in self._plot_items:
+            # TODO: introduce a method which set empty data
+            item.setData([], [])
+
     @pyqtSlot()
     def _onShowGridChanged(self):
         alpha = self._grid_opacity_sld.value()
@@ -302,38 +328,69 @@ class PlotArea(pg.GraphicsWidget):
         self.getAxis('bottom').setGrid(x)
         self.getAxis('left').setGrid(y)
 
+    @pyqtSlot(bool)
+    def _onLogXChanged(self, state):
+        self.getAxis("top").setLogMode(state)
+        self.getAxis("bottom").setLogMode(state)
+        self.updateGeometry()
+
+        for item in self._plot_items:
+            item.setLogX(state)
+
+    @pyqtSlot(bool)
+    def _onLogYChanged(self, state):
+        self.getAxis("left").setLogMode(state)
+        self.getAxis("right").setLogMode(state)
+        self.updateGeometry()
+
+        for item in self._plot_items:
+            item.setLogY(state)
+
     def addItem(self, item, ignore_bounds=False):
-        """Add a plot item to ViewBox."""
+        """Add a graphics item to ViewBox."""
         if item in self._items:
             warnings.warn(f'Item {item} already added to PlotItem, ignoring.')
             return
 
         self._items.add(item)
+
+        if isinstance(item, pg.PlotItem):
+            self._plot_items.add(item)
+            if self._legend is not None:
+                self._legend.addItem(item, item.name())
+
         self._vb.addItem(item, ignoreBounds=ignore_bounds)
-        if self._legend is not None and isinstance(item, pg.PlotItem):
-            self._legend.addItem(item, item.name())
 
     def removeItem(self, item):
-        """Add a plot item to ViewBox."""
+        """Add a graphics item to ViewBox."""
         if item not in self._items:
             return
 
         self._items.remove(item)
-        self._vb.removeItem(item)
-        if self._legend is not None:
-            self._legend.removeItem(item)
-
-    def removeAllItems(self):
-        """Remove all plot items from the ViewBox."""
-        for item in self._items:
-            self._vb.removeItem(item)
+        if item in self._plot_items:
+            self._plot_items.remove(item)
             if self._legend is not None:
                 self._legend.removeItem(item)
+
+        self._vb.removeItem(item)
+
+    def removeAllItems(self):
+        """Remove all graphics items from the ViewBox."""
+        for item in self._items:
+            self._vb.removeItem(item)
+            if self._legend is not None and item in self._plot_items:
+                self._legend.removeItem(item)
+        self._plot_items.clear()
         self._items.clear()
 
     def getContextMenus(self, event):
         """Override."""
-        return self._menu
+        if self._enable_log_menu:
+            return self._menu
+        return self._menu[:-1]
+
+    def enableLogMenu(self, enable):
+        self._enable_log_menu = enable
 
     def getAxis(self, axis):
         """Return the specified AxisItem.
@@ -359,7 +416,21 @@ class PlotArea(pg.GraphicsWidget):
         if self._legend is None:
             self._legend = pg.LegendItem(offset=offset, pen='k', **kwargs)
             self._legend.setParentItem(self._vb)
+
+            for item in self._plot_items:
+                self._legend.addItem(item)
+
         return self._legend
+
+    def showLegend(self, show=True):
+        """Show or hide the legend.
+
+        :param bool show: whether to show the legend.
+        """
+        if show:
+            self._legend.show()
+        else:
+            self._legend.hide()
 
     def setLabel(self, axis, text=None, units=None, **args):
         """Set the label for an axis. Basic HTML formatting is allowed.

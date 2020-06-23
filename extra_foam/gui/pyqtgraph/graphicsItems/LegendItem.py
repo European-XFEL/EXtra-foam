@@ -289,6 +289,17 @@ class ItemSample(GraphicsWidget):
         return QtCore.QRectF(0, 0, 20, 20)
 
     def paint(self, p, *args):
+
+        draw_sample = None
+        try:
+            draw_sample = getattr(self.item, "drawSample")
+        except AttributeError:
+            pass
+
+        if draw_sample is not None:
+            draw_sample(p)
+            return
+
         opts = self.item.opts
 
         if opts.get('antialias'):

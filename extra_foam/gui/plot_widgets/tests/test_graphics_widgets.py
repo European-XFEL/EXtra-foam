@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from PyQt5.QtWidgets import QMenu
+from PyQt5.QtTest import QTest
+from PyQt5.QtCore import Qt
 
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.graphics_widgets import (
@@ -104,40 +105,80 @@ class TestPlotArea(unittest.TestCase):
         bar_graph_item = BarGraphItem()
         area.addItem(bar_graph_item)
         area.addItem(StatisticsBarItem())
-        area.addItem(CurvePlotItem())
-        area.addItem(pg.PlotCurveItem())
+        curve_plot_item = CurvePlotItem()
+        area.addItem(curve_plot_item)
         area.addItem(pg.ScatterPlotItem())
 
-        self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
-        self.assertEqual(5, len(area._legend.items))
-
-        # remove an item which does not exist
-        area.removeItem(BarGraphItem())
-        self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
-        self.assertEqual(5, len(area._legend.items))
-
-        area.removeItem(bar_graph_item)
+        self.assertEqual(4, len(area._plot_items))
         self.assertEqual(7, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
         self.assertEqual(4, len(area._legend.items))
 
-        area.removeItem(image_item)
-        self.assertEqual(6, len(area._items))
-        self.assertEqual(6, len(area._vb.addedItems))
+        with patch.object(curve_plot_item, "setData") as mocked1:
+            with patch.object(bar_graph_item, "setData") as mocked2:
+                area.clearAllPlotItems()
+                mocked1.assert_called_once()
+                mocked2.assert_called_once()
+
+        # remove an item which does not exist
+        area.removeItem(BarGraphItem())
+        self.assertEqual(4, len(area._plot_items))
+        self.assertEqual(7, len(area._items))
+        self.assertEqual(7, len(area._vb.addedItems))
         self.assertEqual(4, len(area._legend.items))
 
+        area.removeItem(bar_graph_item)
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(6, len(area._items))
+        self.assertEqual(6, len(area._vb.addedItems))
+        self.assertEqual(3, len(area._legend.items))
+
+        area.removeItem(image_item)
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(5, len(area._items))
+        self.assertEqual(5, len(area._vb.addedItems))
+        self.assertEqual(3, len(area._legend.items))
+
         area.removeAllItems()
+        self.assertEqual(0, len(area._plot_items))
         self.assertEqual(0, len(area._items))
         self.assertEqual(0, len(area._vb.addedItems))
         self.assertEqual(0, len(area._legend.items))
 
     def testContextMenu(self):
+        area = self._area
         event = object()
-        menu = self._area.getContextMenus(event)
-        for row in menu:
-            self.assertIsInstance(row, QMenu)
+        menus = self._area.getContextMenus(event)
+
+        self.assertEqual(2, len(menus))
+        self.assertEqual("Grid", menus[0].title())
+        self.assertEqual("Transform", menus[1].title())
+
+        # test "Grid" actions
+        grid_actions = menus[0].actions()
+        alpha = area._grid_opacity_sld.value()
+        grid_actions[0].defaultWidget().setChecked(True)
+        self.assertEqual(alpha, area.getAxis("bottom").grid)
+        grid_actions[1].defaultWidget().setChecked(True)
+        self.assertEqual(alpha, area.getAxis("left").grid)
+
+        # test "Transform" actions
+        plot_item = CurvePlotItem()
+        area.addItem(plot_item)
+        transform_actions = menus[1].actions()
+        with patch.object(plot_item, "updateGraph") as mocked:
+            transform_actions[0].defaultWidget().setChecked(True)
+            self.assertTrue(area.getAxis("bottom").logMode)
+            self.assertTrue(area.getAxis("top").logMode)
+            self.assertTrue(plot_item._log_x_mode)
+            mocked.assert_called_once()
+
+        with patch.object(plot_item, "updateGraph") as mocked:
+            transform_actions[1].defaultWidget().setChecked(True)
+            self.assertTrue(area.getAxis("left").logMode)
+            self.assertTrue(area.getAxis("right").logMode)
+            self.assertTrue(plot_item._log_y_mode)
+            mocked.assert_called_once()
 
 
 class TestHistogramLUTItem(unittest.TestCase):

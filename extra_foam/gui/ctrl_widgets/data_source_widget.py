@@ -35,7 +35,7 @@ from ...logger import logger
 
 class _BaseSmartEditItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     def setEditorData(self, editor, index):
         """Override."""
@@ -88,7 +88,7 @@ class BoundaryItemDelegate(_BaseSmartEditItemDelegate):
 class LineEditItemDelegateN(QStyledItemDelegate):
     """The non-smart one."""
     def __init__(self, parent=None, *, validator=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self._validator = validator
 
     def setEditorData(self, editor, index):
@@ -117,7 +117,7 @@ class LineEditItemDelegateN(QStyledItemDelegate):
 
 class ComboBoxDelegate(QStyledItemDelegate):
     def __init__(self, items, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._items = items
 
@@ -235,7 +235,7 @@ class DataSourceItemModel(QAbstractItemModel):
     source_item_toggled_sgn = pyqtSignal(bool, object)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._mediator = Mediator()
 
@@ -468,7 +468,7 @@ class DataSourceItemModel(QAbstractItemModel):
 class DataSourceListModel(QAbstractListModel):
     """List model interface for monitoring available sources."""
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._sources = []
 
@@ -494,7 +494,7 @@ class DataSourceListModel(QAbstractListModel):
 class ProcessMonitorTableModel(QAbstractTableModel):
     """Table model interface for monitoring running processes."""
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._processes = []
         self._headers = ["Process name", "Foam name", "Foam type", "pid", "status"]
@@ -673,7 +673,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
     class AvailStateDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
             self._brush = FColor.mkBrush('g')
 
         def paint(self, painter, option, index):
@@ -691,7 +691,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
     class DataTypeDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
 
             self._c_brush = FColor.mkBrush('c')
             self._p_brush = FColor.mkBrush('p')

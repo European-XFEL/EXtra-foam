@@ -104,7 +104,7 @@ class SmartBoundaryLineEdit(SmartLineEdit):
 
     class Validator(QValidator):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
 
         def validate(self, s, pos):
             try:
@@ -136,7 +136,7 @@ class SmartIdLineEdit(SmartLineEdit):
 
     class Validator(QValidator):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
 
         def validate(self, s, pos):
             try:
@@ -169,7 +169,7 @@ class SmartSliceLineEdit(SmartLineEdit):
     # TODO: make a base class for this
     class Validator(QValidator):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
 
         def validate(self, s, pos):
             try:

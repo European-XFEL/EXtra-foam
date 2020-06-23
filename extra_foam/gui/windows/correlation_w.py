@@ -36,15 +36,15 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.setTitle(f'Correlation {idx+1}')
         self._default_x_label = "Correlator (arb. u.)"
         self._default_y_label = "FOM (arb. u.)"
+        self.addLegend(offset=(-40, 20))
+        self.hideLegend()
 
         self._source = ""
         self._resolution = 0.0
 
         self.updateLabel()
 
-        brush_pair = self._brushes[self._idx]
-        self._plot = self.plotScatter(brush=brush_pair[0])
-        self._plot_slave = self.plotScatter(brush=brush_pair[1])
+        self._newScatterPlot()
 
     def refresh(self):
         """Override."""
@@ -61,16 +61,21 @@ class CorrelationPlot(TimedPlotWidgetF):
         if resolution == 0:
             if self._resolution != 0:
                 # bar -> scatter plot
+                self._removeBothPlots()
                 self._newScatterPlot()
                 self._resolution = 0
 
             self._plot.setData(item.x, y)
-            if y_slave is not None:
+            if y_slave is not None and len(y_slave) > 0:
                 self._plot_slave.setData(item.x_slave, y_slave)
+                self.showLegend()
+            else:
+                self.hideLegend()
         else:
             if resolution != self._resolution:
                 if self._resolution == 0:
                     # scatter -> bar plot
+                    self._removeBothPlots()
                     self._newStatisticsBarPlot(resolution)
                 else:
                     # update beam
@@ -79,10 +84,13 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._resolution = resolution
 
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
-            if y_slave is not None:
+            if y_slave is not None and len(y_slave.avg) > 0:
                 self._plot_slave.setData(
                     item.x_slave, y_slave.avg,
                     y_min=y_slave.min, y_max=y_slave.max)
+                self.showLegend()
+            else:
+                self.hideLegend()
 
     def updateLabel(self):
         src = self._source
@@ -95,21 +103,20 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.setLabel('left', self._default_y_label)
 
     def _newScatterPlot(self):
-        self.removeItem(self._plot)
-        self.removeItem(self._plot_slave)
-
         brush_pair = self._brushes[self._idx]
-        self._plot = self.plotScatter(brush=brush_pair[0])
-        self._plot_slave = self.plotScatter(brush=brush_pair[1])
+        self._plot = self.plotScatter(brush=brush_pair[0], name="master")
+        self._plot_slave = self.plotScatter(brush=brush_pair[1], name="slave")
 
     def _newStatisticsBarPlot(self, resolution):
+        pen_pair = self._pens[self._idx]
+        self._plot = self.plotStatisticsBar(
+            beam=resolution, pen=pen_pair[0], name="master")
+        self._plot_slave = self.plotStatisticsBar(
+            beam=resolution, pen=pen_pair[1], name="slave")
+
+    def _removeBothPlots(self):
         self.removeItem(self._plot)
         self.removeItem(self._plot_slave)
-
-        pen_pair = self._pens[self._idx]
-        self._plot = self.plotStatisticsBar(beam=resolution, pen=pen_pair[0])
-        self._plot_slave = self.plotStatisticsBar(
-            beam=resolution, pen=pen_pair[1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):
