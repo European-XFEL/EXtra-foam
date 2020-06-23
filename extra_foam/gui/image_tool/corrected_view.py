@@ -31,7 +31,7 @@ class RoiProjPlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         x_label, y_label = plot_labels[AnalysisType.ROI_PROJ]
         self.setLabel('bottom', x_label)

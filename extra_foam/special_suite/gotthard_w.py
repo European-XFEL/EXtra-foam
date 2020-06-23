@@ -99,7 +99,7 @@ class GotthardAvgPlot(PlotWidgetF):
     moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
@@ -129,7 +129,7 @@ class GotthardPulsePlot(PlotWidgetF):
     Visualize signals of a single pulse as well as its moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 

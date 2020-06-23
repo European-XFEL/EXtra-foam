@@ -84,7 +84,7 @@ class XesTimingDelayScan(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Laser delay scan")
         self.setLabel('left', "Position (arb.)")

@@ -135,7 +135,7 @@ class XasTimXgmPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Pulse intensities (SA3)")
         self.setLabel('left', "Intensity (arb.)")
@@ -156,7 +156,7 @@ class XasTimDigitizerPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Digitizer pulse integrals")
         self.setLabel('left', "Pulse integral (arb.)")
@@ -181,7 +181,7 @@ class XasTimMonoScanPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Softmono energy scan")
         self.setLabel('left', "Energy (eV)")
@@ -204,7 +204,7 @@ class XasTimCorrelationPlot(TimedPlotWidgetF):
 
         :param int idx: channel index.
         """
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setLabel('left', "I1 (arb.)")
         self.setLabel('bottom', "I0 (micro J)")
@@ -232,7 +232,7 @@ class XasTimSpectraPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("MCP spectra")
         self.setLabel('left', "Absorption (arb.)")
@@ -271,7 +271,7 @@ class XasTimXgmSpectrumPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("XGM spectrum")
         self.setLabel('left', "I0 (arb.)")
