@@ -43,6 +43,7 @@ find_package(Threads REQUIRED)
 
 set(_FOAM_UNITTESTS
     test_tbb.cpp
+    test_azimuthal_integrator.cpp
     test_blas.cpp
     test_canny.cpp
     test_geometry.cpp

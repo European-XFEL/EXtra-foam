@@ -10,6 +10,8 @@ All rights reserved.
 import numpy as np
 from scipy import constants
 
+from .azimuthal_integrator import AzimuthalIntegrator
+
 
 # Plank-einstein relation (E=hv)
 CONST_HC_E = constants.c * constants.h / constants.e

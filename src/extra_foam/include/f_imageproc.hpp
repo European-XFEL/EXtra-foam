@@ -38,10 +38,8 @@ inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
   using value_type = typename std::decay_t<E>::value_type;
   auto shape = src.shape();
 
-  // a bit hacky
-  using return_type = decltype(xt::eval(xt::sum<value_type>(std::declval<E>(), {0})));
-  auto mean = return_type::from_shape({static_cast<std::size_t>(shape[1]),
-                                       static_cast<std::size_t>(shape[2])});
+  auto mean = ReducedImageType<E>::from_shape({static_cast<std::size_t>(shape[1]),
+                                               static_cast<std::size_t>(shape[2])});
 
   tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
     [&src, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)

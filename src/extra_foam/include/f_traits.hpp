@@ -14,6 +14,7 @@
 #include "xtensor/xexpression.hpp"
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xarray.hpp"
+#include "xtensor/xmath.hpp"
 
 
 namespace foam
@@ -24,6 +25,12 @@ struct IsArray : std::false_type {};
 
 template<typename T, xt::layout_type L>
 struct IsArray<xt::xarray<T, L>> : std::true_type {};
+
+template<typename T>
+struct IsVector : std::false_type {};
+
+template<typename T, xt::layout_type L>
+struct IsVector<xt::xtensor<T, 1, L>> : std::true_type {};
 
 template<typename T>
 struct IsImage : std::false_type {};
@@ -63,6 +70,12 @@ struct IsModulesVector<std::vector<xt::xtensor<T, 3, L>>> : std::true_type {};
 
 template<typename E, template<typename> class C>
 using EnableIf = std::enable_if_t<C<E>::value, bool>;
+
+template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
+using ReducedVectorType = decltype(xt::eval(xt::sum<typename std::decay_t<E>::value_type>(std::declval<E>(), {0})));
+
+template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
+using ReducedImageType = decltype(xt::eval(xt::sum<typename std::decay_t<E>::value_type>(std::declval<E>(), {0})));
 }
 
 #endif //EXTRA_FOAM_FOAM_TRAITS_H
