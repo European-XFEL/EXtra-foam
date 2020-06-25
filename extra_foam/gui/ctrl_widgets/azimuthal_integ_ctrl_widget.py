@@ -11,16 +11,21 @@ from collections import OrderedDict
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
-from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
+from PyQt5.QtWidgets import (
+    QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel
+)
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
-from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from .smart_widgets import (
+    SmartBoundaryLineEdit, SmartSliceLineEdit, SmartLineEdit
+)
 from ..gui_helpers import invert_dict
 from ...algorithms import compute_q
 from ...config import config, list_azimuthal_integ_methods, Normalizer
 from ...database import Metadata as mt
 
 _DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
+_DEFAULT_PEAK_PROMINENCE = 100
 
 
 def _estimate_q_range():
@@ -90,6 +95,15 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._auc_range_le = SmartBoundaryLineEdit("0, Inf")
         self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
 
+        self._peak_finding_cb = QCheckBox("Peak finding")
+        self._peak_finding_cb.setChecked(True)
+        self._peak_prominence_le = SmartLineEdit(str(_DEFAULT_PEAK_PROMINENCE))
+        self._peak_prominence_le.setValidator(QIntValidator())
+        self._peak_slicer_le = SmartSliceLineEdit(":")
+
+        self._non_reconfigurable_widgets = [
+        ]
+
         self.initUI()
         self.initConnections()
 
@@ -97,48 +111,68 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
+        layout = QHBoxLayout()
         AR = Qt.AlignRight
 
+        param_widget = QFrame()
+        param_layout = QGridLayout()
         row = 0
-        layout.addWidget(QLabel("Cx (pixel): "), row, 0, AR)
-        layout.addWidget(self._cx_le, row, 1)
-        layout.addWidget(QLabel("Cy (pixel): "), row, 2, AR)
-        layout.addWidget(self._cy_le, row, 3)
-        layout.addWidget(QLabel("Pixel x (m): "), row, 4, AR)
-        layout.addWidget(self._px_le, row, 5)
-        layout.addWidget(QLabel("Pixel y (m): "), row, 6, AR)
-        layout.addWidget(self._py_le, row, 7)
+        param_layout.addWidget(QLabel("Cx (pixel): "), row, 0, AR)
+        param_layout.addWidget(self._cx_le, row, 1)
+        param_layout.addWidget(QLabel("Cy (pixel): "), row, 2, AR)
+        param_layout.addWidget(self._cy_le, row, 3)
+        param_layout.addWidget(QLabel("Pixel x (m): "), row, 4, AR)
+        param_layout.addWidget(self._px_le, row, 5)
+        param_layout.addWidget(QLabel("Pixel y (m): "), row, 6, AR)
+        param_layout.addWidget(self._py_le, row, 7)
 
         row += 1
-        layout.addWidget(QLabel("Sample distance (m): "), row, 0, AR)
-        layout.addWidget(self._sample_dist_le, row, 1)
-        layout.addWidget(QLabel("Rotation x (rad): "), row, 2, AR)
-        layout.addWidget(self._rx_le, row, 3)
-        layout.addWidget(QLabel("Rotation y (rad): "), row, 4, AR)
-        layout.addWidget(self._ry_le, row, 5)
-        layout.addWidget(QLabel("Rotation z (rad): "), row, 6, AR)
-        layout.addWidget(self._rz_le, row, 7)
+        param_layout.addWidget(QLabel("Sample distance (m): "), row, 0, AR)
+        param_layout.addWidget(self._sample_dist_le, row, 1)
+        param_layout.addWidget(QLabel("Rotation x (rad): "), row, 2, AR)
+        param_layout.addWidget(self._rx_le, row, 3)
+        param_layout.addWidget(QLabel("Rotation y (rad): "), row, 4, AR)
+        param_layout.addWidget(self._ry_le, row, 5)
+        param_layout.addWidget(QLabel("Rotation z (rad): "), row, 6, AR)
+        param_layout.addWidget(self._rz_le, row, 7)
 
         row += 1
-        layout.addWidget(QLabel("Photon energy (keV): "), row, 0, AR)
-        layout.addWidget(self._photon_energy_le, row, 1)
-        layout.addWidget(QLabel("Integ method: "), row, 2, AR)
-        layout.addWidget(self._integ_method_cb, row, 3)
-        layout.addWidget(QLabel("Integ points: "), row, 4, AR)
-        layout.addWidget(self._integ_pts_le, row, 5)
-        layout.addWidget(QLabel("Integ range (1/A): "), row, 6, AR)
-        layout.addWidget(self._integ_range_le, row, 7)
+        param_layout.addWidget(QLabel("Photon energy (keV): "), row, 0, AR)
+        param_layout.addWidget(self._photon_energy_le, row, 1)
+        param_layout.addWidget(QLabel("Integ method: "), row, 2, AR)
+        param_layout.addWidget(self._integ_method_cb, row, 3)
+        param_layout.addWidget(QLabel("Integ points: "), row, 4, AR)
+        param_layout.addWidget(self._integ_pts_le, row, 5)
+        param_layout.addWidget(QLabel("Integ range (1/A): "), row, 6, AR)
+        param_layout.addWidget(self._integ_range_le, row, 7)
 
         row += 1
-        layout.addWidget(QLabel("Norm: "), row, 0, AR)
-        layout.addWidget(self._norm_cb, row, 1)
-        layout.addWidget(QLabel("AUC range (1/A): "), row, 2, AR)
-        layout.addWidget(self._auc_range_le, row, 3)
-        layout.addWidget(QLabel("FOM range (1/A): "), row, 4, AR)
-        layout.addWidget(self._fom_integ_range_le, row, 5)
+        param_layout.addWidget(QLabel("Norm: "), row, 0, AR)
+        param_layout.addWidget(self._norm_cb, row, 1)
+        param_layout.addWidget(QLabel("AUC range (1/A): "), row, 2, AR)
+        param_layout.addWidget(self._auc_range_le, row, 3)
+        param_layout.addWidget(QLabel("FOM range (1/A): "), row, 4, AR)
+        param_layout.addWidget(self._fom_integ_range_le, row, 5)
 
+        param_widget.setLayout(param_layout)
+
+        algo_widget = QFrame()
+        algo_layout = QGridLayout()
+        algo_layout.addWidget(self._peak_finding_cb, 0, 0, 1, 2)
+        algo_layout.addWidget(QLabel("Peak prominence: "), 1, 0, AR)
+        algo_layout.addWidget(self._peak_prominence_le, 1, 1)
+        algo_layout.addWidget(QLabel("Peak slicer: "), 2, 0, AR)
+        algo_layout.addWidget(self._peak_slicer_le, 2, 1)
+        algo_widget.setLayout(algo_layout)
+
+        layout.addWidget(param_widget)
+        layout.addWidget(algo_widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
+
+        self.setFrameStyle(QFrame.NoFrame)
+        param_widget.setFrameStyle(QFrame.StyledPanel)
+        algo_widget.setFrameStyle(QFrame.StyledPanel)
 
     def initConnections(self):
         """Override."""
@@ -178,6 +212,15 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onAiFomIntegRangeChange)
 
+        self._peak_finding_cb.toggled.connect(
+            mediator.onAiPeakFindingChange)
+
+        self._peak_prominence_le.value_changed_sgn.connect(
+            mediator.onAiPeakProminenceChange)
+
+        self._peak_slicer_le.value_changed_sgn.connect(
+            mediator.onAiPeakSlicerChange)
+
     def updateMetaData(self):
         """Override."""
         self._photon_energy_le.returnPressed.emit()
@@ -203,6 +246,10 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
 
         self._fom_integ_range_le.returnPressed.emit()
 
+        self._peak_finding_cb.toggled.emit(self._peak_finding_cb.isChecked())
+        self._peak_prominence_le.returnPressed.emit()
+        self._peak_slicer_le.returnPressed.emit()
+
         return True
 
     def loadMetaData(self):
@@ -223,3 +270,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             self._available_norms_inv[int(cfg['normalizer'])])
         self._auc_range_le.setText(cfg['auc_range'][1:-1])
         self._fom_integ_range_le.setText(cfg['fom_integ_range'][1:-1])
+
+        self._updateWidgetValue(self._peak_finding_cb, cfg, "peak_finding")
+        self._updateWidgetValue(
+            self._peak_prominence_le, cfg, "peak_prominence")
+        self._updateWidgetValue(self._peak_slicer_le, cfg, "peak_slicer")

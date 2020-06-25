@@ -10,10 +10,15 @@ All rights reserved.
 import abc
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFrame, QGroupBox
+from PyQt5.QtWidgets import (
+    QCheckBox, QComboBox, QFrame, QGroupBox, QLineEdit, QAbstractSpinBox
+)
 
+from .smart_widgets import SmartBoundaryLineEdit, SmartSliceLineEdit
+from ..gui_helpers import parse_slice_inv
 from ..mediator import Mediator
 from ...database import MetaProxy
+from ...logger import logger
 
 
 class _AbstractCtrlWidgetMixin:
@@ -49,6 +54,42 @@ class _AbstractCtrlWidgetMixin:
     @abc.abstractmethod
     def onStop(self):
         raise NotImplementedError
+
+    def _updateWidgetValue(self, widget, config, key, *, cast=None):
+        """Update widget value from meta data."""
+        value = self._getMetaData(config, key)
+        if value is None:
+            return
+
+        if cast is not None:
+            value = cast(value)
+
+        if isinstance(widget, QCheckBox):
+            widget.setChecked(value == 'True')
+        elif isinstance(widget, SmartBoundaryLineEdit):
+            widget.setText(value[1:-1])
+        elif isinstance(widget, SmartSliceLineEdit):
+            widget.setText(parse_slice_inv(value))
+        elif isinstance(widget, QLineEdit):
+            widget.setText(value)
+        elif isinstance(widget, QAbstractSpinBox):
+            widget.setValue(value)
+        else:
+            logger.error(f"Unknown widget type: {type(widget)}")
+
+    @staticmethod
+    def _getMetaData(config, key):
+        """Convienient function to get metadata and capture key error.
+
+        :param dict config: config dictionary.
+        :param str key: meta data key.
+        """
+        try:
+            return config[key]
+        except KeyError:
+            # This happens when loading metadata in a new version with
+            # a config file in the old version.
+            logger.warning(f"Meta data key not found: {key}")
 
 
 class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):

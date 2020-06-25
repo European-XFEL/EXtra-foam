@@ -13,6 +13,7 @@ from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
 from ..plot_widgets import ImageViewF, PlotWidgetF
+from ...algorithms import find_peaks_1d
 from ...config import AnalysisType, plot_labels
 
 
@@ -31,15 +32,24 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         self.setTitle('Azimuthal integration')
 
         self._plot = self.plotCurve(pen=FColor.mkPen("p"))
+        self._peaks = self.plotScatter(
+            pen=FColor.mkPen("r"), symbol="+", size=12)
 
     def updateF(self, data):
         """Override."""
-        momentum, intensity = data.ai.x, data.ai.y
+        ai = data.ai
+        momentum, intensity = ai.x, ai.y
 
         if intensity is None:
             return
 
         self._plot.setData(momentum, intensity)
+
+        peaks = ai.peaks
+        if peaks is None:
+            self._peaks.setData([], [])
+        else:
+            self._peaks.setData(momentum[peaks], intensity[peaks])
 
 
 @create_imagetool_view(AzimuthalIntegCtrlWidget)
@@ -63,6 +73,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Override."""

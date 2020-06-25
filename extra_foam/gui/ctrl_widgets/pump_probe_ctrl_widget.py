@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
-from ..gui_helpers import invert_dict, parse_slice_inv
+from ..gui_helpers import invert_dict
 from ...config import PumpProbeMode, AnalysisType
 from ...database import Metadata as mt
 
@@ -140,10 +140,10 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._abs_difference_cb.setChecked(cfg["abs_difference"] == 'True')
 
         if self._pulse_resolved:
-            self._on_pulse_le.setText(
-                parse_slice_inv(cfg["on_pulse_slicer"]))
-            self._off_pulse_le.setText(
-                parse_slice_inv(cfg["off_pulse_slicer"]))
+            self._updateWidgetValue(
+                self._on_pulse_le, cfg, "on_pulse_slicer")
+            self._updateWidgetValue(
+                self._off_pulse_le, cfg, "off_pulse_slicer")
 
     def onPpModeChange(self, pp_mode):
         if not self._pulse_resolved:

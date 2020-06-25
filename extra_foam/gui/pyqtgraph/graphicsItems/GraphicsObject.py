@@ -59,6 +59,10 @@ class PlotItem(GraphicsObject):
     def setData(self, *args, **kwargs):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def data(self):
+        raise NotImplementedError
+
     def updateGraph(self):
         self._graph = None
         self.prepareGeometryChange()

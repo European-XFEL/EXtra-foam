@@ -42,6 +42,10 @@ class CurvePlotItem(pg.PlotItem):
 
         self.updateGraph()
 
+    def data(self):
+        """Override."""
+        return self._x, self._y
+
     def _prepareGraph(self):
         """Override."""
         p = QPainterPath()
@@ -96,6 +100,10 @@ class BarGraphItem(pg.PlotItem):
             raise ValueError("'x' and 'y' data have different lengths!")
 
         self.updateGraph()
+
+    def data(self):
+        """Override."""
+        return self._x, self._y
 
     def _prepareGraph(self):
         """Override."""
@@ -179,6 +187,10 @@ class StatisticsBarItem(pg.PlotItem):
                 "'y_min' and 'y_max' data have different lengths!")
 
         self.updateGraph()
+
+    def data(self):
+        """Override."""
+        return self._x, self._y, self._y_min, self._y_max
 
     def setBeam(self, w):
         self._beam = w
