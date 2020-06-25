@@ -7,8 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
 from PyQt5.QtGui import QPainter, QPainterPath, QPicture
 from PyQt5.QtCore import QRectF
 
@@ -51,7 +49,7 @@ class CurvePlotItem(pg.PlotItem):
         p = QPainterPath()
 
         # TODO: use QDataStream to improve performance
-        x, y = self._transformData()
+        x, y = self.transformedData()
         if len(x) >= 2:
             p.moveTo(x[0], y[0])
             for px, py in zip(x[1:], y[1:]):
@@ -112,7 +110,7 @@ class BarGraphItem(pg.PlotItem):
         p.setPen(self._pen)
         p.setBrush(self._brush)
 
-        x, y = self._transformData()
+        x, y = self.transformedData()
         # Now it works for bar plot with equalized gaps
         # TODO: extend it
         if len(x) > 1:
@@ -198,7 +196,7 @@ class StatisticsBarItem(pg.PlotItem):
     def _prepareGraph(self):
         p = QPainterPath()
 
-        x, y, y_min, y_max = self._transformData()
+        x, y, y_min, y_max = self.transformedData()
         beam = self._beam
         for px, u, l in zip(x, y_min, y_max):
             # plot the lower horizontal lines
@@ -229,8 +227,8 @@ class StatisticsBarItem(pg.PlotItem):
         p.drawLine(5, 2, 5, 18)  # vertical line
         p.drawLine(2, 18, 8, 18)  # upper horizontal line
 
-    def _transformData(self):
+    def transformedData(self):
         """Override."""
         y_min = self.toLogScale(self._y_min) if self._log_y_mode else self._y_min
         y_max = self.toLogScale(self._y_max) if self._log_y_mode else self._y_max
-        return super()._transformData() + (y_min, y_max)
+        return super().transformedData() + (y_min, y_max)

@@ -58,7 +58,7 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
     """
 
     # maximum number of peaks expected
-    _MAX_N_PEAKS = 20
+    _MAX_N_PEAKS = 10
 
     def __init__(self):
         super().__init__()

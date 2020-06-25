@@ -33,7 +33,8 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
 
         self._plot = self.plotCurve(pen=FColor.mkPen("p"))
         self._peaks = self.plotScatter(
-            pen=FColor.mkPen("r"), symbol="+", size=12)
+            pen=FColor.mkPen("g"), brush=FColor.mkBrush(None), symbol="o",
+            size=18)
 
     def updateF(self, data):
         """Override."""
@@ -48,8 +49,10 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         peaks = ai.peaks
         if peaks is None:
             self._peaks.setData([], [])
+            self.setAnnotationList([], [])
         else:
             self._peaks.setData(momentum[peaks], intensity[peaks])
+            self.setAnnotationList(momentum[peaks], intensity[peaks])
 
 
 @create_imagetool_view(AzimuthalIntegCtrlWidget)

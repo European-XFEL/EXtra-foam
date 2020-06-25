@@ -196,6 +196,9 @@ class PlotWidgetF(pg.GraphicsView):
     def setTitle(self, *args, **kwargs):
         self._plot_area.setTitle(*args, **kwargs)
 
+    def setAnnotationList(self, *args, **kwargs):
+        self._plot_area.setAnnotationList(*args, **kwargs)
+
     def addLegend(self, *args, **kwargs):
         self._plot_area.addLegend(*args, **kwargs)
 
