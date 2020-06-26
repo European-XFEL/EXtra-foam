@@ -250,4 +250,5 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
             widget.roi_geometry_change_sgn.connect(
                 mediator.onRoiGeometryChange)
             layout.addWidget(widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)

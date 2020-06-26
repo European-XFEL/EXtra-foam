@@ -34,6 +34,7 @@ class GeometryView(_AbstractImageToolView):
         layout = QVBoxLayout()
         layout.addWidget(self._corrected)
         layout.addWidget(self._ctrl_widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):

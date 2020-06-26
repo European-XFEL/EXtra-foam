@@ -113,6 +113,7 @@ class CorrectedView(_AbstractImageToolView):
         ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
+        ctrl_layout.setContentsMargins(1, 1, 1, 1)
         ctrl_widget.setLayout(ctrl_layout)
         ctrl_widget.setFixedHeight(
             self._roi_proj_ctrl_widget.minimumSizeHint().height())
@@ -133,6 +134,7 @@ class CorrectedView(_AbstractImageToolView):
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)
         layout.addWidget(ctrl_widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):

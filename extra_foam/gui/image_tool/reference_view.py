@@ -48,6 +48,7 @@ class ReferenceView(_AbstractImageToolView):
         layout.addWidget(self._corrected, 0, 0)
         layout.addWidget(self._reference, 0, 1)
         layout.addWidget(self._ctrl_widget, 1, 0, 1, 2)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):
