@@ -23,7 +23,7 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
 class TestXasTimWindow(_SpecialSuiteWindowTestBase):
@@ -42,11 +42,11 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
         """Override."""
         return {
             "xgm_intensity": np.arange(n_pulses_per_train),
-            "digitizer_apds": [np.arange(n_pulses_per_train)] * 4,
+            "digitizer_apds": [np.arange(n_pulses_per_train)] * 3 + [None],
             "energy_scan": (np.arange(n_trains), np.arange(n_trains)),
             "correlation_length": 20,
             "i0": np.arange(n_trains * n_pulses_per_train),
-            "i1": [np.arange(n_trains * n_pulses_per_train)] * 4,
+            "i1": [np.arange(n_trains * n_pulses_per_train)] * 3 + [None],
             "spectra": ([np.arange(n_bins)] * 5, np.arange(n_bins), np.arange(n_bins)),
         }
 

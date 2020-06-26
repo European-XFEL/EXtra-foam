@@ -12,13 +12,14 @@ from extra_foam.special_suite.module_scan_w import (
     ModuleScanWindow
 )
 
+from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
-class TestModuleScan(unittest.TestCase):
+class TestModuleScan(_SpecialSuiteWindowTestBase):
     @classmethod
     def setUpClass(cls):
         cls._win = ModuleScanWindow('DET')
