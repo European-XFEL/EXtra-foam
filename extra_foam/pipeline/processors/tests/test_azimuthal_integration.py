@@ -53,6 +53,21 @@ class TestAzimuthalIntegProcessorTrain(_TestDataMixin):
             assert all([not np.isnan(v) for v in ai.y])
             assert ai.fom is not None and ai.fom != 0
             # assert shape[-2:] == ai.q_map.shape
+            assert ai.peaks is None
+
+            # test peak finding
+            with patch("extra_foam.pipeline.processors.azimuthal_integration.find_peaks_1d") as mocked_find_peaks:
+                proc._find_peaks = True
+                proc._peak_prominence = 10
+                proc._peak_slicer = slice(1, -1)
+                mocked_find_peaks.return_value = np.arange(10), object()
+                proc.process(data)
+                np.testing.assert_array_equal(np.arange(1, 9), ai.peaks)
+
+                # test too many peaks found
+                mocked_find_peaks.return_value = np.arange(proc._MAX_N_PEAKS + 3), object()
+                proc.process(data)
+                assert ai.peaks is None
 
     def testAzimuthalIntegrationPp(self):
         proc = self._proc

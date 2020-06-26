@@ -185,11 +185,12 @@ class DataItem:
 
 class AzimuthalIntegrationData(DataItem):
     """Azimuthal integration data item."""
-    __slots__ = ['x', 'y', 'fom', 'q_map']
+    __slots__ = ['x', 'y', 'fom', 'q_map', 'peaks']
 
     def __init__(self):
         super().__init__()
         self.q_map = None
+        self.peaks = None
 
 
 class _RoiGeomBase(ABC):

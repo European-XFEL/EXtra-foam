@@ -108,11 +108,13 @@ class TestPlotArea(unittest.TestCase):
         curve_plot_item = CurvePlotItem()
         area.addItem(curve_plot_item)
         area.addItem(pg.ScatterPlotItem())
+        area.setAnnotationList([0], [0], [1])
 
         self.assertEqual(4, len(area._plot_items))
-        self.assertEqual(7, len(area._items))
-        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(8, len(area._items))
+        self.assertEqual(8, len(area._vb.addedItems))
         self.assertEqual(4, len(area._legend.items))
+        self.assertEqual(1, len(area._annotation_items))
 
         with patch.object(curve_plot_item, "setData") as mocked1:
             with patch.object(bar_graph_item, "setData") as mocked2:
@@ -123,21 +125,24 @@ class TestPlotArea(unittest.TestCase):
         # remove an item which does not exist
         area.removeItem(BarGraphItem())
         self.assertEqual(4, len(area._plot_items))
-        self.assertEqual(7, len(area._items))
-        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(8, len(area._items))
+        self.assertEqual(8, len(area._vb.addedItems))
         self.assertEqual(4, len(area._legend.items))
 
         area.removeItem(bar_graph_item)
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(7, len(area._items))
+        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(3, len(area._legend.items))
+
+        area.removeItem(image_item)
         self.assertEqual(3, len(area._plot_items))
         self.assertEqual(6, len(area._items))
         self.assertEqual(6, len(area._vb.addedItems))
         self.assertEqual(3, len(area._legend.items))
 
-        area.removeItem(image_item)
-        self.assertEqual(3, len(area._plot_items))
-        self.assertEqual(5, len(area._items))
-        self.assertEqual(5, len(area._vb.addedItems))
-        self.assertEqual(3, len(area._legend.items))
+        with self.assertRaisesRegex(RuntimeError, "not allowed to be removed"):
+            area.removeItem(area._annotation_items[0])
 
         area.removeAllItems()
         self.assertEqual(0, len(area._plot_items))
@@ -205,6 +210,56 @@ class TestPlotArea(unittest.TestCase):
         menus = self._area.getContextMenus(event)
         self.assertEqual(1, len(menus))
         self.assertEqual("Grid", menus[0].title())
+
+    def testSetAnnotationList(self):
+        area = self._area
+        # add some items to simulate the practical situation
+        area.addItem(ImageItem())
+        area.addItem(BarGraphItem())
+        area.addItem(StatisticsBarItem())
+
+        # add some items
+        area.setAnnotationList([1, 2, 3], [4, 5, 6])
+        self.assertEqual(3, len(area._annotation_items))
+        for item in area._annotation_items:
+            self.assertTrue(item.isVisible())
+        self.assertEqual(3, area._n_vis_annotation_items)
+
+        # set less items
+        area.setAnnotationList([1, 2], [4, 5])
+        self.assertEqual(3, len(area._annotation_items))
+        for item in area._annotation_items[:2]:
+            self.assertTrue(item.isVisible())
+        self.assertFalse(area._annotation_items[-1].isVisible())
+        self.assertEqual(2, area._n_vis_annotation_items)
+
+        # set more items
+        area.setAnnotationList([1, 2, 3, 4], [4, 5, 6, 7], values=[4, 5, 6, 7])
+        self.assertEqual(4, len(area._annotation_items))
+        for item in area._annotation_items:
+            self.assertTrue(item.isVisible())
+        self.assertEqual(4, area._n_vis_annotation_items)
+
+        # clear items
+        area.setAnnotationList([], [])
+        self.assertEqual(4, len(area._annotation_items))
+        for item in area._annotation_items:
+            self.assertFalse(item.isVisible())
+        self.assertEqual(0, area._n_vis_annotation_items)
+
+        area.removeAllItems()
+        self.assertEqual(0, len(area._annotation_items))
+        self.assertEqual(0, area._n_vis_annotation_items)
+
+        # test TextItem call
+        with patch("extra_foam.gui.pyqtgraph.TextItem.setPos") as mocked_pos:
+            with patch("extra_foam.gui.pyqtgraph.TextItem.setText") as mocked_value:
+                area.setAnnotationList([1, 2, 3], [4, 5, 6])
+                mocked_pos.assert_called_with(3, 6)
+                mocked_value.assert_called_with("3.0000")
+
+                area.setAnnotationList([1], [4], [2])
+                mocked_value.assert_called_with("2.0000")
 
 
 class TestHistogramLUTItem(unittest.TestCase):

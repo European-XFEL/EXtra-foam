@@ -59,6 +59,10 @@ class PlotItem(GraphicsObject):
     def setData(self, *args, **kwargs):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def data(self):
+        raise NotImplementedError
+
     def updateGraph(self):
         self._graph = None
         self.prepareGeometryChange()
@@ -92,8 +96,8 @@ class PlotItem(GraphicsObject):
         self._log_y_mode = state
         self.updateGraph()
 
-    def _transformData(self):
-        """Transform and return the internal data to log scale.
+    def transformedData(self):
+        """Transform and return the internal data to log scale if requested.
 
         Child class should re-implement this method if it has a
         different internal data structure.

@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 
 from PyQt5.QtGui import QPainter
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QPointF, Qt
 from PyQt5.QtWidgets import (
     QCheckBox, QGraphicsGridLayout, QHBoxLayout, QLabel, QMenu, QSizePolicy,
     QSlider, QWidget, QWidgetAction
@@ -190,6 +190,8 @@ class PlotArea(pg.GraphicsWidget):
     _METER_ROW = 0
     _TITLE_ROW = 1
 
+    _MAX_ANNOTATION_ITEMS = 10
+
     def __init__(self, name=None, *,
                  enable_meter=True, enable_transform=True, parent=None):
         super().__init__(parent=parent)
@@ -198,6 +200,8 @@ class PlotArea(pg.GraphicsWidget):
 
         self._items = set()
         self._plot_items = set()
+        self._annotation_items = []
+        self._n_vis_annotation_items = 0
 
         self._vb = pg.ViewBox(parent=self)
 
@@ -394,21 +398,30 @@ class PlotArea(pg.GraphicsWidget):
         if item not in self._items:
             return
 
-        self._items.remove(item)
         if item in self._plot_items:
             self._plot_items.remove(item)
             if self._legend is not None:
                 self._legend.removeItem(item)
 
+        elif item in self._annotation_items:
+            # it is tricky to update n_vis_annotation_items
+            raise RuntimeError("Annotation item is not allowed to be removed "
+                               "using 'removeItem' method!")
+
+        self._items.remove(item)
         self._vb.removeItem(item)
 
     def removeAllItems(self):
         """Remove all graphics items from the ViewBox."""
         for item in self._items:
             self._vb.removeItem(item)
-            if self._legend is not None and item in self._plot_items:
-                self._legend.removeItem(item)
+
+        if self._legend is not None:
+            self._legend.clear()
+
         self._plot_items.clear()
+        self._annotation_items.clear()
+        self._n_vis_annotation_items = 0
         self._items.clear()
 
     def getContextMenus(self, event):
@@ -521,6 +534,43 @@ class PlotArea(pg.GraphicsWidget):
             self._layout.setRowFixedHeight(row, 30)
             self._title.setText(title, **args)
             self._title.setVisible(True)
+
+    def setAnnotationList(self, x, y, values=None):
+        """Set a list of annotation items.
+
+        :param list-like x: x coordinate of the annotated point.
+        :param list-like y: y coordinate of the annotated point.
+        :param list-like values: a list of annotation text.
+        """
+
+        # Don't waste time to check the list lengths.
+
+        a_items = self._annotation_items
+
+        if values is None:
+            values = x
+        values = values[:self._MAX_ANNOTATION_ITEMS]
+        n_pts = len(values)
+
+        n_items = len(a_items)
+        if n_items < n_pts:
+            for i in range(n_pts - n_items):
+                item = pg.TextItem(color=FColor.mkColor('b'), anchor=(0.5, 2))
+                self.addItem(item)
+                a_items.append(item)
+
+        n_vis = self._n_vis_annotation_items
+        if n_vis < n_pts:
+            for i in range(n_vis, n_pts):
+                a_items[i].show()
+        elif n_vis > n_pts:
+            for i in range(n_pts, n_vis):
+                a_items[i].hide()
+        self._n_vis_annotation_items = n_pts
+
+        for i in range(n_pts):
+            a_items[i].setPos(x[i], y[i])
+            a_items[i].setText(f"{values[i]:.4f}")
 
     def setAspectLocked(self, *args, **kwargs):
         self._vb.setAspectLocked(*args, **kwargs)

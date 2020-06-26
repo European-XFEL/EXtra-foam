@@ -19,12 +19,13 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
-from .smart_widgets import SmartLineEdit, SmartStringLineEdit
+from .smart_widgets import SmartLineEdit
 from ..gui_helpers import invert_dict
+from ..items import GeometryItem
 from ...config import config, GeomAssembler
 from ...database import Metadata as mt
 from ...geometries import module_indices
-from ..items import GeometryItem
+from ...logger import logger
 
 
 def _parse_table_widget(widget):
@@ -213,16 +214,21 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
 
-        self._assembler_cb.setCurrentText(
-            self._assemblers_inv[int(cfg["assembler"])])
-        self._stack_only_cb.setChecked(cfg["stack_only"] == 'True')
-        self._geom_file_le.setText(cfg["geometry_file"])
+        assembler = self._getMetaData(cfg, "assembler")
+        if assembler is not None:
+            self._assembler_cb.setCurrentText(
+                self._assemblers_inv[int(cfg["assembler"])])
+
+        self._updateWidgetValue(self._stack_only_cb, cfg, "stack_only")
+        self._updateWidgetValue(self._geom_file_le, cfg, "geometry_file")
 
         # TODO: check number of modules for JungFrau
-        coordinates = json.loads(cfg["coordinates"], encoding='utf8')
-        table = self._coordinates_tb
-        n_rows = table.rowCount()
-        n_cols = table.columnCount()
-        for j in range(n_cols):
-            for i in range(n_rows):
-                table.cellWidget(i, j).setText(str(coordinates[j][i]))
+        coordinates = self._getMetaData(cfg, "coordinates")
+        if coordinates is not None:
+            coordinates = json.loads(coordinates, encoding='utf8')
+            table = self._coordinates_tb
+            n_rows = table.rowCount()
+            n_cols = table.columnCount()
+            for j in range(n_cols):
+                for i in range(n_rows):
+                    table.cellWidget(i, j).setText(str(coordinates[j][i]))

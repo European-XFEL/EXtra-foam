@@ -123,6 +123,7 @@ class ImageViewF(QWidget):
         layout.addWidget(self._plot_widget, 4)
         layout.addWidget(self._hist_widget, 1)
         layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
     def reset(self):

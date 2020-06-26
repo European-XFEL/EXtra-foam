@@ -162,17 +162,18 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_TRANSFORM_PROC)
 
-        self._ma_window_le.setText(str(cfg["ma_window"]))
+        self._updateWidgetValue(self._ma_window_le, cfg, "ma_window")
 
         # do not load transform type since it is not an "input"
 
         fft = self._fourier_transform
-        fft.logrithmic_cb.setChecked(cfg["fft:logrithmic"] == 'True')
+        self._updateWidgetValue(fft.logrithmic_cb, cfg, "fft:logrithmic")
 
         ed = self._edge_detection
-        ed.kernel_size_sp.setValue(int(cfg["ed:kernel_size"]))
-        ed.sigma_sp.setValue(float(cfg["ed:sigma"]))
-        ed.threshold_le.setText(cfg['ed:threshold'][1:-1])
+        self._updateWidgetValue(
+            ed.kernel_size_sp, cfg, "ed:kernel_size", cast=int)
+        self._updateWidgetValue(ed.sigma_sp, cfg, "ed:sigma", cast=float)
+        self._updateWidgetValue(ed.threshold_le, cfg, "ed:threshold")
 
     def registerTransformType(self):
         self._mediator.onItTransformTypeChange(

@@ -561,7 +561,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
         from extra_foam.gui.ctrl_widgets.azimuthal_integ_ctrl_widget import \
-            _DEFAULT_AZIMUTHAL_INTEG_POINTS
+            _DEFAULT_AZIMUTHAL_INTEG_POINTS, _DEFAULT_PEAK_PROMINENCE
 
         widget = self.image_tool._azimuthal_integ_1d_view._ctrl_widget
         avail_norms = {value: key for key, value in widget._available_norms.items()}
@@ -586,6 +586,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(default_pixel_size, proc._pixel2)
         self.assertEqual(0, proc._poni1)
         self.assertEqual(0, proc._poni2)
+        self.assertTrue(proc._find_peaks)
+        self.assertEqual(_DEFAULT_PEAK_PROMINENCE, proc._peak_prominence)
+        self.assertEqual(slice(None), proc._peak_slicer)
 
         # test setting new values
         widget._photon_energy_le.setText("12.4")
@@ -600,6 +603,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._py_le.setText("0.000002")
         widget._cx_le.setText("-1000")
         widget._cy_le.setText("1000")
+        widget._peak_finding_cb.setChecked(False)
+        widget._peak_prominence_le.setText("50")
+        widget._peak_slicer_le.setText("1:-1")
         proc.update()
         self.assertAlmostEqual(1e-10, proc._wavelength)
         self.assertAlmostEqual(0.3, proc._sample_dist)
@@ -613,6 +619,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(0.000002, proc._pixel1)
         self.assertEqual(-1000 * 0.000001, proc._poni2)
         self.assertEqual(1000 * 0.000002, proc._poni1)
+        self.assertFalse(proc._find_peaks)
+        self.assertEqual(50, proc._peak_prominence)
+        self.assertEqual(slice(1, -1), proc._peak_slicer)
 
         # test loading meta data
         mediator = widget._mediator
@@ -628,6 +637,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onAiPixelSizeYChange(0.002)
         mediator.onAiIntegCenterXChange(1)
         mediator.onAiIntegCenterYChange(2)
+        mediator.onAiPeakFindingChange(True)
+        mediator.onAiPeakProminenceChange(20)
+        mediator.onAiPeakSlicerChange([0, None, 2])
         widget.loadMetaData()
         self.assertEqual("2.0", widget._photon_energy_le.text())
         self.assertEqual("0.2", widget._sample_dist_le.text())
@@ -641,6 +653,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("0.002", widget._py_le.text())
         self.assertEqual("1", widget._cx_le.text())
         self.assertEqual("2", widget._cy_le.text())
+        self.assertTrue(widget._peak_finding_cb.isChecked())
+        self.assertEqual("20", widget._peak_prominence_le.text())
+        self.assertEqual("0::2", widget._peak_slicer_le.text())
 
     def testRoiFomCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_fom_ctrl_widget
