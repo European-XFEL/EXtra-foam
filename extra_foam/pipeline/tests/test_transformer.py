@@ -112,8 +112,8 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         self.assertDictEqual({'abc ppt': 2}, correlated['raw'])
         self.assertEqual(1004, correlated['processed'].tid)
         self.assertListEqual(['abc ppt'], matched)
-        self.assertListEqual([(1002, 'Train 1002 dropped! Not found: 1 out of 1 source items.'),
-                              (1003, 'Train 1003 dropped! Not found: 1 out of 1 source items.')],
+        self.assertListEqual([(1002, 'Train 1002 dropped! Not found: 1 out of 1 source items: abc ppt ...'),
+                              (1003, 'Train 1003 dropped! Not found: 1 out of 1 source items: abc ppt ...')],
                              dropped)
 
     def testCorrelationMultiple(self):
@@ -135,7 +135,7 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         self.assertDictEqual({'abc ppt': 1, 'efg ppt': 1}, correlated['raw'])
         self.assertEqual(1002, correlated['processed'].tid)
         self.assertListEqual(['abc ppt', 'efg ppt'], matched)
-        self.assertListEqual([(1001, 'Train 1001 dropped! Not found: 1 out of 2 source items.')],
+        self.assertListEqual([(1001, 'Train 1001 dropped! Not found: 1 out of 2 source items: efg ppt ...')],
                              dropped)
         self.assertListEqual([1003], list(trans._cached.keys()))
 
