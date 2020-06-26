@@ -21,12 +21,14 @@ from extra_foam.special_suite.special_analysis_base import (
     ProcessingError
 )
 
+from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
+
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
-class TestGotthard(unittest.TestCase):
+class TestGotthardWindow(_SpecialSuiteWindowTestBase):
     @classmethod
     def setUpClass(cls):
         cls._win = GotthardWindow('MID')
@@ -35,6 +37,19 @@ class TestGotthard(unittest.TestCase):
     def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
+
+    @staticmethod
+    def data4visualization(n_pulses=4):
+        """Override."""
+        return {
+            "x": None,
+            "spectrum": np.arange(10 * n_pulses).reshape(n_pulses, 10),
+            "spectrum_ma": np.arange(10 * n_pulses).reshape(n_pulses, 10),
+            "spectrum_mean": np.arange(10),
+            "spectrum_ma_mean": np.arange(10),
+            "poi_index": 0,
+            "hist": (np.arange(5), np.arange(5), 1, 1, 1),
+        }
 
     def testWindow(self):
         win = self._win
@@ -49,7 +64,7 @@ class TestGotthard(unittest.TestCase):
         self.assertEqual(1, counter[GotthardPulsePlot])
         self.assertEqual(1, counter[GotthardHist])
 
-        win.updateWidgetsST()
+        self._check_update_plots()
 
     def testCtrl(self):
         from extra_foam.special_suite.gotthard_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
@@ -135,7 +150,7 @@ class TestGotthard(unittest.TestCase):
         self.assertTrue(proc._hist_over_ma)
 
 
-class TestGotthardProcessor(_RawDataMixin):
+class TestGotthardProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = GotthardProcessor(object(), object())
@@ -269,6 +284,7 @@ class TestGotthardProcessor(_RawDataMixin):
 
         # 1st train
         processed = proc.process(self._get_data(12345))
+        self._check_processed_data_structure(processed)
         assert 1 == processed["poi_index"]
         np.testing.assert_array_almost_equal(adc_gt, processed["spectrum"])
         np.testing.assert_array_almost_equal(adc_gt, processed["spectrum_ma"])
@@ -329,3 +345,8 @@ class TestGotthardProcessor(_RawDataMixin):
         proc.onRemoveDark()
         assert proc._dark_ma is None
         assert proc._dark_mean_ma is None
+
+    def _check_processed_data_structure(self, ret):
+        """Override."""
+        data_gt = TestGotthardWindow.data4visualization().keys()
+        assert set(ret.keys()) == set(data_gt)

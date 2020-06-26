@@ -177,9 +177,13 @@ class DataTransformer:
         #       is impossible to have a detailed error message
         #       since we do not know which data are requested
         #       in the old time.
+
+        # The first source name is required by the special suite
+        # since matched source items are not encoded.
         if not_found:
             msg += f"Not found: {len(not_found)} out of " \
-                   f"{len(self._catalog)} source items."
+                   f"{len(self._catalog)} source items: " \
+                   f"{not_found[0]} ..."
         return msg
 
     def reset(self):

@@ -20,7 +20,7 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
 class TestTrXasWindow(_SpecialSuiteWindowTestBase):

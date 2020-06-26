@@ -17,12 +17,15 @@ from extra_foam.special_suite.cam_view_w import (
     CamViewWindow, CameraView, CameraViewRoiHist
 )
 
+from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
+
+
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
-class TestCamView(unittest.TestCase):
+class TestCamViewWindow(_SpecialSuiteWindowTestBase):
     @classmethod
     def setUpClass(cls):
         cls._win = CamViewWindow('SCS')
@@ -31,6 +34,14 @@ class TestCamView(unittest.TestCase):
     def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
+
+    @staticmethod
+    def data4visualization():
+        """Override."""
+        return {
+            "displayed": np.arange(20).reshape(4, 5),
+            "roi_hist": (np.arange(4), np.arange(4), 1, 2, 3)
+        }
 
     def testWindow(self):
         win = self._win
@@ -43,7 +54,7 @@ class TestCamView(unittest.TestCase):
         self.assertEqual(1, counter[CameraView])
         self.assertEqual(1, counter[CameraViewRoiHist])
 
-        win.updateWidgetsST()
+        self._check_update_plots()
 
     def testCtrl(self):
         from extra_foam.special_suite.cam_view_w import (
@@ -99,7 +110,7 @@ class TestCamView(unittest.TestCase):
         self.assertEqual(999, proc._n_bins)
 
 
-class TestCamViewProcessor(_RawDataMixin):
+class TestCamViewProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = CamViewProcessor(object(), object())
@@ -208,6 +219,7 @@ class TestCamViewProcessor(_RawDataMixin):
 
         # 1st train
         processed = proc.process(self._get_data(12345))
+        self._check_processed_data_structure(processed)
         np.testing.assert_array_almost_equal(imgdata_gt, processed["displayed"])
 
         # 2nd train
@@ -222,3 +234,8 @@ class TestCamViewProcessor(_RawDataMixin):
         # reset
         proc.reset()
         assert proc._raw_ma is None
+
+    def _check_processed_data_structure(self, ret):
+        """Override."""
+        data_gt = TestCamViewWindow.data4visualization().keys()
+        assert set(ret.keys()) == set(data_gt)

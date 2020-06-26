@@ -9,6 +9,8 @@ All rights reserved.
 """
 from functools import partial
 
+import numpy as np
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import (
@@ -145,7 +147,9 @@ class XasTimXgmPulsePlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        self._plot.setData(data['xgm_intensity'])
+        y = data['xgm_intensity']
+        x = np.arange(len(y))
+        self._plot.setData(x, y)
 
 
 class XasTimDigitizerPulsePlot(PlotWidgetF):
@@ -171,7 +175,11 @@ class XasTimDigitizerPulsePlot(PlotWidgetF):
     def updateF(self, data):
         """Override."""
         for p, apd in zip(self._plots, data['digitizer_apds']):
-            p.setData(apd)
+            if apd is None:
+                p.setData([], [])
+            else:
+                x = np.arange(len(apd))
+                p.setData(x, apd)
 
 
 class XasTimMonoScanPlot(TimedPlotWidgetF):
