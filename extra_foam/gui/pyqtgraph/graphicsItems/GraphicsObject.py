@@ -59,6 +59,25 @@ class PlotItem(GraphicsObject):
     def setData(self, *args, **kwargs):
         raise NotImplementedError
 
+    def _parseInputData(self, x, y, **kwargs):
+        """Convert input to np.array and apply shape check."""
+        if isinstance(x, list):
+            self._x = np.array(x)
+        elif x is None:
+            self._x = np.array([])
+        else:
+            self._x = x
+
+        if isinstance(y, list):
+            self._y = np.array(y)
+        elif y is None:
+            self._y = np.array([])
+        else:
+            self._y = y
+
+        if len(self._x) != len(self._y):
+            raise ValueError("'x' and 'y' data have different lengths!")
+
     @abc.abstractmethod
     def data(self):
         raise NotImplementedError

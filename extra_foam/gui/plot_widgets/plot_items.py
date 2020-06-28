@@ -36,12 +36,7 @@ class CurvePlotItem(pg.PlotItem):
 
     def setData(self, x, y):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
-
-        if len(self._x) != len(self._y):
-            raise ValueError("'x' and 'y' data have different lengths!")
-
+        self._parseInputData(x, y)
         self.updateGraph()
 
     def data(self):
@@ -112,12 +107,7 @@ class BarGraphItem(pg.PlotItem):
 
     def setData(self, x, y):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
-
-        if len(self._x) != len(self._y):
-            raise ValueError("'x' and 'y' data have different lengths!")
-
+        self._parseInputData(x, y)
         self.updateGraph()
 
     def data(self):
@@ -190,22 +180,39 @@ class StatisticsBarItem(pg.PlotItem):
 
     def setData(self, x, y, y_min=None, y_max=None, beam=None):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
+        self._parseInputData(x, y, y_min=y_min, y_max=y_max)
 
-        self._y_min = self._y if y_min is None else y_min
-        self._y_max = self._y if y_max is None else y_max
         if beam is not None:
             # keep the default beam if not specified
             self._beam = beam
+
+        self.updateGraph()
+
+    def _parseInputData(self, x, y, **kwargs):
+        """Override."""
+        super()._parseInputData(x, y)
+
+        y_min = kwargs.get('y_min', None)
+        if isinstance(y_min, list):
+            self._y_min = np.array(y_min)
+        elif y_min is None:
+            self._y_min = self._y
+        else:
+            self._y_min = y_min
+
+        y_max = kwargs.get('y_max', None)
+        if isinstance(y_max, list):
+            self._y_max = np.array(y_max)
+        elif y_max is None:
+            self._y_max = self._y
+        else:
+            self._y_max = y_max
 
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
         if not len(self._y) == len(self._y_min) == len(self._y_max):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
-
-        self.updateGraph()
 
     def data(self):
         """Override."""
