@@ -1,6 +1,39 @@
 CHANGELOG
 =========
 
+0.9.0 (30 June 2020)
+------------------------
+
+- **Bug Fix**
+
+  - Fix bug in data source tree introduced in 0.8.4. #235
+  - Fix transparent Nan pixel with the latest pyqtgraph version. #231
+
+- **Improvement**
+
+  - Improve performance of PlotCurveItem and add benchmarks for PlotItems and ImageViewF. #243
+  - Make ctrl widgets in Imagetool more compact. #241
+  - Improve C++ code quality and suppress TBB deprecate warning. #239
+  - Add meter bar to plot area. #236
+  - Reimplement ImageItem and PlotItem to replace the pyqtgraph ones. #232 #242
+  - Improve data source updating and color encoding matched source items in
+    the data source tree. #230 #234
+  - Rename configurator to analysis setup manager and allow take snapshot for
+    each setup. #228
+  - Update data source and trouble shooting in documentation. #227
+  - Add summary of compiler flags for EXtra-foam-python. #226
+  - Update installation (gcc7) and CI (gcc8). #226
+  - Rename misleading mouse mode in the right-click context menu. #211
+  - Update pyqtgraph to the latest master branch. #206 #211 #233
+
+- **New Feature**
+
+  - Annotate peaks in azimuthal integration view. #240
+  - Enable Legend for all the plot items. #206 #237
+  - Implement logarithmic X/Y scale in right-click context menu. #206
+  - Enable C++ API installation and add examples. #227
+
+
 0.8.4 (8 June 2020)
 ------------------------
 
