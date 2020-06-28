@@ -519,22 +519,6 @@ class PlotArea(pg.GraphicsWidget):
             x, y = pos
             self._meter.setText(f"x = {x}, y = {y}")
 
-    def setTitle(self, title=None, **args):
-        """Set the title of the plot.
-
-        :param str title: text to display along the axis. HTML allowed.
-        """
-        row = self._TITLE_ROW
-        if title is None:
-            self._title.setMaximumHeight(0)
-            self._layout.setRowFixedHeight(row, 0)
-            self._title.setVisible(False)
-        else:
-            self._title.setMaximumHeight(30)
-            self._layout.setRowFixedHeight(row, 30)
-            self._title.setText(title, **args)
-            self._title.setVisible(True)
-
     def setAnnotationList(self, x, y, values=None):
         """Set a list of annotation items.
 
@@ -572,14 +556,31 @@ class PlotArea(pg.GraphicsWidget):
             a_items[i].setPos(x[i], y[i])
             a_items[i].setText(f"{values[i]:.4f}")
 
+    def setTitle(self, *args, **kwargs):
+        """Set the title of the plot."""
+        row = self._TITLE_ROW
+        title = None if len(args) == 0 else args[0]
+        if title is None:
+            self._title.setMaximumHeight(0)
+            self._layout.setRowFixedHeight(row, 0)
+            self._title.setVisible(False)
+        else:
+            self._title.setMaximumHeight(30)
+            self._layout.setRowFixedHeight(row, 30)
+            self._title.setText(title, **kwargs)
+            self._title.setVisible(True)
+
     def setAspectLocked(self, *args, **kwargs):
         self._vb.setAspectLocked(*args, **kwargs)
+
+    def invertX(self, *args, **kwargs):
+        self._vb.invertX(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
         self._vb.invertY(*args, **kwargs)
 
-    def invertX(self, *args, **kwargs):
-        self._vb.invertX(*args, **kwargs)
+    def autoRange(self, *args, **kwargs):
+        self._vb.autoRange(*args, **kwargs)
 
     def mapSceneToView(self, *args, **kwargs):
         return self._vb.mapSceneToView(*args, **kwargs)

@@ -40,6 +40,15 @@ class TestImageView:
         assert len(menu) == 1
         assert menu[0].title() == "Grid"
 
+    def testForwardMethod(self):
+        widget = ImageViewF(has_roi=True)
+
+        for method in ["setAspectLocked", "setLabel", "setTitle", "addItem",
+                       "removeItem", "invertX", "invertY", "autoRange"]:
+            with patch.object(widget._plot_widget, method) as mocked:
+                getattr(widget, method)()
+                mocked.assert_called_once()
+
     @pytest.mark.parametrize("dtype", [np.uint8, np.int, np.float32])
     def testSetImage(self, dtype):
         widget = ImageViewF(has_roi=True)
@@ -49,9 +58,12 @@ class TestImageView:
 
         _display()
 
-        # test setting a valid image
+        # test setImage
         img = np.arange(64).reshape(8, 8).astype(dtype)
-        widget.setImage(img)  # auto_levels = False
+        widget.setImage(img, auto_range=False, auto_levels=False)
+        _display()
+
+        widget.setImage(img, auto_range=True, auto_levels=True)
         _display()
 
         # test setting image to None
