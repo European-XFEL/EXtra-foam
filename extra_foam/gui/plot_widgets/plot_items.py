@@ -7,8 +7,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import struct
+
+import numpy as np
+
 from PyQt5.QtGui import QPainter, QPainterPath, QPicture
-from PyQt5.QtCore import QRectF
+from PyQt5.QtCore import QByteArray, QDataStream, QRectF
 
 from .. import pyqtgraph as pg
 
@@ -46,16 +50,33 @@ class CurvePlotItem(pg.PlotItem):
 
     def _prepareGraph(self):
         """Override."""
-        p = QPainterPath()
-
-        # TODO: use QDataStream to improve performance
         x, y = self.transformedData()
-        if len(x) >= 2:
-            p.moveTo(x[0], y[0])
-            for px, py in zip(x[1:], y[1:]):
-                p.lineTo(px, py)
+        self._graph = self.array2Path(x, y)
 
-        self._graph = p
+    @staticmethod
+    def array2Path(x, y):
+        """Convert array to QPainterPath."""
+        path = QPainterPath()
+        if len(x) >= 2:
+            # see: https://github.com/qt/qtbase/blob/dev/src/gui/painting/qpainterpath.cpp
+            n = len(x)
+            buf = np.empty(n+2, dtype=[('c', '>i4'), ('x', '>f8'), ('y', '>f8')])
+            byteview = buf.view(dtype=np.ubyte)
+            # header (size)
+            byteview[:16] = 0
+            byteview.data[16:20] = struct.pack('>i', n)
+            # data
+            data = buf[1:-1]
+            data['c'], data['x'], data['y'] = 1, x, y
+            data['c'][0] = 0
+            # tail (cStart, fillRule)
+            byteview.data[-20:-16] = struct.pack('>i', 0)
+            byteview.data[-16:-12] = struct.pack('>i', 0)
+
+            # take the pointer without copy
+            arr = QByteArray.fromRawData(byteview.data[16:-12])
+            QDataStream(arr) >> path
+        return path
 
     def drawSample(self, p):
         """Override."""

@@ -87,6 +87,6 @@ class BenchmarkPlotItemSpeed:
 
 
 if __name__ == '__main__':
-    bench = BenchmarkPlotItemSpeed(PlotType.Scatter)
+    bench = BenchmarkPlotItemSpeed(PlotType.Line)
     bench.start()
     app.exec_()
