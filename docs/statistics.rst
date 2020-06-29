@@ -3,13 +3,15 @@
 STATISTICS ANALYSIS
 ===================
 
+.. _Binning:
+
 Binning
 -------
 
-.. image:: images/binning_setup.png
-   :width: 640
+.. image:: images/1d_binning.jpg
+   :width: 800
 
-The binning control panel in the Main GUI allows to setup the visualization of 1D/2D binning of the
+The binning window allows to setup the visualization of 1D/2D binning of the
 FOM and VFOM for different analysis types. For now, it works only with train-resolved data. For instance,
 you can bin the sum of a ROI of the averaged frames in a train with respect to a motor position, while
 binning the sum of a ROI of each frame in a train with respect to a motor position or the XGM intensity
@@ -65,9 +67,8 @@ themselves to click the reset button.
     1 ms with a predefined bin range. However, the cost could increase to a few tens of ms with
     a dynamic bin range!
 
-.. image:: images/binning_window.png
-   :width: 800
 
+.. _Histogram:
 
 Histogram
 ---------
@@ -97,13 +98,44 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 .. image:: images/histogram_window.png
    :width: 800
 
+
+.. _Correlation:
+
 Correlation
 -----------
 
-.. image:: images/correlation_setup.png
-   :width: 640
+.. image:: images/correlation.jpg
+   :width: 800
 
-Setup the visualization of correlations of a given FOM with various slow data.
+The correlation window allows to setup the visualization of correlations of a given FOM with
+various control data. Two plot types are supported in the correlation analysis:
+
+- Scatter plot
+
+  Scatter plot is the most commonly used plot type and it can be activated in the correlation
+  window by setting ``Resolution`` to 0 (default).
+
+- Statistics bar plot
+
+  Statistics bar plot is very useful in the so-called "stop-and-scan" analysis: *a motor moves
+  along a predefined path and it stays at each location for a certain period of time to collect
+  enough data*. It is activated when ``Resolution`` is larger than 0. The y values of the upper
+  and lower bars in the plot are :math:`\bar{y} + {\sigma}` and :math:`\bar{y} - {\sigma}`, respectively,
+  where :math:`\bar{y}` the mean and :math:`{\sigma}` the standard deviation of the FOM values
+  at that point. The widths of both bars are equal to ``Resolution``.
+  Specifically, assuming the current statistics point recorded an average x value of :math:`\bar{x}`
+  and a new data (x, y) arrives, a new statistics point will be started if :math:`|\bar{x} - x| > r`,
+  where `r` is ``Resolution``.
+  Otherwise, the statistics of the current point will be updated.
+  It should be noted that *if there is only 1 data at a statistics point, the point will be discarded.*
+
+  The statistics bar plot is very similar to 1D binning. However, different from 1D binning,
+  a new statistics point will be recorded if the motor moves away and later comes back to the same location.
+
+.. note::
+
+    One can change the value of resolution on-the-fly without resetting the whole data history.
+
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
@@ -116,13 +148,10 @@ Setup the visualization of correlations of a given FOM with various slow data.
 +----------------------------+--------------------------------------------------------------------+
 | ``Property name``          | Property name in the Karabo device.                                |
 +----------------------------+--------------------------------------------------------------------+
-| ``Resolution``             | 0 for scattering plot and any positive value for bar plot          |
+| ``Resolution``             | 0 for scatter plot and any positive value for statistics bar plot. |
 +----------------------------+--------------------------------------------------------------------+
 | ``Reset``                  | Reset the correlation history.                                     |
 +----------------------------+--------------------------------------------------------------------+
-
-.. image:: images/correlation_window.png
-   :width: 800
 
 One can also plot FOMs of ROI1 and ROI2 together when the *master-slave* mode is activated in
 :ref:`ROI FOM setup`.

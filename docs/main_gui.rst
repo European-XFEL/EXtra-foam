@@ -7,6 +7,52 @@ by functionality and a log window.
 .. image:: images/MainGUI.png
    :width: 800
 
+Action bar
+----------
+
+.. image:: images/main_gui_action_bar.jpg
+
+
+- **Start**
+
+  Start acquiring, processing and visualizing data.
+
+- **Stop**
+
+  Stop acquiring and processing data.
+
+- **Image tool**
+
+  Open the :ref:`Image tool` for image related manipulation and analysis.
+
+- **Pulse-of-interest**
+
+  Open the window for monitoring up to two pulses of interest.
+  *Only available for pulse-resolved detectors*
+
+- **Pump-probe**
+
+  Open the window for :ref:`Pump-probe analysis`.
+
+- **Correlation**
+
+  Open the window for :ref:`Correlation` analysis.
+
+- **Histogram**
+
+  Open the window for :ref:`Histogram` analysis.
+
+- **Binning**
+
+  Open the window for :ref:`Binning` analysis.
+
+- **File stream**
+
+  Open the window for :ref:`stream data from run directory`.
+
+- **About**
+
+
 .. _Data source:
 
 Data source
@@ -140,12 +186,6 @@ ON-/Off- pulses in a train
 |                            | When it is checked, the filtering is pulse-wise. Otherwise, the    |
 |                            | filtering is train-wise.                                           |
 +----------------------------+--------------------------------------------------------------------+
-
-
-Statistics analysis
--------------------
-
-See :ref:`statistics analysis`
 
 
 Analysis setup manager

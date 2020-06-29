@@ -1,6 +1,9 @@
 INTRODUCTION
 ============
 
+.. image:: images/extra_foam_0.9.0.jpg
+
+
 **EXtra-foam** ( **F**\ ast **O**\ nline **A**\ nalysis **M**\ onitor) is a tool that provides
 real-time and off-line data analysis (**azimuthal integration**, **ROI**, **correlation**,
 **binning**, etc.) and visualization for experiments using **2D area detectors** (*AGIPD*,
@@ -75,34 +78,3 @@ can be preprocessed and analysed per second.
     Due to the limited performance of `PyQt`, the visualization rate could be slower
     than the processing rate if there are too many plots to render, especially for
     train-resolved detectors.
-
-
-Galleries
----------
-
-.. image:: images/MainGUI.png
-   :width: 800
-
-.. image:: images/ImageTool.png
-   :width: 800
-
-.. image:: images/pump_probe_window.png
-   :width: 800
-
-.. image:: images/correlation_window.png
-   :width: 800
-
-.. image:: images/histogram_window.png
-   :width: 800
-
-.. image:: images/binning_window.png
-   :width: 800
-
-.. image:: images/special_suite_tr_xas.png
-   :width: 800
-
-.. image:: images/special_suite_xas_tim.png
-   :width: 800
-
-.. image:: images/special_suite_xas_tim_xmcd.png
-   :width: 800

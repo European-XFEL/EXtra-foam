@@ -12,7 +12,9 @@ EXtra-foam core and special suite in various aspects.
 +------------------------------------------------+--------------------------------------------------+
 | EXtra-foam core                                | EXtra-foam special suite                         |
 +================================================+==================================================+
-| General purpose; rich features.                | Special purpose.                                 |
+| General purpose; rich features.                | Special-purposed small apps.                     |
++------------------------------------------------+--------------------------------------------------+
+| **Heavy computation.**                         | Light computation.                               |
 +------------------------------------------------+--------------------------------------------------+
 | Image detector oriented.                       | Any detector.                                    |
 +------------------------------------------------+--------------------------------------------------+
@@ -25,12 +27,15 @@ EXtra-foam core and special suite in various aspects.
 +------------------------------------------------+--------------------------------------------------+
 | Multi-process; distributed.                    | Single-process; multi-threading.                 |
 +------------------------------------------------+--------------------------------------------------+
-| Python and C++.                                | Pure Python but depends on EXtra-foam core.      |
+| Python and C++.                                | Pure Python.                                     |
++------------------------------------------------+--------------------------------------------------+
+|                                                | Depends on EXtra-foam core; may need a core      |
+|                                                | instance to run.                                 |
 +------------------------------------------------+--------------------------------------------------+
 
 There are two different work flows for special analysis:
 
-1. The special analysis will receive processed data from a main **EXtra-foam** instance;
+1. The special analysis receives processed data from a main **EXtra-foam** instance;
 2. The special analysis is independent from the main instance and it directly receives
    data from a "Karabo bridge".
 
@@ -87,6 +92,36 @@ General purposed apps
 Camera view, multi-camera view
 
 
+.. _Camera view:
+
+Camera view
+"""""""""""
+
+.. image:: images/special_suite_camera_view.jpg
+   :width: 800
+
+Camera view is a light-weight image tool for monitoring image data updated at 10 Hz or even faster.
+It also allows to monitor (ROI) histogram of the image. When the ROI is activated, histogram is
+calculated over the ROI instead of the whole image. It supports any train-resolved image data, i.e.
+an image data which has a shape of (y, x) or (1, y, x) or (y, x, 1).
+
+More small features will be added in the future.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Output channel``         | Output channel name.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``Property``               | Image data property name.                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``M.A. window``            | Slicer used to slice pulses in a train.                            |
++----------------------------+--------------------------------------------------------------------+
+| ``Bin range``              | Histogram bin range.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``# of bins``              | Number of histogram bins.                                          |
++----------------------------+--------------------------------------------------------------------+
+
+
 Special purposed apps
 ---------------------
 
@@ -100,11 +135,11 @@ Bragg diffraction peak, XES
 
 - SCS
 
-Gotthard, Gotthard (pump-probe), :ref:`tr-XAS`, :ref:`XAS-TIM`, :ref:`XAS-TIM-XMCD`
+:ref:`Gotthard`, :ref:`Gotthard (pump-probe)`, :ref:`tr-XAS`, :ref:`XAS-TIM`, :ref:`XAS-TIM-XMCD`
 
 - MID
 
-Gotthard
+:ref:`Gotthard`, :ref:`Gotthard (pump-probe)`
 
 - HED
 
@@ -116,6 +151,75 @@ Multi-module scan
 
 Gotthard
 
+
+.. _Gotthard:
+
+Gotthard
+""""""""
+
+.. image:: images/special_suite_gotthard.jpg
+   :width: 800
+
+When the ROI is activated, histogram is calculated over the ROI instead of the whole image.
+
+For applying dark subtraction, one can record the dark online or load a dark run from the file.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Output channel``         | Output channel name.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``M.A. window``            | Moving average window size.                                        |
++----------------------------+--------------------------------------------------------------------+
+| ``Pulse slicer``           | Slicer used to slice pulses in a train.                            |
++----------------------------+--------------------------------------------------------------------+
+| ``P.O.I. (sliced)``        | Index of the pulse of interest after pulse slicing. For example,   |
+|                            | if there are 60 pulses in a train and the slicer only selects a    |
+|                            | half of them. The index range will be from 0 to 29.                |
++----------------------------+--------------------------------------------------------------------+
+| ``Bin range``              | Histogram bin range.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``# of bins``              | Number of histogram bins.                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``Scale (eV/pixel)``       | Scale used for axis calibration. If it is zero, no calibration     |
+|                            | will be performed and the ``Offset`` will be ignored as well.      |
++----------------------------+--------------------------------------------------------------------+
+| ``Offset (eV)``            | Offset used for x-axis calibration.                                |
++----------------------------+--------------------------------------------------------------------+
+| ``Histogram over M.A.``    | Check to calculate the histogram over the moving averaged data.    |
++----------------------------+--------------------------------------------------------------------+
+
+.. _Gotthard (pump-probe):
+
+Gotthard (pump-probe)
+"""""""""""""""""""""
+
+.. image:: images/special_suite_gotthard_pump_probe.jpg
+   :width: 800
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Output channel``         | Output channel name.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``M.A. window``            | Moving average window size.                                        |
++----------------------------+--------------------------------------------------------------------+
+| ``On-pulse slicer``        | Slicer used to slice on (pumped) pulses in a train.                |
++----------------------------+--------------------------------------------------------------------+
+| ``Off-pulse slicer``       | Slicer used to slice off (unpumped) pulses in a train. *The        |
+|                            | numbers of the on and off pulses must be the same*.                |
++----------------------------+--------------------------------------------------------------------+
+| ``Pump-probe P.O.I.``      | Index of the pump-probe pulse of interest. For example, if there   |
+|                            | are 10 on-pulses and 10 off-pulses, the range of the index         |
+|                            | is from 0 to 9.                                                    |
++----------------------------+--------------------------------------------------------------------+
+| ``Dark-pulse slicer``      | Slicer used to slice dark pulses in a train.                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Dark-pulse P.O.I.``      | Index of the dark pulse of interest. For example, if there are 5   |
+|                            | dark pulses and the total number pulses is 100, the index range    |
+|                            | is from 0 to 4 regardless of the dark pulse positions in the       |
+|                            | train.                                                             |
++----------------------------+--------------------------------------------------------------------+
 
 .. _tr-XAS:
 
@@ -134,6 +238,31 @@ XAS-TIM
 .. image:: images/special_suite_xas_tim.png
    :width: 800
 
++------------------------------+--------------------------------------------------------------------+
+| Input                        | Description                                                        |
++==============================+====================================================================+
+| ``XGM Output channel``       | XGM output channel name.                                           |
++------------------------------+--------------------------------------------------------------------+
+| ``Digitizer output channel`` | Digitizer output channel name.                                     |
++------------------------------+--------------------------------------------------------------------+
+| ``Digitizer channels``       | Check to analyze data on the corresponding channel.                |
++------------------------------+--------------------------------------------------------------------+
+| ``Mono device ID``           | Monochromator device ID.                                           |
++------------------------------+--------------------------------------------------------------------+
+| ``# of pulses/train``        | Number of 'useful' XGM pulses in a train.                          |
++------------------------------+--------------------------------------------------------------------+
+| ``APD stride``               | Stride used in slice the digitizer APD data.                       |
++------------------------------+--------------------------------------------------------------------+
+| ``XGM intensity threshold``  | Pulses with XGM intensity below this threshold will be ignored.    |
++------------------------------+--------------------------------------------------------------------+
+| ``Pulse window``             | Maximum number of pulses used in calculating the spectra.          |
++------------------------------+--------------------------------------------------------------------+
+| ``# of energy bins``         | Number of energy bins for spectra calculation.                     |
++------------------------------+--------------------------------------------------------------------+
+| ``Pulse window``             | Maximum number of pulses used in I0/I1 correlation visualization.  |
++------------------------------+--------------------------------------------------------------------+
+| ``Show spectra``             | Check to show spectra on the corresponding digitizer channel.      |
++------------------------------+--------------------------------------------------------------------+
 
 .. _XAS-TIM-XMCD:
 
@@ -142,3 +271,16 @@ XAS-TIM-XMCD
 
 .. image:: images/special_suite_xas_tim_xmcd.png
    :width: 800
+
+XAS-TIM-XMCD is very similar to :ref:`XAS-TIM`. For input not listed in the following table, please
+refer to the input table in :ref:`XAS-TIM`.
+
++------------------------------+--------------------------------------------------------------------+
+| Input                        | Description                                                        |
++==============================+====================================================================+
+| ``Magnet device ID``         | Output channel name of the device which provides the magnet        |
+|                              | current values.                                                    |
++------------------------------+--------------------------------------------------------------------+
+| ``Magnet current threshold`` | Pulses with an absolute magnet current value below this threshold  |
+|                              | will be ignored.                                                   |
++------------------------------+--------------------------------------------------------------------+
