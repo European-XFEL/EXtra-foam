@@ -202,6 +202,15 @@ class PlotWidgetF(pg.GraphicsView):
     def addLegend(self, *args, **kwargs):
         self._plot_area.addLegend(*args, **kwargs)
 
+    def invertX(self, *args, **kargs):
+        self._plot_area.invertX(*args, **kargs)
+
+    def invertY(self, *args, **kargs):
+        self._plot_area.invertY(*args, **kargs)
+
+    def autoRange(self, *args, **kwargs):
+        self._plot_area.autoRange(*args, **kwargs)
+
     def hideAxis(self):
         """Hide x and y axis."""
         for v in ["left", 'bottom']:

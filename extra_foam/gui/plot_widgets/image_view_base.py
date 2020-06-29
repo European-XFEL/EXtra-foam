@@ -204,7 +204,7 @@ class ImageViewF(QWidget):
             self._image_item.setPos(*pos)
 
         if auto_range:
-            self._plot_widget._plot_item.vb.autoRange()
+            self.autoRange()
 
     def clear(self):
         self._image = None
@@ -254,14 +254,20 @@ class ImageViewF(QWidget):
     def setLabel(self, *args, **kwargs):
         self._plot_widget.setLabel(*args, **kwargs)
 
-    def setTitle(self, title, *args, **kwargs):
+    def setTitle(self, *args, **kwargs):
         # This is the public interface. Therefore, we ought to cache
         # the title.
-        self._cached_title = title
-        self._plot_widget.setTitle(title, *args, **kwargs)
+        self._cached_title = None if len(args) == 0 else args[0]
+        self._plot_widget.setTitle(*args, **kwargs)
+
+    def invertX(self, *args, **kwargs):
+        self._plot_widget.invertX(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
-        self._plot_widget._plot_area.invertY(*args, **kwargs)
+        self._plot_widget.invertY(*args, **kwargs)
+
+    def autoRange(self, *args, **kwargs):
+        self._plot_widget.autoRange(*args, **kwargs)
 
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)

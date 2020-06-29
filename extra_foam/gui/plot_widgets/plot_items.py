@@ -7,8 +7,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import struct
+
+import numpy as np
+
 from PyQt5.QtGui import QPainter, QPainterPath, QPicture
-from PyQt5.QtCore import QRectF
+from PyQt5.QtCore import QByteArray, QDataStream, QRectF
 
 from .. import pyqtgraph as pg
 
@@ -32,12 +36,7 @@ class CurvePlotItem(pg.PlotItem):
 
     def setData(self, x, y):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
-
-        if len(self._x) != len(self._y):
-            raise ValueError("'x' and 'y' data have different lengths!")
-
+        self._parseInputData(x, y)
         self.updateGraph()
 
     def data(self):
@@ -46,16 +45,33 @@ class CurvePlotItem(pg.PlotItem):
 
     def _prepareGraph(self):
         """Override."""
-        p = QPainterPath()
-
-        # TODO: use QDataStream to improve performance
         x, y = self.transformedData()
-        if len(x) >= 2:
-            p.moveTo(x[0], y[0])
-            for px, py in zip(x[1:], y[1:]):
-                p.lineTo(px, py)
+        self._graph = self.array2Path(x, y)
 
-        self._graph = p
+    @staticmethod
+    def array2Path(x, y):
+        """Convert array to QPainterPath."""
+        path = QPainterPath()
+        if len(x) >= 2:
+            # see: https://github.com/qt/qtbase/blob/dev/src/gui/painting/qpainterpath.cpp
+            n = len(x)
+            buf = np.empty(n+2, dtype=[('c', '>i4'), ('x', '>f8'), ('y', '>f8')])
+            byteview = buf.view(dtype=np.ubyte)
+            # header (size)
+            byteview[:16] = 0
+            byteview.data[16:20] = struct.pack('>i', n)
+            # data
+            data = buf[1:-1]
+            data['c'], data['x'], data['y'] = 1, x, y
+            data['c'][0] = 0
+            # tail (cStart, fillRule)
+            byteview.data[-20:-16] = struct.pack('>i', 0)
+            byteview.data[-16:-12] = struct.pack('>i', 0)
+
+            # take the pointer without copy
+            arr = QByteArray.fromRawData(byteview.data[16:-12])
+            QDataStream(arr) >> path
+        return path
 
     def drawSample(self, p):
         """Override."""
@@ -91,12 +107,7 @@ class BarGraphItem(pg.PlotItem):
 
     def setData(self, x, y):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
-
-        if len(self._x) != len(self._y):
-            raise ValueError("'x' and 'y' data have different lengths!")
-
+        self._parseInputData(x, y)
         self.updateGraph()
 
     def data(self):
@@ -169,22 +180,39 @@ class StatisticsBarItem(pg.PlotItem):
 
     def setData(self, x, y, y_min=None, y_max=None, beam=None):
         """Override."""
-        self._x = [] if x is None else x
-        self._y = [] if y is None else y
+        self._parseInputData(x, y, y_min=y_min, y_max=y_max)
 
-        self._y_min = self._y if y_min is None else y_min
-        self._y_max = self._y if y_max is None else y_max
         if beam is not None:
             # keep the default beam if not specified
             self._beam = beam
+
+        self.updateGraph()
+
+    def _parseInputData(self, x, y, **kwargs):
+        """Override."""
+        super()._parseInputData(x, y)
+
+        y_min = kwargs.get('y_min', None)
+        if isinstance(y_min, list):
+            self._y_min = np.array(y_min)
+        elif y_min is None:
+            self._y_min = self._y
+        else:
+            self._y_min = y_min
+
+        y_max = kwargs.get('y_max', None)
+        if isinstance(y_max, list):
+            self._y_max = np.array(y_max)
+        elif y_max is None:
+            self._y_max = self._y
+        else:
+            self._y_max = y_max
 
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
         if not len(self._y) == len(self._y_min) == len(self._y_max):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
-
-        self.updateGraph()
 
     def data(self):
         """Override."""
