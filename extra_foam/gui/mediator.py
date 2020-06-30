@@ -309,9 +309,6 @@ class Mediator(QObject):
     def onFomFilterRangeChange(self, value: tuple):
         self._meta.hset(mt.FOM_FILTER_PROC, "fom_range", str(value))
 
-    def onFomFilterPulseResolvedChange(self, value: bool):
-        self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
-
     def onItMaWindowChange(self, value: int):
         self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ma_window", value)
 
