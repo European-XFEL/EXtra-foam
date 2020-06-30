@@ -133,8 +133,8 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
 
         widget._idx = 1  # a trick
         widget.refresh()
-        self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
+        self.assertNotIn(plot_item, widget._plot_area._items)  # being deleted
+        self.assertNotIn(plot_item_slave, widget._plot_area._items)  # being deleted
         plot_item, plot_item_slave = widget._plot, widget._plot_slave
         self.assertIsInstance(plot_item, StatisticsBarItem)
         self.assertIsInstance(plot_item_slave, StatisticsBarItem)
@@ -148,8 +148,8 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
 
         widget._idx = 0  # a trick
         widget.refresh()
-        self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
+        self.assertNotIn(plot_item, widget._plot_area._items)  # being deleted
+        self.assertNotIn(plot_item_slave, widget._plot_area._items)  # being deleted
         self.assertIsInstance(widget._plot, pg.ScatterPlotItem)
         self.assertIsInstance(widget._plot_slave, pg.ScatterPlotItem)
 

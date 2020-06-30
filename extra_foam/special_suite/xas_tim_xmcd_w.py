@@ -76,7 +76,7 @@ class XasTimXmcdSlowScanPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setLabel('left', "Energy (eV)")
         self.setLabel('right', "Current (A)")
@@ -100,7 +100,7 @@ class XasTimXmcdAbsorpPnSpectraPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("XAS-p & XAS-n")
         self.setLabel('left', "Absorption (arb.)")
@@ -147,7 +147,7 @@ class XasTimXmcdSpectraPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("XAS & XMCD")
         self.setLabel('left', "Absorption (arb.)")

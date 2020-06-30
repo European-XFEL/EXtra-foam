@@ -544,9 +544,9 @@ class TestImageRoiTrain(_TestDataMixin):
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
             assert fom_handler(processed.pp.image_on[s[0], s[1]]) == \
-                   pytest.approx(processed.pp.on.roi_norm, rel=1e-4)
+                   pytest.approx(processed.pp.on.roi_norm, rel=1e-3)
             assert fom_handler(processed.pp.image_off[s[0], s[1]]) == \
-                   pytest.approx(processed.pp.off.roi_norm, rel=1e-4)
+                   pytest.approx(processed.pp.off.roi_norm, rel=1e-3)
 
         for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
             data, processed = self._get_data()
@@ -566,8 +566,8 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 fom_on_gt = fom3_on_gt + fom4_on_gt
                 fom_off_gt = fom3_off_gt + fom4_off_gt
-            assert fom_on_gt == pytest.approx(processed.pp.on.roi_norm, rel=1e-4)
-            assert fom_off_gt == pytest.approx(processed.pp.off.roi_norm, rel=1e-4)
+            assert fom_on_gt == pytest.approx(processed.pp.on.roi_norm, rel=1e-3)
+            assert fom_off_gt == pytest.approx(processed.pp.off.roi_norm, rel=1e-3)
 
     @pytest.mark.parametrize("fom_type, fom_handler",
                              [(k, v) for k, v in _roi_fom_handlers.items()])

@@ -21,7 +21,9 @@ from ...config import AnalysisType, Normalizer
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import energy2wavelength, mask_image_data
+from extra_foam.algorithms import (
+    energy2wavelength, find_peaks_1d, mask_image_data
+)
 
 
 class _AzimuthalIntegProcessorBase(_BaseProcessor):
@@ -52,7 +54,11 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         _q_map (numpy.ndarray): momentum transfer of map of the detector image.
             q = 4 * pi * sin(theta) / lambda
         _ma_window (int): moving average window size.
+        _find_peaks (bool): whether to apply peak finding.
     """
+
+    # maximum number of peaks expected
+    _MAX_N_PEAKS = 10
 
     def __init__(self):
         super().__init__()
@@ -77,6 +83,10 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._integrator = None
         self._q_map = None
 
+        self._find_peaks = True
+        self._peak_prominence = None
+        self._peak_slicer = slice(None, None)
+
         self._reset_ma = False
 
     def update(self):
@@ -98,6 +108,10 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._normalizer = Normalizer(int(cfg['normalizer']))
         self._auc_range = self.str2tuple(cfg['auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
+
+        self._find_peaks = cfg['peak_finding'] == 'True'
+        self._peak_prominence = float(cfg['peak_prominence'])
+        self._peak_slicer = self.str2slice(cfg['peak_slicer'])
 
     def _update_integrator(self):
         if self._integrator is None:
@@ -263,6 +277,15 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
             ai.y = self._intensity_ma
             ai.fom = fom
             ai.q_map = self._q_map
+
+            if self._find_peaks:
+                peaks, _ = find_peaks_1d(self._intensity_ma,
+                                         prominence=self._peak_prominence)
+                peaks = peaks[self._peak_slicer]
+
+                if len(peaks) > self._MAX_N_PEAKS:
+                    peaks = None
+                ai.peaks = peaks
 
         # ------------------------------------
         # pump-probe azimuthal integration

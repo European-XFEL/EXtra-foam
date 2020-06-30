@@ -8,8 +8,10 @@ STREAM DATA FROM RUN DIRECTORY
    :width: 500
 
 
-File stream
-"""""""""""
+.. _File streamer:
+
+File streamer
+"""""""""""""
 
 **EXtra-foam** can be used to replay experiments with stored files. To start,
 click on the *File stream* icon on the tool bar to opens the following window:

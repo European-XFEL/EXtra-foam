@@ -43,3 +43,7 @@ from .spectrum import (
 from .computer_vision import (
     edge_detect, fourier_transform_2d
 )
+
+from .peak_finding import (
+    find_peaks_1d
+)

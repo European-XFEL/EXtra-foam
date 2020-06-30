@@ -19,9 +19,18 @@ In your Anaconda_ environment, run the following commands:
 
 .. code-block:: bash
 
-    $ conda install -c anaconda cmake libstdcxx-ng numpy
+    # install gcc-6.1
     $ conda install -c omgarcia gcc-6
-    $ conda install -c conda-forge tbb
+    $ conda install -c anaconda libstdcxx-ng
+
+    # install gcc-7.5 (experimenting)
+    # $ conda install -c conda-forge gxx_linux-64
+    # $ ln -s ${CONDA_PREFIX}/bin/x86_64-conda_cos6-linux-gnu-gcc  ${CONDA_PREFIX}/bin/gcc
+    # $ ln -s ${CONDA_PREFIX}/bin/x86_64-conda_cos6-linux-gnu-g++  ${CONDA_PREFIX}/bin/g++
+
+    # install cmake and dependencies
+    $ conda install -c anaconda cmake numpy
+    $ conda install -c conda-forge tbb-devel
 
 Install **EXtra-foam**
 ----------------------
@@ -55,7 +64,5 @@ Install C++ API of **EXtra-foam** only
 .. code-block:: bash
 
     $ mkdir build && cd build
-    $ cmake -DFOAM_USE_TBB=ON -DXTENSOR_USE_TBB=ON
-            -DFOAM_USE_XSIMD=ON -DXTENSOR_USE_XSIMD=ON -march=native
-            -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
+    $ cmake -DFOAM_USE_XSIMD=ON -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
     $ make && make install

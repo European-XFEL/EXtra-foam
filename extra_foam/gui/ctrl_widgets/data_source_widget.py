@@ -26,6 +26,7 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..misc_widgets import FColor
 from ..mediator import Mediator
 from ...database import MonProxy
+from ...database import Metadata as mt
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes
@@ -34,7 +35,7 @@ from ...logger import logger
 
 class _BaseSmartEditItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     def setEditorData(self, editor, index):
         """Override."""
@@ -87,7 +88,7 @@ class BoundaryItemDelegate(_BaseSmartEditItemDelegate):
 class LineEditItemDelegateN(QStyledItemDelegate):
     """The non-smart one."""
     def __init__(self, parent=None, *, validator=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self._validator = validator
 
     def setEditorData(self, editor, index):
@@ -116,7 +117,7 @@ class LineEditItemDelegateN(QStyledItemDelegate):
 
 class ComboBoxDelegate(QStyledItemDelegate):
     def __init__(self, items, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._items = items
 
@@ -234,7 +235,7 @@ class DataSourceItemModel(QAbstractItemModel):
     source_item_toggled_sgn = pyqtSignal(bool, object)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._mediator = Mediator()
 
@@ -280,8 +281,7 @@ class DataSourceItemModel(QAbstractItemModel):
                                 self.dataChanged.emit(index.sibling(i, 0),
                                                       index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
-                                    False,
-                                    f'{item_sb.name()} {item_sb.ppt()}')
+                                    False, f'{item_sb.name()} {item_sb.ppt()}')
                                 break
 
                 item.setChecked(value)
@@ -468,7 +468,7 @@ class DataSourceItemModel(QAbstractItemModel):
 class DataSourceListModel(QAbstractListModel):
     """List model interface for monitoring available sources."""
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._sources = []
 
@@ -494,7 +494,7 @@ class DataSourceListModel(QAbstractListModel):
 class ProcessMonitorTableModel(QAbstractTableModel):
     """Table model interface for monitoring running processes."""
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self._processes = []
         self._headers = ["Process name", "Foam name", "Foam type", "pid", "status"]
@@ -673,30 +673,25 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
     class AvailStateDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
-            super().__init__(parent)
-            self._brush1 = FColor.mkBrush('g')
-            self._brush2 = FColor.mkBrush('r')
+            super().__init__(parent=parent)
+            self._brush = FColor.mkBrush('g')
 
         def paint(self, painter, option, index):
             """Override."""
             v = index.data()
-            if isinstance(v, bool):
-                painter.setPen(Qt.NoPen)
-
-                if v:
-                    painter.setBrush(self._brush1)
-                else:
-                    painter.setBrush(self._brush2)
-
-                rect = option.rect
-                h = rect.height()
-                painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
+            painter.setPen(Qt.NoPen)
+            if v:
+                painter.setBrush(self._brush)
             else:
-                super().paint(painter, option, index)
+                painter.setBrush(Qt.NoBrush)
+
+            rect = option.rect
+            h = rect.height()
+            painter.drawRect(rect.x() + 2, rect.y() + 2, h - 4, h - 4)
 
     class DataTypeDelegate(QStyledItemDelegate):
         def __init__(self, parent=None):
-            super().__init__(parent)
+            super().__init__(parent=parent)
 
             self._c_brush = FColor.mkBrush('c')
             self._p_brush = FColor.mkBrush('p')
@@ -793,7 +788,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
     def initUI(self):
         """Override."""
         self._monitor_tb.setTabPosition(QTabWidget.TabPosition.South)
-        self._monitor_tb.addTab(self._avail_src_view, "Available sources")
+        self._monitor_tb.addTab(self._avail_src_view, "Source monitor")
         self._monitor_tb.addTab(self._process_mon_view, "Process monitor")
 
         splitter = QSplitter(Qt.Vertical)
@@ -836,6 +831,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
         except ValueError as e:
             logger.error(e)
             return False
+
         return True
 
     def loadMetaData(self):

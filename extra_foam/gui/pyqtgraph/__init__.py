@@ -16,7 +16,8 @@ from .Qt import QtGui, mkQApp
 #if QtGui.QApplication.instance() is None:
     #app = QtGui.QApplication([])
 
-## (import here to avoid massive error dump later on if numpy is not available)
+import numpy  ## pyqtgraph requires numpy
+              ## (import here to avoid massive error dump later on if numpy is not available)
 
 import os, sys
 
@@ -27,9 +28,6 @@ if sys.version_info[0] < 2 or (sys.version_info[0] == 2 and sys.version_info[1] 
 
 ## helpers for 2/3 compatibility
 from . import python2_3
-
-## install workarounds for numpy bugs
-from . import numpy_fix
 
 ## in general openGL is poorly supported with Qt+GraphicsView.
 ## we only enable it where the performance benefit is critical.
@@ -66,7 +64,6 @@ CONFIG_OPTIONS = {
 
 
 def setConfigOption(opt, value):
-    global CONFIG_OPTIONS
     if opt not in CONFIG_OPTIONS:
         raise KeyError('Unknown configuration option "%s"' % opt)
     if opt == 'imageAxisOrder' and value not in ('row-major', 'col-major'):
@@ -98,7 +95,8 @@ def systemInfo():
     if __version__ is None:  ## this code was probably checked out from bzr; look up the last-revision file
         lastRevFile = os.path.join(os.path.dirname(__file__), '..', '.bzr', 'branch', 'last-revision')
         if os.path.exists(lastRevFile):
-            rev = open(lastRevFile, 'r').read().strip()
+            with open(lastRevFile, 'r') as fd:
+                rev = fd.read().strip()
     
     print("pyqtgraph: %s; %s" % (__version__, rev))
     print("config:")
@@ -200,79 +198,36 @@ if __version__ is None and not hasattr(sys, 'frozen') and sys.version_info[0] ==
 #importAll('widgets', globals(), locals(),
           #excludes=['MatplotlibWidget', 'RawImageWidget', 'RemoteGraphicsView'])
 
-from .graphicsItems.VTickGroup import * 
-from .graphicsItems.GraphicsWidget import * 
-from .graphicsItems.ScaleBar import * 
-from .graphicsItems.PlotDataItem import * 
-from .graphicsItems.GraphItem import * 
-from .graphicsItems.TextItem import * 
-from .graphicsItems.GraphicsLayout import * 
-from .graphicsItems.UIGraphicsItem import * 
+from .graphicsItems.GraphicsWidget import *
+from .graphicsItems.PlotDataItem import *
+from .graphicsItems.TextItem import *
+from .graphicsItems.UIGraphicsItem import *
 from .graphicsItems.GraphicsObject import * 
-from .graphicsItems.PlotItem import * 
-from .graphicsItems.ROI import * 
-from .graphicsItems.InfiniteLine import * 
-from .graphicsItems.HistogramLUTItem import * 
-from .graphicsItems.GridItem import * 
-from .graphicsItems.GradientLegend import * 
+from .graphicsItems.ROI import *
+from .graphicsItems.InfiniteLine import *
+from .graphicsItems.GradientLegend import *
 from .graphicsItems.GraphicsItem import * 
 from .graphicsItems.BarGraphItem import * 
 from .graphicsItems.ViewBox import * 
 from .graphicsItems.ArrowItem import * 
-from .graphicsItems.ImageItem import * 
-from .graphicsItems.AxisItem import * 
-from .graphicsItems.LabelItem import * 
+from .graphicsItems.AxisItem import *
+from .graphicsItems.LabelItem import *
 from .graphicsItems.CurvePoint import * 
 from .graphicsItems.GraphicsWidgetAnchor import * 
 from .graphicsItems.PlotCurveItem import * 
-from .graphicsItems.ButtonItem import * 
-from .graphicsItems.GradientEditorItem import * 
-from .graphicsItems.MultiPlotItem import * 
-from .graphicsItems.ErrorBarItem import * 
-from .graphicsItems.IsocurveItem import * 
-from .graphicsItems.LinearRegionItem import * 
-from .graphicsItems.FillBetweenItem import * 
-from .graphicsItems.LegendItem import * 
+from .graphicsItems.GradientEditorItem import *
+from .graphicsItems.LinearRegionItem import *
+from .graphicsItems.LegendItem import *
 from .graphicsItems.ScatterPlotItem import * 
 from .graphicsItems.ItemGroup import * 
 
-from .widgets.MultiPlotWidget import * 
-from .widgets.ScatterPlotWidget import * 
-from .widgets.ColorMapWidget import * 
-from .widgets.FileDialog import * 
-from .widgets.ValueLabel import * 
-from .widgets.HistogramLUTWidget import * 
-from .widgets.CheckTable import * 
-from .widgets.BusyCursor import * 
-from .widgets.PlotWidget import * 
-from .widgets.ComboBox import * 
-from .widgets.GradientWidget import * 
-from .widgets.DataFilterWidget import * 
-from .widgets.SpinBox import * 
-from .widgets.JoystickButton import * 
-from .widgets.GraphicsLayoutWidget import * 
-from .widgets.TreeWidget import * 
-from .widgets.PathButton import * 
-from .widgets.VerticalLabel import * 
-from .widgets.FeedbackButton import * 
-from .widgets.ColorButton import * 
-from .widgets.DataTreeWidget import * 
-from .widgets.DiffTreeWidget import * 
-from .widgets.GraphicsView import * 
-from .widgets.LayoutWidget import * 
-from .widgets.TableWidget import * 
-from .widgets.ProgressDialog import *
-from .widgets.GroupBox import GroupBox
+from .widgets.SpinBox import *
+from .widgets.GraphicsView import *
 
-from .imageview import *
 from .WidgetGroup import *
 from .Point import Point
-from .Vector import Vector
 from .SRTTransform import SRTTransform
-from .Transform3D import Transform3D
-from .SRTTransform3D import SRTTransform3D
 from .functions import *
-from .graphicsWindows import *
 from .SignalProxy import *
 from .colormap import *
 from .ptime import time
@@ -368,101 +323,13 @@ def exit():
     ## close file handles
     if sys.platform == 'darwin':
         for fd in range(3, 4096):
-            if fd not in [7]:  # trying to close 7 produces an illegal instruction on the Mac.
+            if fd in [7]:  # trying to close 7 produces an illegal instruction on the Mac.
+                continue
+            try:
                 os.close(fd)
+            except OSError:
+                pass
     else:
         os.closerange(3, 4096) ## just guessing on the maximum descriptor count..
 
     os._exit(0)
-    
-
-
-## Convenience functions for command-line use
-
-plots = []
-images = []
-QAPP = None
-
-def plot(*args, **kargs):
-    """
-    Create and return a :class:`PlotWindow <pyqtgraph.PlotWindow>` 
-    (this is just a window with :class:`PlotWidget <pyqtgraph.PlotWidget>` inside), plot data in it.
-    Accepts a *title* argument to set the title of the window.
-    All other arguments are used to plot data. (see :func:`PlotItem.plot() <pyqtgraph.PlotItem.plot>`)
-    """
-    mkQApp()
-    #if 'title' in kargs:
-        #w = PlotWindow(title=kargs['title'])
-        #del kargs['title']
-    #else:
-        #w = PlotWindow()
-    #if len(args)+len(kargs) > 0:
-        #w.plot(*args, **kargs)
-        
-    pwArgList = ['title', 'labels', 'name', 'left', 'right', 'top', 'bottom', 'background']
-    pwArgs = {}
-    dataArgs = {}
-    for k in kargs:
-        if k in pwArgList:
-            pwArgs[k] = kargs[k]
-        else:
-            dataArgs[k] = kargs[k]
-        
-    w = PlotWindow(**pwArgs)
-    if len(args) > 0 or len(dataArgs) > 0:
-        w.plot(*args, **dataArgs)
-    plots.append(w)
-    w.show()
-    return w
-    
-def image(*args, **kargs):
-    """
-    Create and return an :class:`ImageWindow <pyqtgraph.ImageWindow>` 
-    (this is just a window with :class:`ImageView <pyqtgraph.ImageView>` widget inside), show image data inside.
-    Will show 2D or 3D image data.
-    Accepts a *title* argument to set the title of the window.
-    All other arguments are used to show data. (see :func:`ImageView.setImage() <pyqtgraph.ImageView.setImage>`)
-    """
-    mkQApp()
-    w = ImageWindow(*args, **kargs)
-    images.append(w)
-    w.show()
-    return w
-show = image  ## for backward compatibility
-
-def dbg(*args, **kwds):
-    """
-    Create a console window and begin watching for exceptions.
-    
-    All arguments are passed to :func:`ConsoleWidget.__init__() <pyqtgraph.console.ConsoleWidget.__init__>`.
-    """
-    mkQApp()
-    from . import console
-    c = console.ConsoleWidget(*args, **kwds)
-    c.catchAllExceptions()
-    c.show()
-    global consoles
-    try:
-        consoles.append(c)
-    except NameError:
-        consoles = [c]
-    return c
-
-
-def stack(*args, **kwds):
-    """
-    Create a console window and show the current stack trace.
-    
-    All arguments are passed to :func:`ConsoleWidget.__init__() <pyqtgraph.console.ConsoleWidget.__init__>`.
-    """
-    mkQApp()
-    from . import console
-    c = console.ConsoleWidget(*args, **kwds)
-    c.setStack()
-    c.show()
-    global consoles
-    try:
-        consoles.append(c)
-    except NameError:
-        consoles = [c]
-    return c

@@ -67,11 +67,11 @@ class SignalProxy(QtCore.QObject):
         """If there is a signal queued up, send it now."""
         if self.args is None or self.block:
             return False
-        #self.emit(self.signal, *self.args)
-        self.sigDelayed.emit(self.args)
-        self.args = None
+        args, self.args = self.args, None
         self.timer.stop()
         self.lastFlushTime = time()
+        #self.emit(self.signal, *self.args)
+        self.sigDelayed.emit(args)
         return True
         
     def disconnect(self):
@@ -81,39 +81,6 @@ class SignalProxy(QtCore.QObject):
         except:
             pass
         try:
-            self.sigDelayed.disconnect(self.slot())
+            self.sigDelayed.disconnect(self.slot)
         except:
             pass
-   
-   
-
-#def proxyConnect(source, signal, slot, delay=0.3):
-    #"""Connect a signal to a slot with delay. Returns the SignalProxy
-    #object that was created. Be sure to store this object so it is not
-    #garbage-collected immediately."""
-    #sp = SignalProxy(source, signal, delay)
-    #if source is None:
-        #sp.connect(sp, QtCore.SIGNAL('signal'), slot)
-    #else:
-        #sp.connect(sp, signal, slot)
-    #return sp
-    
-    
-if __name__ == '__main__':
-    from .Qt import QtGui
-    app = QtGui.QApplication([])
-    win = QtGui.QMainWindow()
-    spin = QtGui.QSpinBox()
-    win.setCentralWidget(spin)
-    win.show()
-    
-    def fn(*args):
-        print("Raw signal:", args)
-    def fn2(*args):
-        print("Delayed signal:", args)
-    
-    
-    spin.valueChanged.connect(fn)
-    #proxy = proxyConnect(spin, QtCore.SIGNAL('valueChanged(int)'), fn)
-    proxy = SignalProxy(spin.valueChanged, delay=0.5, slot=fn2)
-        

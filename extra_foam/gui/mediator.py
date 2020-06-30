@@ -173,6 +173,15 @@ class Mediator(QObject):
     def onAiFomIntegRangeChange(self, value: tuple):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'fom_integ_range', str(value))
 
+    def onAiPeakFindingChange(self, value: bool):
+        self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, "peak_finding", str(value))
+
+    def onAiPeakProminenceChange(self, value: float):
+        self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, "peak_prominence", str(value))
+
+    def onAiPeakSlicerChange(self, value: list):
+        self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, "peak_slicer", str(value))
+
     def onPpModeChange(self, value: IntEnum):
         self._meta.hset(mt.PUMP_PROBE_PROC, 'mode', int(value))
 

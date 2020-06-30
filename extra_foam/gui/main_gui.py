@@ -32,7 +32,7 @@ from .ctrl_widgets import (
     AnalysisCtrlWidget, ExtensionCtrlWidget, FomFilterCtrlWidget,
     DataSourceWidget, PumpProbeCtrlWidget
 )
-from .misc_widgets import Configurator, GuiLogger
+from .misc_widgets import AnalysisSetupManager, GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
@@ -208,7 +208,7 @@ class MainGUI(QMainWindow):
         self._gui_logger = GuiLogger(parent=self)
         logger.addHandler(self._gui_logger)
 
-        self._configurator = Configurator()
+        self._analysis_setup_manager = AnalysisSetupManager()
 
         self._thread_logger = ThreadLoggerBridge()
         self.quit_sgn.connect(self._thread_logger.stop)
@@ -258,7 +258,7 @@ class MainGUI(QMainWindow):
         self.initUI()
         self.initConnections()
         self.updateMetaData()
-        self._configurator.onInit()
+        self._analysis_setup_manager.onInit()
 
         self.setMinimumSize(640, 480)
         self.resize(self._WIDTH, self._HEIGHT)
@@ -278,7 +278,7 @@ class MainGUI(QMainWindow):
 
         self._cw.addWidget(self._left_cw_container)
         self._cw.addWidget(self._right_cw_container)
-        self._cw.setSizes([self._WIDTH * 0.5, self._WIDTH * 0.5])
+        self._cw.setSizes([self._WIDTH * 0.6, self._WIDTH * 0.4])
 
     def initLeftUI(self):
         self._left_cw.setTabPosition(QTabWidget.TabPosition.West)
@@ -296,16 +296,13 @@ class MainGUI(QMainWindow):
         self._right_cw.addWidget(self._ctrl_panel_cw)
         self._right_cw.addWidget(self._util_panel_container)
 
-        self._ctrl_panel_cw.setFixedHeight(
-            self._ctrl_panel_cw.minimumSizeHint().height())
-
         self._right_cw_container.setWidget(self._right_cw)
         self._right_cw_container.setWidgetResizable(True)
 
     def initCtrlUI(self):
         self.initGeneralAnalysisUI()
 
-        self._ctrl_panel_cw.addTab(self._analysis_cw, "Analysis setup")
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis setup")
 
     def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()
@@ -316,7 +313,7 @@ class MainGUI(QMainWindow):
 
     def initUtilUI(self):
         self._util_panel_cw.addTab(self._gui_logger.widget, "Logger")
-        self._util_panel_cw.addTab(self._configurator, "Configurator")
+        self._util_panel_cw.addTab(self._analysis_setup_manager, "Analysis Setup Manager")
         self._util_panel_cw.setTabPosition(QTabWidget.TabPosition.South)
 
         layout = QVBoxLayout()
@@ -324,7 +321,7 @@ class MainGUI(QMainWindow):
         self._util_panel_container.setLayout(layout)
 
     def initConnections(self):
-        self._configurator.load_metadata_sgn.connect(self.loadMetaData)
+        self._analysis_setup_manager.load_metadata_sgn.connect(self.loadMetaData)
 
     def connect_input_to_output(self, output):
         self._input.connect(output)
@@ -456,7 +453,7 @@ class MainGUI(QMainWindow):
         for win in self._plot_windows:
             win.onStart()
         self._image_tool.onStart()
-        self._configurator.onStart()
+        self._analysis_setup_manager.onStart()
 
         self._running = True  # starting to update plots
         self._input_update_ev.set()  # notify update
@@ -477,7 +474,7 @@ class MainGUI(QMainWindow):
         for win in self._plot_windows:
             win.onStop()
         self._image_tool.onStop()
-        self._configurator.onStop()
+        self._analysis_setup_manager.onStop()
 
     def updateMetaData(self):
         """Update metadata from all the ctrl widgets.

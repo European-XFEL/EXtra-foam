@@ -16,12 +16,14 @@ from extra_foam.special_suite.multicam_view_w import (
     MultiCamViewWindow, CameraView
 )
 
+from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
+
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
-class TestMultiCamView(unittest.TestCase):
+class TestMultiCamViewWindow(_SpecialSuiteWindowTestBase):
     @classmethod
     def setUpClass(cls):
         cls._win = MultiCamViewWindow('SCS')
@@ -30,6 +32,14 @@ class TestMultiCamView(unittest.TestCase):
     def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
+
+    @staticmethod
+    def data4visualization():
+        """Override."""
+        return {
+            "channels": {0: "camera1", 1: None, 2: None, 3: "camera2"},
+            "images": {0: np.ones((4, 5)), 1: None, 2: None, 3: np.ones((5, 6))}
+        }
 
     def testWindow(self):
         win = self._win
@@ -41,7 +51,7 @@ class TestMultiCamView(unittest.TestCase):
 
         self.assertEqual(4, counter[CameraView])
 
-        win.updateWidgetsST()
+        self._check_update_plots()
 
     def testCtrl(self):
 
@@ -67,7 +77,7 @@ class TestMultiCamView(unittest.TestCase):
             self.assertEqual(f"new/property{i}", proc._properties[i])
 
 
-class TestMultiCamViewProcessor(_RawDataMixin):
+class TestMultiCamViewProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = MultiCamViewProcessor(object(), object())
@@ -89,6 +99,8 @@ class TestMultiCamViewProcessor(_RawDataMixin):
         })
 
         processed = proc.process(data)
+        self._check_processed_data_structure(processed)
+
         for i, gt in enumerate(proc._output_channels):
             assert gt == processed["channels"][i]
 
@@ -97,3 +109,8 @@ class TestMultiCamViewProcessor(_RawDataMixin):
         np.testing.assert_array_equal(np.ones((3, 3)), processed["images"][2])
         np.testing.assert_array_equal(np.ones((4, 4)), processed["images"][3])
         assert np.float32 == processed["images"][3].dtype
+
+    def _check_processed_data_structure(self, ret):
+        """Override."""
+        data_gt = TestMultiCamViewWindow.data4visualization().keys()
+        assert set(ret.keys()) == set(data_gt)

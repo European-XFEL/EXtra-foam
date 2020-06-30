@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
-from ..gui_helpers import create_icon_button, parse_slice_inv
+from ..gui_helpers import create_icon_button
 from ...database import Metadata as mt
 
 
@@ -134,7 +134,5 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
 
         if self._pulse_resolved:
-            self._gain_cells_le.setText(
-                parse_slice_inv(cfg["gain_cells"]))
-            self._offset_cells_le.setText(
-                parse_slice_inv(cfg["offset_cells"]))
+            self._updateWidgetValue(self._gain_cells_le, cfg, "gain_cells")
+            self._updateWidgetValue(self._offset_cells_le, cfg, "offset_cells")

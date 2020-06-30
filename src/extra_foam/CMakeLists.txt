@@ -4,6 +4,33 @@
 # All rights reserved.                                            #
 ###################################################################
 
+# ============
+# Build flags
+# ============
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    if(NOT CMAKE_CXX_FLAGS MATCHES "-march")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
+endif()
+
+message(STATUS "=========================== EXtra-foam Python ============================")
+message(STATUS "")
+message(STATUS "    C++ Compiler:               ${FOAM_COMPILER_STR}")
+message(STATUS "    C++ flags (Release):        ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "    C++ flags (Debug):          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "    Linker flags (Release):     ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
+message(STATUS "    Linker flags (Debug):       ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+message(STATUS "")
+message(STATUS "    USE TBB in FOAM/XTENSOR:    ${FOAM_USE_TBB}/${XTENSOR_USE_TBB}")
+message(STATUS "    USE XSIMD in FOAM/XTENSOR:  ${FOAM_USE_XSIMD}/${XTENSOR_USE_XSIMD}")
+message(STATUS "")
+message(STATUS "==========================================================================")
+
+# ===============
+# Build libraries
+# ===============
+
 set(_FOAM_MODULE_FILES
     f_canny.cpp
     f_datamodel.cpp

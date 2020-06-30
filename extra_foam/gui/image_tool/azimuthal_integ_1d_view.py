@@ -13,6 +13,7 @@ from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
 from ..plot_widgets import ImageViewF, PlotWidgetF
+from ...algorithms import find_peaks_1d
 from ...config import AnalysisType, plot_labels
 
 
@@ -23,7 +24,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         x_label, y_label = plot_labels[AnalysisType.AZIMUTHAL_INTEG]
         self.setLabel('bottom', x_label)
@@ -31,15 +32,27 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         self.setTitle('Azimuthal integration')
 
         self._plot = self.plotCurve(pen=FColor.mkPen("p"))
+        self._peaks = self.plotScatter(
+            pen=FColor.mkPen("g"), brush=FColor.mkBrush(None), symbol="o",
+            size=18)
 
     def updateF(self, data):
         """Override."""
-        momentum, intensity = data.ai.x, data.ai.y
+        ai = data.ai
+        momentum, intensity = ai.x, ai.y
 
         if intensity is None:
             return
 
         self._plot.setData(momentum, intensity)
+
+        peaks = ai.peaks
+        if peaks is None:
+            self._peaks.setData([], [])
+            self.setAnnotationList([], [])
+        else:
+            self._peaks.setData(momentum[peaks], intensity[peaks])
+            self.setAnnotationList(momentum[peaks], intensity[peaks])
 
 
 @create_imagetool_view(AzimuthalIntegCtrlWidget)
@@ -63,6 +76,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Override."""
@@ -75,10 +89,12 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         view_splitter.setChildrenCollapsible(False)
         view_splitter.addWidget(view_tab)
         view_splitter.addWidget(self._azimuthal_integ_1d_curve)
+        view_splitter.setSizes([1e6, 1e6])
 
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)
         layout.addWidget(self._ctrl_widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):

@@ -20,7 +20,7 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
 class TestTrXasWindow(_SpecialSuiteWindowTestBase):
@@ -74,10 +74,10 @@ class TestTrXasWindow(_SpecialSuiteWindowTestBase):
         # test default values
         self.assertTrue(proc._device_id1)
         self.assertTrue(proc._ppt1)
-        self.assertTrue(win._a21._plot_item.getAxis("bottom").label.toPlainText())
-        self.assertTrue(win._a13_a23._plot_item.getAxis("bottom").label.toPlainText())
-        self.assertTrue(win._a21_heatmap._plot_widget._plot_item.getAxis("left").label.toPlainText())
-        self.assertTrue(win._a21_heatmap._plot_widget._plot_item.getAxis("bottom").label.toPlainText())
+        self.assertTrue(win._a21._plot_area.getAxis("bottom").label.toPlainText())
+        self.assertTrue(win._a13_a23._plot_area.getAxis("bottom").label.toPlainText())
+        self.assertTrue(win._a21_heatmap._plot_widget._plot_area.getAxis("left").label.toPlainText())
+        self.assertTrue(win._a21_heatmap._plot_widget._plot_area.getAxis("bottom").label.toPlainText())
         self.assertTrue(proc._device_id2)
         self.assertTrue(proc._ppt2)
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))

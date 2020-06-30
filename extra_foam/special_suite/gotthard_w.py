@@ -9,6 +9,8 @@ All rights reserved.
 """
 from string import Template
 
+import numpy as np
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QCheckBox, QSplitter
@@ -99,7 +101,7 @@ class GotthardAvgPlot(PlotWidgetF):
     moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
@@ -112,15 +114,18 @@ class GotthardAvgPlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
+        spectrum = data['spectrum_mean']
+        spectrum_ma = data['spectrum_ma_mean']
+
         x = data["x"]
         if x is None:
-            self._mean.setData(data['spectrum_mean'])
-            self._mean_ma.setData(data['spectrum_ma_mean'])
             self.setLabel('bottom', "Pixel")
+            x = np.arange(len(spectrum))
         else:
-            self._mean.setData(x, data['spectrum_mean'])
-            self._mean_ma.setData(x, data['spectrum_ma_mean'])
             self.setLabel('bottom', "eV")
+
+        self._mean.setData(x, spectrum)
+        self._mean_ma.setData(x, spectrum_ma)
 
 
 class GotthardPulsePlot(PlotWidgetF):
@@ -129,7 +134,7 @@ class GotthardPulsePlot(PlotWidgetF):
     Visualize signals of a single pulse as well as its moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -152,15 +157,18 @@ class GotthardPulsePlot(PlotWidgetF):
             self._idx = idx
             self._updateTitle()
 
+        spectrum = data['spectrum'][idx]
+        spectrum_ma = data['spectrum_ma'][idx]
+
         x = data["x"]
         if x is None:
-            self._poi.setData(data['spectrum'][idx])
-            self._poi_ma.setData(data['spectrum_ma'][idx])
             self.setLabel('bottom', "Pixel")
+            x = np.arange(len(spectrum))
         else:
-            self._poi.setData(x, data['spectrum'][idx])
-            self._poi_ma.setData(x, data['spectrum_ma'][idx])
             self.setLabel('bottom', "eV")
+
+        self._poi.setData(x, spectrum)
+        self._poi_ma.setData(x, spectrum_ma)
 
 
 class GotthardImageView(ImageViewF):

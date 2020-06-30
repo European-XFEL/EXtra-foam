@@ -11,6 +11,8 @@ EXtra-foam
 ![Language](https://img.shields.io/badge/language-c++-red)
 [![Qt 5](https://img.shields.io/badge/Qt-5-brightgreen)](https://doc.qt.io/qt-5/)
 
+![Overview](docs/images/extra_foam_0.9.0.jpg)
+
 *EXtra-foam* (previously known as *[karaboFAI](https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/)*) is a 
 framework that provides super fast on-line (real-time) and off-line data analysis and visualization for 
 experiments at European XFEL that using 2D detectors (e.g. AGIPD, DSSC, LPD, ePix100, FastCCD, JungFrau, 

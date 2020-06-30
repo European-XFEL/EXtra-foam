@@ -29,22 +29,22 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = idx
 
         self.setTitle(f'Correlation {idx+1}')
         self._default_x_label = "Correlator (arb. u.)"
         self._default_y_label = "FOM (arb. u.)"
+        self.addLegend(offset=(-40, 20))
+        self.hideLegend()
 
         self._source = ""
         self._resolution = 0.0
 
         self.updateLabel()
 
-        brush_pair = self._brushes[self._idx]
-        self._plot = self.plotScatter(brush=brush_pair[0])
-        self._plot_slave = self.plotScatter(brush=brush_pair[1])
+        self._newScatterPlot()
 
     def refresh(self):
         """Override."""
@@ -61,16 +61,30 @@ class CorrelationPlot(TimedPlotWidgetF):
         if resolution == 0:
             if self._resolution != 0:
                 # bar -> scatter plot
+                self._removeBothPlots()
                 self._newScatterPlot()
                 self._resolution = 0
 
             self._plot.setData(item.x, y)
+            # The following code looks awkward but it is by far
+            # the best solution. The user could choose to deactivate
+            # the master-slave mode and keep the slave data there.
+            # In this case, a legend is still required. Therefore,
+            # we cannot toggle the legend by the signal from the
+            # master-slave checkbox in the GUI.
             if y_slave is not None:
                 self._plot_slave.setData(item.x_slave, y_slave)
+                if len(y_slave) > 0:
+                    self.showLegend()
+                else:
+                    self.hideLegend()
+            else:
+                self.hideLegend()
         else:
             if resolution != self._resolution:
                 if self._resolution == 0:
                     # scatter -> bar plot
+                    self._removeBothPlots()
                     self._newStatisticsBarPlot(resolution)
                 else:
                     # update beam
@@ -83,6 +97,12 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._plot_slave.setData(
                     item.x_slave, y_slave.avg,
                     y_min=y_slave.min, y_max=y_slave.max)
+                if len(y_slave.avg) > 0:
+                    self.showLegend()
+                else:
+                    self.hideLegend()
+            else:
+                self.hideLegend()
 
     def updateLabel(self):
         src = self._source
@@ -95,21 +115,20 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.setLabel('left', self._default_y_label)
 
     def _newScatterPlot(self):
-        self.removeItem(self._plot)
-        self.removeItem(self._plot_slave)
-
         brush_pair = self._brushes[self._idx]
-        self._plot = self.plotScatter(brush=brush_pair[0])
-        self._plot_slave = self.plotScatter(brush=brush_pair[1])
+        self._plot = self.plotScatter(brush=brush_pair[0], name="master")
+        self._plot_slave = self.plotScatter(brush=brush_pair[1], name="slave")
 
     def _newStatisticsBarPlot(self, resolution):
+        pen_pair = self._pens[self._idx]
+        self._plot = self.plotStatisticsBar(
+            beam=resolution, pen=pen_pair[0], name="master")
+        self._plot_slave = self.plotStatisticsBar(
+            beam=resolution, pen=pen_pair[1], name="slave")
+
+    def _removeBothPlots(self):
         self.removeItem(self._plot)
         self.removeItem(self._plot_slave)
-
-        pen_pair = self._pens[self._idx]
-        self._plot = self.plotStatisticsBar(beam=resolution, pen=pen_pair[0])
-        self._plot_slave = self.plotStatisticsBar(
-            beam=resolution, pen=pen_pair[1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):

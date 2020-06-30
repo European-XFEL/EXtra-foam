@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 
 class InputDialogWithCheckBox(QDialog):
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     @classmethod
     def getResult(cls, parent, window_title, input_label, checkbox_label):

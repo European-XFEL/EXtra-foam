@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QSplitter
@@ -81,7 +83,7 @@ class GotthardPpFomMeanPlot(PlotWidgetF):
     Visualize averaged VFOM over a train as well as its moving average.
     """
     def __init__(self, *, parent=None):
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Averaged FOM over train")
         self.setLabel('left', "ADU")
@@ -94,8 +96,10 @@ class GotthardPpFomMeanPlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        self._mean.setData(data['vfom_mean'])
-        self._mean_ma.setData(data['vfom_ma_mean'])
+        vfom_mean, vfom_ma_mean = data['vfom_mean'], data['vfom_ma_mean']
+        x = np.arange(len(vfom_mean))
+        self._mean.setData(x, vfom_mean)
+        self._mean_ma.setData(x, vfom_ma_mean)
 
 
 class GotthardPpFomPulsePlot(PlotWidgetF):
@@ -105,7 +109,7 @@ class GotthardPpFomPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -128,8 +132,10 @@ class GotthardPpFomPulsePlot(PlotWidgetF):
             self._idx = idx
             self._updateTitle()
 
-        self._poi.setData(data['vfom'][idx])
-        self._poi_ma.setData(data['vfom_ma'][idx])
+        vfom, vfom_ma = data['vfom'][idx], data['vfom_ma'][idx]
+        x = np.arange(len(vfom))
+        self._poi.setData(x, vfom)
+        self._poi_ma.setData(x, vfom_ma)
 
 
 class GotthardPpRawPulsePlot(PlotWidgetF):
@@ -139,7 +145,7 @@ class GotthardPpRawPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -161,8 +167,11 @@ class GotthardPpRawPulsePlot(PlotWidgetF):
             self._idx = idx
             self._updateTitle()
 
-        self._on.setData(data['raw'][data['on_slicer']][idx])
-        self._off.setData(data['raw'][data['off_slicer']][idx])
+        on = data['raw'][data['on_slicer']][idx]
+        off = data['raw'][data['off_slicer']][idx]
+        x = np.arange(len(on))
+        self._on.setData(x, on)
+        self._off.setData(x, off)
 
 
 class GotthardPpDarkPulsePlot(PlotWidgetF):
@@ -172,7 +181,7 @@ class GotthardPpDarkPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self._idx = 0
 
@@ -192,7 +201,9 @@ class GotthardPpDarkPulsePlot(PlotWidgetF):
             self._idx = idx
             self._updateTitle()
 
-        self._plot.setData(data['raw'][data['dark_slicer']][idx])
+        y = data['raw'][data['dark_slicer']][idx]
+        x = np.arange(len(y))
+        self._plot.setData(x, y)
 
 
 class GotthardPpImageView(ImageViewF):

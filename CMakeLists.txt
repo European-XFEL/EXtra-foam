@@ -59,6 +59,8 @@ if(FOAM_USE_TBB OR XTENSOR_USE_TBB)
     set(TBB_REQUIRED_VERSION 2020.1)
     string(REPLACE "." "_U" TBB_REQUIRED_VERSION_STR ${TBB_REQUIRED_VERSION})
 
+    add_compile_definitions(TBB_SUPPRESS_DEPRECATED_MESSAGES)
+
     find_package(TBB QUIET)
     if(TBB_FOUND AND ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} VERSION_EQUAL TBB_REQUIRED_VERSION)
         set(TBB_LIBRARY ${TBB_LIBRARIES_RELEASE})
@@ -145,6 +147,17 @@ target_link_libraries(${PROJECT_NAME}
 if(BUILD_FOAM_TESTS)
     add_subdirectory(test)
 endif()
+
+# ============
+# Build flags
+# ============
+
+if(CMAKE_CXX_COMPILER_VERSION)
+    set(FOAM_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (version ${CMAKE_CXX_COMPILER_VERSION})")
+else()
+    set(FOAM_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
+endif()
+string(STRIP "${FOAM_COMPILER_STR}" FOAM_COMPILER_STR)
 
 # ============
 # Installation

@@ -31,6 +31,9 @@ class _AbstractProxy(ProcessLogger):
     def pipeline(self):
         return self._db.pipeline()
 
+    def execute_command(self, *args, **kwargs):
+        return self._db.execute_command(*args, **kwargs)
+
     @redis_except_handler
     def hset(self, name, key, value):
         """Set a key-value pair of a hash.

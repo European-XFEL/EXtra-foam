@@ -9,6 +9,8 @@ All rights reserved.
 """
 from functools import partial
 
+import numpy as np
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import (
@@ -135,7 +137,7 @@ class XasTimXgmPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Pulse intensities (SA3)")
         self.setLabel('left', "Intensity (arb.)")
@@ -145,7 +147,9 @@ class XasTimXgmPulsePlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        self._plot.setData(data['xgm_intensity'])
+        y = data['xgm_intensity']
+        x = np.arange(len(y))
+        self._plot.setData(x, y)
 
 
 class XasTimDigitizerPulsePlot(PlotWidgetF):
@@ -156,7 +160,7 @@ class XasTimDigitizerPulsePlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Digitizer pulse integrals")
         self.setLabel('left', "Pulse integral (arb.)")
@@ -171,7 +175,11 @@ class XasTimDigitizerPulsePlot(PlotWidgetF):
     def updateF(self, data):
         """Override."""
         for p, apd in zip(self._plots, data['digitizer_apds']):
-            p.setData(apd)
+            if apd is None:
+                p.setData([], [])
+            else:
+                x = np.arange(len(apd))
+                p.setData(x, apd)
 
 
 class XasTimMonoScanPlot(TimedPlotWidgetF):
@@ -181,7 +189,7 @@ class XasTimMonoScanPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("Softmono energy scan")
         self.setLabel('left', "Energy (eV)")
@@ -204,7 +212,7 @@ class XasTimCorrelationPlot(TimedPlotWidgetF):
 
         :param int idx: channel index.
         """
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setLabel('left', "I1 (arb.)")
         self.setLabel('bottom', "I0 (micro J)")
@@ -232,7 +240,7 @@ class XasTimSpectraPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("MCP spectra")
         self.setLabel('left', "Absorption (arb.)")
@@ -271,7 +279,7 @@ class XasTimXgmSpectrumPlot(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         self.setTitle("XGM spectrum")
         self.setLabel('left', "I0 (arb.)")

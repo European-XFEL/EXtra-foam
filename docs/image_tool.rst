@@ -1,3 +1,5 @@
+.. _Image tool:
+
 IMAGE TOOL
 ==========
 
@@ -247,8 +249,8 @@ aforementioned coordinate system, respectively.
 .. image:: images/pyFAI_PONI.png
    :width: 800
 
-.. image:: images/azimuthal_integ_1D.png
-   :width: 800
+.. image:: images/azimuthal_integ_1D.jpg
+
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
@@ -286,6 +288,27 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 | ``FOM range (1/A)``        | Integration range when calculating the figure-of-merit of the      |
 |                            | azimuthal integration result.                                      |
++----------------------------+--------------------------------------------------------------------+
+
+By default, peak finding is activated and peak positions will be annotated along the scattering
+curve if the number of detected peaks is between 1 and 10. There is no special reason for choosing
+10 as the upper limit. Nevertheless, if there are two many peaks found, it may be due to a noisy
+scattering curve or some unreasonable peak-finding parameters.
+
+For now, users can set prominence to refine the number of detected peaks and use a slicer to select
+part of them. The prominence of a peak measures how much a peak stands out from the surrounding
+baseline of the signal and is defined as the vertical distance between the peak and its lowest
+contour line. The slicer is useful when the scattering curve has some undesired structure, especially
+at the start and/or end of the curve.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Peak finding``           | Check to activate real-time peak finding and annotating.           |
++----------------------------+--------------------------------------------------------------------+
+| ``Peak prominence``        | Minimum prominence of peaks.                                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Peak slicer``            | Pixel size along the detector's 2nd dimension.                     |
 +----------------------------+--------------------------------------------------------------------+
 
 

@@ -18,12 +18,14 @@ from extra_foam.special_suite.gotthard_pump_probe_w import (
 )
 from extra_foam.special_suite.special_analysis_base import ProcessingError
 
+from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
+
 app = mkQApp()
 
-logger.setLevel('CRITICAL')
+logger.setLevel('INFO')
 
 
-class TestGotthardPumpProbe(unittest.TestCase):
+class TestGotthardPpWindow(_SpecialSuiteWindowTestBase):
     @classmethod
     def setUpClass(cls):
         cls._win = GotthardPumpProbeWindow('SCS')
@@ -32,6 +34,23 @@ class TestGotthardPumpProbe(unittest.TestCase):
     def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
+
+    @staticmethod
+    def data4visualization(n_pulses=5, n_on=2, n_off=2):
+        """Override."""
+        return {
+            "raw": np.arange(8*n_pulses).reshape(n_pulses, 8),
+            "corrected": np.arange(8 * n_pulses).reshape(n_pulses, 8),
+            "on_slicer": slice(0, n_on),
+            "off_slicer": slice(n_on, n_on + n_off),
+            "dark_slicer": slice(n_on + n_off, None),
+            "poi_index": n_on - 1,
+            "dark_poi_index": 0,
+            "vfom": np.arange(40).reshape(5, 8),
+            "vfom_ma": np.arange(40).reshape(5, 8),
+            "vfom_mean": np.arange(8),
+            "vfom_ma_mean": np.arange(8),
+        }
 
     def testWindow(self):
         win = self._win
@@ -47,7 +66,7 @@ class TestGotthardPumpProbe(unittest.TestCase):
         self.assertEqual(1, counter[GotthardPpRawPulsePlot])
         self.assertEqual(1, counter[GotthardPpDarkPulsePlot])
 
-        win.updateWidgetsST()
+        self._check_update_plots()
 
     def testCtrl(self):
         win = self._win
@@ -103,7 +122,7 @@ class TestGotthardPumpProbe(unittest.TestCase):
         self.assertEqual(9, proc.__class__._vfom_ma.window)
 
 
-class TestGotthardPpProcessor(_RawDataMixin):
+class TestGotthardPpProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = GotthardPpProcessor(object(), object())
@@ -153,9 +172,15 @@ class TestGotthardPpProcessor(_RawDataMixin):
         adc_gt = self._adc.astype(_PIXEL_DTYPE)
 
         processed = proc.process(self._get_data(12345))
+        self._check_processed_data_structure(processed)
 
         np.testing.assert_array_almost_equal(adc_gt, processed["raw"])
         corrected_gt = adc_gt - np.mean(adc_gt[proc._dark_slicer], axis=0)
         np.testing.assert_array_almost_equal(corrected_gt, processed["corrected"])
         vfom_gt = corrected_gt[proc._on_slicer] - corrected_gt[proc._off_slicer]
         np.testing.assert_array_almost_equal(vfom_gt, processed["vfom"])
+
+    def _check_processed_data_structure(self, ret):
+        """Override."""
+        data_gt = TestGotthardPpWindow.data4visualization().keys()
+        assert set(ret.keys()) == set(data_gt)

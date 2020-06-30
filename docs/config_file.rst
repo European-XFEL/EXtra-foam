@@ -6,6 +6,10 @@ CONFIG FILE
 Users from different instruments should use the corresponding config file to config
 the instrument specific data sources, the detector specific setups and so on.
 
+Each instrument has a default config file, which can be found in the
+`github repository <https://github.com/European-XFEL/EXtra-foam/tree/dev/extra_foam/configs>`__.
+We appreciate if the beamline scientists can help us keep the default config file updated.
+
 Let's take *FXE* for example, when one starts a detector on topic *FXE* for the first by
 time:
 
@@ -13,7 +17,7 @@ time:
 
     extra-foam LPD FXE
 
-, the system will create a new config file `$HOME/.EXtra-foam/fxe.config.yaml`.
+, the system will create a new config file `$HOME/.EXtra-foam/fxe.config.yaml` using the default one.
 The first block of the config file looks like the following:
 
 .. code-block:: yaml

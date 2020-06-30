@@ -31,7 +31,7 @@ class RoiProjPlot(PlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent, show_indicator=True)
+        super().__init__(parent=parent)
 
         x_label, y_label = plot_labels[AnalysisType.ROI_PROJ]
         self.setLabel('bottom', x_label)
@@ -113,6 +113,7 @@ class CorrectedView(_AbstractImageToolView):
         ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
+        ctrl_layout.setContentsMargins(1, 1, 1, 1)
         ctrl_widget.setLayout(ctrl_layout)
         ctrl_widget.setFixedHeight(
             self._roi_proj_ctrl_widget.minimumSizeHint().height())
@@ -128,10 +129,12 @@ class CorrectedView(_AbstractImageToolView):
         view_splitter.setChildrenCollapsible(False)
         view_splitter.addWidget(self._corrected)
         view_splitter.addWidget(subview_splitter)
+        view_splitter.setSizes([1e6, 1e6])
 
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)
         layout.addWidget(ctrl_widget)
+        layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):

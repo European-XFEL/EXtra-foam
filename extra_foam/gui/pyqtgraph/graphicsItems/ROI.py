@@ -2,7 +2,7 @@
 """
 ROI.py -  Interactive graphics items for GraphicsView (ROI widgets)
 Copyright 2010  Luke Campagnola
-Distributed under MIT/X11 license. See license.txt for more infomation.
+Distributed under MIT/X11 license. See license.txt for more information.
 
 Implements a series of graphics items which display movable/scalable/rotatable shapes
 for use as region-of-interest markers. ROI class automatically handles extraction 
@@ -428,7 +428,8 @@ class ROI(GraphicsObject):
 
     def handleMoveStarted(self):
         self.preMoveState = self.getState()
-    
+        self.sigRegionChangeStarted.emit(self)
+
     def addTranslateHandle(self, pos, axes=None, item=None, name=None, index=None):
         """
         Add a new translation handle to the ROI. Dragging the handle will move 
@@ -589,13 +590,13 @@ class ROI(GraphicsObject):
         ## If a Handle was not supplied, create it now
         if 'item' not in info or info['item'] is None:
             h = Handle(self.handleSize, typ=info['type'], pen=self.handlePen, parent=self)
-            h.setPos(info['pos'] * self.state['size'])
             info['item'] = h
         else:
             h = info['item']
             if info['pos'] is None:
                 info['pos'] = h.pos()
-            
+        h.setPos(info['pos'] * self.state['size'])
+
         ## connect the handle to this ROI
         #iid = len(self.handles)
         h.connectROI(self)
@@ -711,10 +712,10 @@ class ROI(GraphicsObject):
                 
         if hover:
             self.setMouseHover(True)
-            self.sigHoverEvent.emit(self)
             ev.acceptClicks(QtCore.Qt.LeftButton)  ## If the ROI is hilighted, we should accept all clicks to avoid confusion.
             ev.acceptClicks(QtCore.Qt.RightButton)
             ev.acceptClicks(QtCore.Qt.MidButton)
+            self.sigHoverEvent.emit(self)
         else:
             self.setMouseHover(False)
 
@@ -757,6 +758,9 @@ class ROI(GraphicsObject):
             remAct.triggered.connect(self.removeClicked)
             self.menu.addAction(remAct)
             self.menu.remAct = remAct
+        # ROI menu may be requested when showing the handle context menu, so
+        # return the menu but disable it if the ROI isn't removable
+        self.menu.setEnabled(self.contextMenuEnabled())
         return self.menu
 
     def removeClicked(self):
@@ -928,7 +932,8 @@ class ROI(GraphicsObject):
             
             if h['type'] == 'rf':
                 h['item'].setPos(self.mapFromScene(p1))  ## changes ROI coordinates of handle
-                
+                h['pos'] = self.mapFromParent(p1)
+
         elif h['type'] == 'sr':
             if h['center'][0] == h['pos'][0]:
                 scaleAxis = 1
@@ -1102,9 +1107,9 @@ class ROI(GraphicsObject):
             return bounds, tr
 
     def getArrayRegion(self, data, img, axes=(0,1), returnMappedCoords=False, **kwds):
-        """Use the position and orientation of this ROI relative to an imageItem 
+        r"""Use the position and orientation of this ROI relative to an imageItem
         to pull a slice from an array.
-        
+
         =================== ====================================================
         **Arguments**
         data                The array to slice from. Note that this array does
@@ -1268,11 +1273,12 @@ class Handle(UIGraphicsItem):
     sigClicked = QtCore.Signal(object, object)   # self, event
     sigRemoveRequested = QtCore.Signal(object)   # self
     
-    def __init__(self, radius, typ=None, pen=(200, 200, 220), parent=None, deletable=False):
+    def __init__(self, radius, typ=None, pen=(200, 200, 220), parent=None, deletable=False, activePen=(255, 255, 0)):
         self.rois = []
         self.radius = radius
         self.typ = typ
         self.pen = fn.mkPen(pen)
+        self.activePen = fn.mkPen(activePen)
         self.currentPen = self.pen
         self.pen.setWidth(0)
         self.pen.setCosmetic(True)
@@ -1316,7 +1322,7 @@ class Handle(UIGraphicsItem):
                     hover=True
                     
         if hover:
-            self.currentPen = fn.mkPen(255, 255,0)
+            self.currentPen = self.activePen
         else:
             self.currentPen = self.pen
         self.update()
@@ -1369,15 +1375,19 @@ class Handle(UIGraphicsItem):
                 for r in self.rois:
                     r.stateChangeFinished()
             self.isMoving = False
+            self.currentPen = self.pen
+            self.update()
         elif ev.isStart():
             for r in self.rois:
                 r.handleMoveStarted()
             self.isMoving = True
             self.startPos = self.scenePos()
             self.cursorOffset = self.scenePos() - ev.buttonDownScenePos()
-            
+            self.currentPen = self.activePen
+
         if self.isMoving:  ## note: isMoving may become False in mid-drag due to right-click.
             pos = ev.scenePos() + self.cursorOffset
+            self.currentPen = self.activePen
             self.movePoint(pos, ev.modifiers(), finish=False)
 
     def movePoint(self, pos, modifiers=QtCore.Qt.KeyboardModifier(), finish=True):
@@ -1524,9 +1534,9 @@ class TestROI(ROI):
 
 
 class RectROI(ROI):
-    """
+    r"""
     Rectangular ROI subclass with a single scale handle at the top-right corner.
-    
+
     ============== =============================================================
     **Arguments**
     pos            (length-2 sequence) The position of the ROI origin.
@@ -1553,7 +1563,7 @@ class RectROI(ROI):
             self.addScaleHandle([0.5, 1], [0.5, center[1]])
 
 class LineROI(ROI):
-    """
+    r"""
     Rectangular ROI subclass with scale-rotate handles on either side. This
     allows the ROI to be positioned as if moving the ends of a line segment.
     A third handle controls the width of the ROI orthogonal to its "line" axis.
@@ -1586,11 +1596,13 @@ class LineROI(ROI):
         
 
         
+
+
 class MultiRectROI(QtGui.QGraphicsObject):
-    """
-    Chain of rectangular ROIs connected by handles. 
-    
-    This is generally used to mark a curved path through 
+    r"""
+    Chain of rectangular ROIs connected by handles.
+
+    This is generally used to mark a curved path through
     an image similarly to PolyLineROI. It differs in that each segment
     of the chain is rectangular instead of linear and thus has width.
     
@@ -1665,7 +1677,7 @@ class MultiRectROI(QtGui.QGraphicsObject):
         ms = min([r.shape[axes[1]] for r in rgns])
         sl = [slice(None)] * rgns[0].ndim
         sl[axes[1]] = slice(0,ms)
-        rgns = [r[sl] for r in rgns]
+        rgns = [r[tuple(sl)] for r in rgns]
         #print [r.shape for r in rgns], axes
         
         return np.concatenate(rgns, axis=axes[0])
@@ -1724,12 +1736,12 @@ class MultiLineROI(MultiRectROI):
         MultiRectROI.__init__(self, *args, **kwds)
         print("Warning: MultiLineROI has been renamed to MultiRectROI. (and MultiLineROI may be redefined in the future)")
 
-        
+
 class EllipseROI(ROI):
-    """
+    r"""
     Elliptical ROI subclass with one scale handle and one rotation handle.
-    
-    
+
+
     ============== =============================================================
     **Arguments**
     pos            (length-2 sequence) The position of the ROI's origin.
@@ -1810,8 +1822,9 @@ class EllipseROI(ROI):
         return self.path
         
         
+
 class CircleROI(EllipseROI):
-    """
+    r"""
     Circular ROI subclass. Behaves exactly as EllipseROI, but may only be scaled
     proportionally to maintain its aspect ratio.
     
@@ -1878,13 +1891,13 @@ class PolygonROI(ROI):
         sc['angle'] = self.state['angle']
         return sc
 
-    
+
 class PolyLineROI(ROI):
-    """
+    r"""
     Container class for multiple connected LineSegmentROIs.
-    
+
     This class allows the user to draw paths of multiple line segments.
-    
+
     ============== =============================================================
     **Arguments**
     positions      (list of length-2 sequences) The list of points in the path.
@@ -2076,9 +2089,9 @@ class PolyLineROI(ROI):
 
 
 class LineSegmentROI(ROI):
-    """
+    r"""
     ROI subclass with two freely-moving handles defining a line.
-    
+
     ============== =============================================================
     **Arguments**
     positions      (list of two length-2 sequences) The endpoints of the line 
@@ -2108,7 +2121,24 @@ class LineSegmentROI(ROI):
         
     def listPoints(self):
         return [p['item'].pos() for p in self.handles]
-            
+
+    def getState(self):
+        state = ROI.getState(self)
+        state['points'] = [Point(h.pos()) for h in self.getHandles()]
+        return state
+
+    def saveState(self):
+        state = ROI.saveState(self)
+        state['points'] = [tuple(h.pos()) for h in self.getHandles()]
+        return state
+
+    def setState(self, state):
+        ROI.setState(self, state)
+        p1 = [state['points'][0][0]+state['pos'][0], state['points'][0][1]+state['pos'][1]]
+        p2 = [state['points'][1][0]+state['pos'][0], state['points'][1][1]+state['pos'][1]]
+        self.movePoint(self.getHandles()[0], p1, finish=False)
+        self.movePoint(self.getHandles()[1], p2)
+
     def paint(self, p, *args):
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         p.setPen(self.currentPen)

@@ -2,7 +2,7 @@
 """
 debug.py - Functions to aid in debugging 
 Copyright 2010  Luke Campagnola
-Distributed under MIT/X11 license. See license.txt for more infomation.
+Distributed under MIT/X11 license. See license.txt for more information.
 """
 
 from __future__ import print_function
@@ -10,7 +10,7 @@ from __future__ import print_function
 import sys, traceback, time, gc, re, types, weakref, inspect, os, cProfile, threading
 from . import ptime
 from numpy import ndarray
-from .Qt import QtCore
+from .Qt import QtCore, QtGui
 from .util.mutex import Mutex
 from .util import cprint
 

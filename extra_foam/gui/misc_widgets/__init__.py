@@ -3,4 +3,4 @@ from .aesthetics import (
     set_button_color
 )
 from .gui_logger import GuiLogger, InputDialogWithCheckBox
-from .configurator import Configurator
+from .analysis_setup_manager import AnalysisSetupManager

@@ -11,17 +11,33 @@ import abc
 
 import numpy as np
 from PyQt5.QtCore import pyqtSlot, Qt, QTimer
-from PyQt5.QtWidgets import QHBoxLayout, QWidget
+from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
 from .. import pyqtgraph as pg
 
+from .graphics_widgets import HistogramLUTItem
 from .plot_widget_base import PlotWidgetF
-from .plot_items import ImageItem, RectROI
+from .image_items import ImageItem, RectROI
 from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
-from ...algorithms import quick_min_max
 from ...config import config
 from ...typing import final
+
+
+class HistogramLUTWidget(pg.GraphicsView):
+    def __init__(self, image_item, parent=None):
+        super().__init__(parent, useOpenGL=False)
+
+        if not isinstance(image_item, ImageItem):
+            raise TypeError
+
+        self._item = HistogramLUTItem(image_item)
+        self.setCentralWidget(self._item)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.setMinimumWidth(95)
+
+    def setColorMap(self, cm):
+        self._item.setColorMap(cm)
 
 
 class ImageViewF(QWidget):
@@ -40,7 +56,6 @@ class ImageViewF(QWidget):
     """
 
     def __init__(self, *,
-                 level_mode='mono',
                  has_roi=False,
                  hide_axis=True,
                  color_map=None,
@@ -49,12 +64,8 @@ class ImageViewF(QWidget):
                  parent=None):
         """Initialization.
 
-        :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
-            a single set of black/white level lines is drawn, and the
-            levels apply to all channels in the image. If 'rgba', then
-            one set of levels is drawn for each channel.
         :param bool has_roi: True for adding 4 ROIs on top of the other
-            PlotItems.
+            plot items.
         :param bool hide_axis: True for hiding left and bottom axes.
         :param tuple roi_position: Initial upper-left corner position (x, y)
             of the first ROI.
@@ -70,7 +81,8 @@ class ImageViewF(QWidget):
         if has_roi:
             self._initializeROIs(roi_position, roi_size)
 
-        self._plot_widget = PlotWidgetF()
+        self._plot_widget = PlotWidgetF(enable_meter=False,
+                                        enable_transform=False)
 
         self._cached_title = None
         # use the public interface for caching
@@ -89,9 +101,7 @@ class ImageViewF(QWidget):
         # self.invertY(True)  # y-axis points from top to bottom
         self.setAspectLocked(True)
 
-        self._hist_widget = pg.HistogramLUTWidget()
-        self._hist_widget.setLevelMode(level_mode)
-        self._hist_widget.setImageItem(self._image_item)
+        self._hist_widget = HistogramLUTWidget(self._image_item)
 
         if color_map is None:
             self.setColorMap(colorMapFactory[config["GUI_COLOR_MAP"]])
@@ -100,7 +110,6 @@ class ImageViewF(QWidget):
 
         self._is_initialized = False
         self._image = None
-        self._auto_level_quantile = 0.99
 
         self.initUI()
 
@@ -111,11 +120,11 @@ class ImageViewF(QWidget):
 
     def initUI(self):
         layout = QHBoxLayout()
-        layout.addWidget(self._plot_widget)
-        layout.addWidget(self._hist_widget)
+        layout.addWidget(self._plot_widget, 4)
+        layout.addWidget(self._hist_widget, 1)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.layout().setSpacing(0)
 
     def reset(self):
         self.clear()
@@ -162,10 +171,10 @@ class ImageViewF(QWidget):
 
     def setImage(self, *args, **kwargs):
         """Interface method."""
-        self._updateImage(*args, **kwargs)
+        self._updateImageImp(*args, **kwargs)
 
-    def _updateImage(self, img, *, auto_range=False, auto_levels=False,
-                     scale=None, pos=None):
+    def _updateImageImp(self, img, *, auto_range=False, auto_levels=False,
+                        scale=None, pos=None):
         """Update the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
@@ -184,8 +193,7 @@ class ImageViewF(QWidget):
         if not isinstance(img, np.ndarray):
             raise TypeError("Image data must be a numpy array!")
 
-        # set autoLevels manually later
-        self._image_item.setImage(img, autoLevels=False)
+        self._image_item.setImage(img, auto_levels=auto_levels)
         self._image = img
 
         self._image_item.resetTransform()
@@ -195,13 +203,8 @@ class ImageViewF(QWidget):
         if pos is not None:
             self._image_item.setPos(*pos)
 
-        if auto_levels:
-            v_min, v_max = quick_min_max(
-                self._image, q=self._auto_level_quantile)
-            self.setLevels(rgba=[(float(v_min), float(v_max))])
-
         if auto_range:
-            self._plot_widget._plot_item.vb.autoRange()
+            self.autoRange()
 
     def clear(self):
         self._image = None
@@ -211,13 +214,13 @@ class ImageViewF(QWidget):
     @pyqtSlot()
     def _onAutoLevel(self):
         if self.isVisible():
-            self.updateImageWithAutoLevel()
+            self.updateImage(auto_levels=True)
 
-    def updateImageWithAutoLevel(self):
-        """Re-display the current image with autoLevels == True."""
+    def updateImage(self, **kwargs):
+        """Re-display the current image."""
         if self._image is None:
             return
-        self._updateImage(self._image, auto_levels=True)
+        self._updateImageImp(self._image, **kwargs)
 
     def setMouseHoverValueRoundingDecimals(self, v):
         self._mouse_hover_v_rounding_decimals = v
@@ -243,10 +246,7 @@ class ImageViewF(QWidget):
 
         :param cm: a ColorMap object.
         """
-        self._hist_widget.gradient.setColorMap(cm)
-
-    def setBorder(self, *args, **kwargs):
-        self._image_item.setBorder(*args, **kwargs)
+        self._hist_widget.setColorMap(cm)
 
     def setAspectLocked(self, *args, **kwargs):
         self._plot_widget.setAspectLocked(*args, **kwargs)
@@ -254,14 +254,20 @@ class ImageViewF(QWidget):
     def setLabel(self, *args, **kwargs):
         self._plot_widget.setLabel(*args, **kwargs)
 
-    def setTitle(self, title, *args, **kwargs):
+    def setTitle(self, *args, **kwargs):
         # This is the public interface. Therefore, we ought to cache
         # the title.
-        self._cached_title = title
-        self._plot_widget.setTitle(title, *args, **kwargs)
+        self._cached_title = None if len(args) == 0 else args[0]
+        self._plot_widget.setTitle(*args, **kwargs)
+
+    def invertX(self, *args, **kwargs):
+        self._plot_widget.invertX(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
-        self._plot_widget._plot_item.invertY(*args, **kwargs)
+        self._plot_widget.invertY(*args, **kwargs)
+
+    def autoRange(self, *args, **kwargs):
+        self._plot_widget.autoRange(*args, **kwargs)
 
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)
@@ -269,9 +275,12 @@ class ImageViewF(QWidget):
     def removeItem(self, *args, **kwargs):
         self._plot_widget.removeItem(*args, **kwargs)
 
-    def close(self):
-        self.parent().unregisterPlotWidget(self)
-        super().close()
+    def closeEvent(self, event):
+        """Override."""
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWidget(self)
+        super().closeEvent(event)
 
 
 class TimedImageViewF(ImageViewF):
