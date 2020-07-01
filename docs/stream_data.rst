@@ -24,8 +24,9 @@ click on the *File stream* icon on the tool bar to opens the following window:
 
     extra-foam-stream
 
-in another terminal to open the above window. This is useful for development since one
-does not have to set up the streamer again when restarting **EXtra-foam**.
+in another terminal to open the above window. **This is the recommended way since the streamer and
+the EXtra-foam instance are decoupled**. This is also useful for development since one does not have
+to set up the streamer again when restarting **EXtra-foam**.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
@@ -34,9 +35,9 @@ does not have to set up the streamer again when restarting **EXtra-foam**.
 |                            | via entering the full path.                                        |
 +----------------------------+--------------------------------------------------------------------+
 | ``Port``                   | The TCP port from which the data is streamed. If the GUI is not    |
-|                            | opened from the terminal, the ``Port`` is readonly and internally  |
-|                            | it is the same as the port specified in the :ref:`Data source`     |
-|                            | panel in the main GUI.                                             |
+|                            | opened from the terminal, the ``Port`` is displayed as '*' and     |
+|                            | internally it is the same as the port specified in the             |
+|                            | :ref:`Data source` panel in the main GUI.                          |
 +----------------------------+--------------------------------------------------------------------+
 | ``Stream once``            | Press to stream the data in the run folder once.                   |
 +----------------------------+--------------------------------------------------------------------+

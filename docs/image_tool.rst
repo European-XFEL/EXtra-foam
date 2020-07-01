@@ -108,7 +108,7 @@ ROI FOM setup
 |                            | pump-probe analysis*.                                              |
 +----------------------------+--------------------------------------------------------------------+
 | ``Master-slave``           | Check to activate the *master-slave* model. This model is used     |
-|                            | exclusively in correlation plots (see :ref:`statistics analysis`). |
+|                            | exclusively in :ref:`Correlation` window.                          |
 |                            | When it is activated, FOMs of ROI1 (master) and ROI2 (slave) will  |
 |                            | be plotted in the same correlation plot. For other statistics      |
 |                            | analysis like binning and histogram, only ROI1 FOM will be used.   |
