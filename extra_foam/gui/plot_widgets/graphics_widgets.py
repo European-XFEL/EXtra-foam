@@ -178,12 +178,6 @@ class PlotArea(pg.GraphicsWidget):
     - Manage a list of GraphicsItems displayed inside the ViewBox;
     - Implement a context menu with display options.
     """
-    # Emitted when the ViewBox range has changed
-    range_changed_sgn = pyqtSignal(object, object)
-    # Emitted when the ViewBox Y range has changed
-    sigYRangeChanged = pyqtSignal(object, object)
-    # Emitted when the ViewBox X range has changed
-    sigXRangeChanged = pyqtSignal(object, object)
 
     cross_toggled_sgn = pyqtSignal(bool)
 
@@ -274,10 +268,6 @@ class PlotArea(pg.GraphicsWidget):
         self._initContextMenu()
 
     def initConnections(self):
-        self._vb.sigRangeChanged.connect(self.range_changed_sgn)
-        self._vb.sigXRangeChanged.connect(self.sigXRangeChanged)
-        self._vb.sigYRangeChanged.connect(self.sigYRangeChanged)
-
         self._show_cross_cb.toggled.connect(self._onShowCrossChanged)
 
         self._show_x_grid_cb.toggled.connect(self._onShowGridChanged)

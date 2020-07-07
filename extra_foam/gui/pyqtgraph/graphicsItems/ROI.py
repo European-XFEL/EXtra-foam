@@ -1469,7 +1469,6 @@ class Handle(UIGraphicsItem):
         return dti.map(tr.map(self.path))
         
     def viewTransformChanged(self):
-        GraphicsObject.viewTransformChanged(self)
         self._shape = None  ## invalidate shape, recompute later if requested.
         self.update()
 

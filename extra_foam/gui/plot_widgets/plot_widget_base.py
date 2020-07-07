@@ -35,9 +35,6 @@ class PlotWidgetF(pg.GraphicsView):
     This base class should be used to display plots except images.
     For displaying images, please refer to ImageViewF class.
     """
-    # signals wrapped from PlotArea / ViewBox
-    sigRangeChanged = pyqtSignal(object, object)
-    sigTransformChanged = pyqtSignal(object)
 
     def __init__(self, parent=None, *,
                  background='default',
@@ -71,8 +68,6 @@ class PlotWidgetF(pg.GraphicsView):
                                          rateLimit=60, slot=self.onMouseMoved)
 
         self._vb2 = None  # ViewBox for y2 axis
-
-        self._plot_area.range_changed_sgn.connect(self.viewRangeChanged)
 
         if parent is not None and hasattr(parent, 'registerPlotWidget'):
             parent.registerPlotWidget(self)
@@ -226,9 +221,6 @@ class PlotWidgetF(pg.GraphicsView):
     def showLegend(self):
         """Show legend."""
         self._plot_area.showLegend(True)
-
-    def viewRangeChanged(self, view, range):
-        self.sigRangeChanged.emit(self, range)
 
     @pyqtSlot(bool)
     def onCrossToggled(self, state):

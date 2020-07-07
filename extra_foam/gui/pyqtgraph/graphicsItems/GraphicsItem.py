@@ -426,7 +426,8 @@ class GraphicsItem(object):
         return vec.angleTo(QtCore.QLineF(vec.p1(), vec.p1()+QtCore.QPointF(1,0)))
 
     def parentChanged(self):
-        """Called when the item's parent has changed. 
+        """Called when the item's parent has changed.
+
         This method handles connecting / disconnecting from ViewBox signals
         to make sure viewRangeChanged works properly. It should generally be 
         extended, not overridden."""
@@ -447,16 +448,12 @@ class GraphicsItem(object):
         
         ## check for this item's current viewbox or view widget
         view = self.getViewBox()
-        #if view is None:
-            ##print "  no view"
-            #return
 
         oldView = None
         if self._connectedView is not None:
             oldView = self._connectedView()
             
         if view is oldView:
-            #print "  already have view", view
             return
 
         ## disconnect from previous view
@@ -475,7 +472,6 @@ class GraphicsItem(object):
 
         ## connect to new view
         if view is not None:
-            #print "connect:", self, view
             if hasattr(view, 'sigDeviceRangeChanged'):
                 # connect signals from GraphicsView
                 view.sigDeviceRangeChanged.connect(self.viewRangeChanged)
@@ -505,7 +501,6 @@ class GraphicsItem(object):
             if isinstance(child, GraphicsItem):
                 if child.getViewBox() is oldView:
                     child._updateView()
-                        #self._replaceView(oldView, child)
             else:
                 self._replaceView(oldView, child)
 

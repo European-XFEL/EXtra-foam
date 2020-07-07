@@ -299,7 +299,6 @@ class ViewBox(GraphicsWidget):
         GraphicsWidget.update(self, *args, **kwargs)
 
     def prepareForPaint(self):
-        #autoRangeEnabled = (self.state['autoRange'][0] is not False) or (self.state['autoRange'][1] is not False)
         # don't check whether auto range is enabled here--only check when setting dirty flag.
         if self._autoRangeNeedsUpdate: # and autoRangeEnabled:
             self.updateAutoRange()
@@ -517,10 +516,6 @@ class ViewBox(GraphicsWidget):
         ================== =====================================================================
 
         """
-        #print self.name, "ViewBox.setRange", rect, xRange, yRange, padding
-        #import traceback
-        #traceback.print_stack()
-
         changes = {}   # axes
         setRequested = [False, False]
 
@@ -610,7 +605,6 @@ class ViewBox(GraphicsWidget):
                     delta = lmx - mx
                     mx = lmx
                     mn += delta
-
 
             # Set target range
             if self.state['targetRange'][ax] != [mn, mx]:
@@ -1527,7 +1521,6 @@ class ViewBox(GraphicsWidget):
             canidateRange = [rangeX, rangeY]
 
             # Decide which range to try to keep unchanged
-            #print self.name, "aspect:", aspect, "changed:", changed, "auto:", self.state['autoRange']
             if forceX:
                 ax = 0
             elif forceY:
@@ -1556,7 +1549,6 @@ class ViewBox(GraphicsWidget):
                 if dx != 0:
                     changed[0] = True
                 viewRange[0] = rangeX
-
 
         changed = [(viewRange[i][0] != self.state['viewRange'][i][0]) or (viewRange[i][1] != self.state['viewRange'][i][1]) for i in (0,1)]
         self.state['viewRange'] = viewRange

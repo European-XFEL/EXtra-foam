@@ -440,7 +440,6 @@ class ScatterPlotItem(pg.PlotItem):
     def viewTransformChanged(self):
         # FIXME: I am not sure whether this is needed
         self.prepareGeometryChange()
-        super().viewTransformChanged()
         self._bounds = [None, None]
 
     def mapPointsToDevice(self, pts):
