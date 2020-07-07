@@ -375,7 +375,14 @@ class PlotArea(pg.GraphicsWidget):
         self._items.add(item)
 
         if isinstance(item, pg.PlotItem):
+            if self._log_x_cb.isChecked():
+                item.setLogX(True)
+
+            if self._log_y_cb.isChecked():
+                item.setLogY(True)
+
             self._plot_items.add(item)
+
             if self._legend is not None:
                 self._legend.addItem(item, item.name())
 
