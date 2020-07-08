@@ -178,12 +178,6 @@ class PlotArea(pg.GraphicsWidget):
     - Manage a list of GraphicsItems displayed inside the ViewBox;
     - Implement a context menu with display options.
     """
-    # Emitted when the ViewBox range has changed
-    range_changed_sgn = pyqtSignal(object, object)
-    # Emitted when the ViewBox Y range has changed
-    sigYRangeChanged = pyqtSignal(object, object)
-    # Emitted when the ViewBox X range has changed
-    sigXRangeChanged = pyqtSignal(object, object)
 
     cross_toggled_sgn = pyqtSignal(bool)
 
@@ -274,10 +268,6 @@ class PlotArea(pg.GraphicsWidget):
         self._initContextMenu()
 
     def initConnections(self):
-        self._vb.sigRangeChanged.connect(self.range_changed_sgn)
-        self._vb.sigXRangeChanged.connect(self.sigXRangeChanged)
-        self._vb.sigYRangeChanged.connect(self.sigYRangeChanged)
-
         self._show_cross_cb.toggled.connect(self._onShowCrossChanged)
 
         self._show_x_grid_cb.toggled.connect(self._onShowGridChanged)
@@ -362,21 +352,19 @@ class PlotArea(pg.GraphicsWidget):
 
     @pyqtSlot(bool)
     def _onLogXChanged(self, state):
-        self.getAxis("top").setLogMode(state)
-        self.getAxis("bottom").setLogMode(state)
-        self.updateGeometry()
-
         for item in self._plot_items:
             item.setLogX(state)
+        self.getAxis("top").setLogMode(state)
+        self.getAxis("bottom").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
     @pyqtSlot(bool)
     def _onLogYChanged(self, state):
-        self.getAxis("left").setLogMode(state)
-        self.getAxis("right").setLogMode(state)
-        self.updateGeometry()
-
         for item in self._plot_items:
             item.setLogY(state)
+        self.getAxis("left").setLogMode(state)
+        self.getAxis("right").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
     def addItem(self, item, ignore_bounds=False):
         """Add a graphics item to ViewBox."""
@@ -387,7 +375,14 @@ class PlotArea(pg.GraphicsWidget):
         self._items.add(item)
 
         if isinstance(item, pg.PlotItem):
+            if self._log_x_cb.isChecked():
+                item.setLogX(True)
+
+            if self._log_y_cb.isChecked():
+                item.setLogY(True)
+
             self._plot_items.add(item)
+
             if self._legend is not None:
                 self._legend.addItem(item, item.name())
 
@@ -460,7 +455,7 @@ class PlotArea(pg.GraphicsWidget):
             self._legend.setParentItem(self._vb)
 
             for item in self._plot_items:
-                self._legend.addItem(item)
+                self._legend.addItem(item, item.name())
 
         return self._legend
 

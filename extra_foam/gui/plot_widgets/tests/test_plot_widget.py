@@ -23,16 +23,22 @@ class TestPlotWidget(unittest.TestCase):
     def testAddPlots(self):
         widget = self._widget
 
-        self.assertEqual(len(self._widget._plot_area._items), 2)
+        self.assertEqual(len(widget._plot_area._items), 2)
 
-        # test Legend
+        # test addLegend before adding plot items
         widget.addLegend()
         widget.plotCurve(name="curve")
         widget.plotScatter(name="scatter")
         widget.plotBar(name="bar")
         widget.plotStatisticsBar(name="statistics")
+        self.assertEqual(len(widget._plot_area._items), 6)
 
-        self.assertEqual(len(self._widget._plot_area._items), 6)
+        # test addLegend after adding plot items
+        widget = PlotWidgetF()
+        widget.plotCurve(name="curve")
+        widget.plotScatter(name="scatter")
+        widget.addLegend()
+        self.assertEqual(len(widget._plot_area._items), 4)
 
     def testForwardMethod(self):
         widget = self._widget

@@ -1,14 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
-
-import numpy as np
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtTest import QTest, QSignalSpy
 
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp
-
+from extra_foam.gui.plot_widgets.plot_items import ScatterPlotItem
 from extra_foam.pipeline.data_model import ProcessedData
 from extra_foam.pipeline.tests import _TestDataMixin
 
@@ -128,8 +122,8 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
         widget._data = data
         widget.refresh()
         plot_item, plot_item_slave = widget._plot, widget._plot_slave
-        self.assertIsInstance(plot_item, pg.ScatterPlotItem)
-        self.assertIsInstance(plot_item_slave, pg.ScatterPlotItem)
+        self.assertIsInstance(plot_item, ScatterPlotItem)
+        self.assertIsInstance(plot_item_slave, ScatterPlotItem)
 
         widget._idx = 1  # a trick
         widget.refresh()
@@ -150,8 +144,8 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
         widget.refresh()
         self.assertNotIn(plot_item, widget._plot_area._items)  # being deleted
         self.assertNotIn(plot_item_slave, widget._plot_area._items)  # being deleted
-        self.assertIsInstance(widget._plot, pg.ScatterPlotItem)
-        self.assertIsInstance(widget._plot_slave, pg.ScatterPlotItem)
+        self.assertIsInstance(widget._plot, ScatterPlotItem)
+        self.assertIsInstance(widget._plot_slave, ScatterPlotItem)
 
 
 class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
