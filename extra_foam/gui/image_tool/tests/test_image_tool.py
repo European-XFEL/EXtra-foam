@@ -74,12 +74,16 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                                                require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
+        self.image_tool.show()
 
         self.view = self.image_tool._corrected_view.imageView
         self.view._image = None
 
         self.pulse_worker._image_proc = ImageProcessor()
         self.pulse_worker._image_roi = ImageRoiPulse()
+
+    def tearDown(self):
+        self.image_tool.close()
 
     def testGeneral(self):
         self.assertTrue(self.image_tool._pulse_resolved)
@@ -922,12 +926,24 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc.update()
         self.assertFalse(fft.logrithmic)
 
+        with patch.object(ctrl_widget, "registerTransformType") as mocked_register:
+            with patch.object(ctrl_widget, "unregisterTransformType") as mocked_unregister:
+                ctrl_widget.updateMetaData()
+                mocked_register.assert_called_once()
+                mocked_unregister.assert_not_called()
+
         # switch back to "overview"
         tab.tabBarClicked.emit(TabIndex.OVERVIEW)
         proc.update()
         # test unregistration
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)
         tab.setCurrentIndex(TabIndex.OVERVIEW)
+
+        with patch.object(ctrl_widget, "registerTransformType") as mocked_register:
+            with patch.object(ctrl_widget, "unregisterTransformType") as mocked_unregister:
+                ctrl_widget.updateMetaData()
+                mocked_register.assert_not_called()
+                mocked_unregister.assert_called_once()
 
         # test loading meta data
         mediator = ctrl_widget._mediator
@@ -944,10 +960,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("3", ed_widget.kernel_size_sp.text())
         self.assertEqual("2.10", ed_widget.sigma_sp.text())
         self.assertEqual("20, 40", ed_widget.threshold_le.text())
-
-        with patch.object(mediator, "onItTransformTypeChange") as mocked:
-            ctrl_widget.updateMetaData()
-            mocked.assert_not_called()
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
@@ -1020,6 +1032,10 @@ class TestImageToolTs(unittest.TestCase):
                                                require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
+        self.image_tool.show()
+
+    def tearDown(self):
+        self.image_tool.close()
 
     def testGeneral(self):
         self.assertFalse(self.image_tool._pulse_resolved)

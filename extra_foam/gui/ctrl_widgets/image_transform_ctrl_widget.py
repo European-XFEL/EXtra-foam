@@ -128,9 +128,6 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         self._opt_tab.currentChanged.connect(
             lambda x: mediator.onItTransformTypeChange(
                 self._opt_index_map[x]))
-        # initialize here since updateMetaData does not initialize it
-        self._mediator.onItTransformTypeChange(
-            ImageTransformType.UNDEFINED)
 
         fft = self._fourier_transform
         fft.logrithmic_cb.toggled.connect(mediator.onItFftLogrithmicScaleChange)
@@ -146,7 +143,10 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         self._ma_window_le.returnPressed.emit()
 
-        # do not update transform type since it is not an "input"
+        if self.isVisible():
+            self.registerTransformType()
+        else:
+            self.unregisterTransformType()
 
         fft = self._fourier_transform
         fft.logrithmic_cb.toggled.emit(fft.logrithmic_cb.isChecked())
