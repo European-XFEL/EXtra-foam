@@ -28,13 +28,13 @@ static constexpr auto nan = std::numeric_limits<double>::quiet_NaN();
 
 TEST(TestAzimuthalIntegrate, TestGeneral)
 {
-  xt::xtensor<double, 2> src = xt::ones<double>({6, 8});
+  xt::xtensor<double, 2> src = xt::arange(1024).reshape({16, 128});
 
-  double distance = 1.;
+  double distance = 0.2;
   double pixel1 = 1e-4;
   double pixel2 = 2e-4;
-  double poni1 = 2 * pixel1;
-  double poni2 = 4 * pixel2;
+  double poni1 = -6 * pixel1;
+  double poni2 = 130 * pixel2;
   double wavelength = 1e-10;
   size_t npt = 10;
 

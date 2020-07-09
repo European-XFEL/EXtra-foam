@@ -21,21 +21,26 @@ class TestAzimuthalIntegrationMisc(unittest.TestCase):
 
 class TestAzimuthalIntegrator(unittest.TestCase):
     def testGeneral(self):
-        img = np.ones((10, 10), dtype=float)
+        img = np.arange(1024).reshape((16, 64)).astype(np.float)
 
-        distance = 1.
+        distance = 0.2
         pixel1, pixel2 = 1e-4, 2e-4
-        poni1, poni2 = 2 * pixel1, 4 * pixel2
+        poni1, poni2 = -6 * pixel1, 130 * pixel2
         wavelength = 1e-10
 
         npt = 10
 
-        pyfai_integrator = PyfaiAzimuthalIntegrator(
-            dist=distance, poni1=poni1, poni2=poni2, pixel1=pixel1, pixel2=pixel2,
-            wavelength=wavelength)
-        q_gt, s_gt = pyfai_integrator.integrate1d(img, npt=npt, correctSolidAngle=True)
-
+        # FIXME: how to test the result?
         integrator = AzimuthalIntegrator(
             dist=distance, poni1=poni1, poni2=poni2, pixel1=pixel1, pixel2=pixel2,
             wavelength=wavelength)
         q, s = integrator.integrate1d(img, npt=npt)
+        q *= 1e-10  # 1/m -> 1/A
+
+        pyfai_integrator = PyfaiAzimuthalIntegrator(
+            dist=distance, poni1=poni1, poni2=poni2, pixel1=pixel1, pixel2=pixel2,
+            wavelength=wavelength)
+        q_gt, s_gt = pyfai_integrator.integrate1d(img,
+                                                  npt=npt,
+                                                  correctSolidAngle=True,
+                                                  unit="q_A^-1")

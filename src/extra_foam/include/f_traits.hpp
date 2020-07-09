@@ -20,6 +20,12 @@
 namespace foam
 {
 
+template<typename D>
+struct IsExpression : std::false_type {};
+
+template<typename D>
+struct IsExpression<xt::xexpression<D>> : std::true_type {};
+
 template<typename T>
 struct IsArray : std::false_type {};
 
@@ -71,11 +77,16 @@ struct IsModulesVector<std::vector<xt::xtensor<T, 3, L>>> : std::true_type {};
 template<typename E, template<typename> class C>
 using EnableIf = std::enable_if_t<C<E>::value, bool>;
 
-template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-using ReducedVectorType = decltype(xt::eval(xt::sum<typename std::decay_t<E>::value_type>(std::declval<E>(), {0})));
+template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImage> = false>
+using ReducedVectorType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
+                                                                       typename std::decay_t<E>::value_type,
+                                                                       T>>(std::declval<E>(), {0})));
 
-template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
-using ReducedImageType = decltype(xt::eval(xt::sum<typename std::decay_t<E>::value_type>(std::declval<E>(), {0})));
-}
+template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImageArray> = false>
+using ReducedImageType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
+                                                                      typename std::decay_t<E>::value_type,
+                                                                      T>>(std::declval<E>(), {0})));
+
+} // foam
 
 #endif //EXTRA_FOAM_FOAM_TRAITS_H

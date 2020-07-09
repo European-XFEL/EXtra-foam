@@ -17,7 +17,7 @@
 #include <xtensor/xview.hpp>
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xfixed.hpp>
-#include <xtensor/xhistogram.hpp>
+#include <xtensor/xsort.hpp>
 
 #include "f_traits.hpp"
 
@@ -31,15 +31,17 @@ namespace
 template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
 auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixel2, size_t npt)
 {
-  using value_type = typename std::decay_t<E>::value_type;
-  using vector_type = ReducedVectorType<E>;
+  using value_type = std::conditional_t<std::is_floating_point<typename std::decay_t<E>::value_type>::value,
+                                        typename std::decay_t<E>::value_type,
+                                        double>;
+  using vector_type = ReducedVectorType<E, value_type>;
 
   auto shape = src.shape();
 
-  vector_type radial = xt::zeros<value_type>({src.size()});
+  vector_type dists = xt::zeros<value_type>({src.size()});
   vector_type weights = xt::zeros<value_type>({src.size()});
 
-  size_t count = 0;
+  size_t index = 0;
   for (int i = 0; i < static_cast<int>(shape[0]); ++i)
   {
     for (int j = 0; j < static_cast<int>(shape[1]); ++j)
@@ -47,17 +49,36 @@ auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixe
       if (std::isnan(src(i, j))) continue;
       value_type dx = j * pixel2 - poni2;
       value_type dy = i * pixel1 - poni1;
-      radial(count) = std::sqrt(dx * dx + dy * dy);
-      weights(count++) = src(i, j);
+      dists(index) = std::sqrt(dx * dx + dy * dy);
+      weights(index++) = src(i, j);
     }
   }
 
-  auto hist = xt::histogram(radial, npt, weights);
-  auto bin_counts = xt::histogram(radial, npt);
-  auto edges = xt::histogram_bin_edges(radial, npt);
-  vector_type centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
+  // do histogram
 
-  return std::pair<vector_type, vector_type>({centers, hist / bin_counts});
+  std::array<value_type, 2> bounds;
+  bounds = xt::minmax(dists)();
+  value_type lb = bounds[0];
+  value_type ub = bounds[1];
+  vector_type edges = xt::linspace<value_type>(lb, ub, npt + 1);
+  vector_type hist = xt::zeros<value_type>({ npt });
+  vector_type counts = xt::zeros<value_type>({ npt });
+
+  value_type norm = 1. / (ub - lb);
+  for (size_t i = 0; i < dists.size(); ++i)
+  {
+    auto v = dists(i);
+    if (v == 0) continue;
+
+    value_type frac = (v - lb) * norm;
+    size_t i_bin = npt * frac;
+    hist(i_bin) += weights(i);
+    counts(i_bin) += 1;
+  }
+
+  auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
+
+  return std::make_pair<vector_type, vector_type>(centers, hist / counts);
 }
 
 } //namespace
