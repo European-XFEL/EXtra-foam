@@ -36,10 +36,10 @@ PYBIND11_MODULE(azimuthal_integrator, m)
 #define AZIMUTHAL_INTEGRATE1D(DTYPE)                                                                 \
   cls.def("integrate1d", (std::pair<foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>,                 \
                                     foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                 \
-                          (Integrator::*)(const xt::pytensor<DTYPE, 2>&, size_t,                     \
+                          (Integrator::*)(const xt::pytensor<DTYPE, 2>&, size_t, size_t,             \
                                           foam::AzimuthalIntegrationMethod) const)                   \
        &Integrator::integrate1d<const xt::pytensor<DTYPE, 2>&>,                                      \
-       py::arg("src").noconvert(), py::arg("npt").noconvert(),                                       \
+       py::arg("src").noconvert(), py::arg("npt").noconvert(), py::arg("min_count").noconvert()=1,   \
        py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
 
   AZIMUTHAL_INTEGRATE1D(double)

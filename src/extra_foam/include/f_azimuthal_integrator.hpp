@@ -29,7 +29,7 @@ namespace
 {
 
 template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixel2, size_t npt)
+auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixel2, size_t npt, size_t min_count=1)
 {
   using value_type = std::conditional_t<std::is_floating_point<typename std::decay_t<E>::value_type>::value,
                                         typename std::decay_t<E>::value_type,
@@ -76,6 +76,16 @@ auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixe
     counts(i_bin) += 1;
   }
 
+  // thresholding
+
+  if (min_count > 1)
+  {
+    for (size_t i = 0; i < npt; ++i)
+    {
+      if (counts(i) < min_count) hist(i) = 0;
+    }
+  }
+
   auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
 
   return std::make_pair<vector_type, vector_type>(centers, hist / counts);
@@ -119,10 +129,11 @@ public:
    *
    * @param src: source image or an array of images.
    * @param npt: number of integration points.
+   * @param min_count: minimum number of pixels required.
    * @return (q, s): (momentum transfer, scattering)
    */
   template<typename E>
-  auto integrate1d(E&& src, size_t npt,
+  auto integrate1d(E&& src, size_t npt, size_t min_count=1,
                    AzimuthalIntegrationMethod method=AzimuthalIntegrationMethod::HISTOGRAM) const;
 };
 
@@ -145,7 +156,10 @@ AzimuthalIntegrator::AzimuthalIntegrator(double dist,
 }
 
 template<typename E>
-auto AzimuthalIntegrator::integrate1d(E&& src, size_t npt, AzimuthalIntegrationMethod method) const
+auto AzimuthalIntegrator::integrate1d(E&& src,
+                                      size_t npt,
+                                      size_t min_count,
+                                      AzimuthalIntegrationMethod method) const
 {
   if (npt == 0) npt = 1;
 
@@ -153,7 +167,7 @@ auto AzimuthalIntegrator::integrate1d(E&& src, size_t npt, AzimuthalIntegrationM
   {
     case AzimuthalIntegrationMethod::HISTOGRAM:
     {
-      auto ret = histogramAI(std::forward<E>(src), poni_[0], poni_[1], pixel_[0], pixel_[1], npt);
+      auto ret = histogramAI(std::forward<E>(src), poni_[0], poni_[1], pixel_[0], pixel_[1], npt, min_count);
       distance2q(ret.first);
       return ret;
     }
