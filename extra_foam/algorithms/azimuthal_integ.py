@@ -10,7 +10,7 @@ All rights reserved.
 import numpy as np
 from scipy import constants
 
-from .azimuthal_integrator import AzimuthalIntegrator
+from .azimuthal_integrator import AzimuthalIntegrator, ConcentricRingFinder
 
 
 # Plank-einstein relation (E=hv)

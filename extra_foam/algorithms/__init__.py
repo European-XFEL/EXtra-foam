@@ -21,7 +21,9 @@ from .data_structures import (
     OrderedSet, Stack, SimpleSequence, SimpleVectorSequence,
     SimplePairSequence, OneWayAccuPairSequence,
 )
-from .azimuthal_integ import compute_q, energy2wavelength
+from .azimuthal_integ import (
+    compute_q, energy2wavelength, AzimuthalIntegrator, ConcentricRingFinder,
+)
 
 from .helpers import intersection
 

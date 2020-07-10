@@ -15,15 +15,8 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(azimuthal_integrator, m)
+void declareAzimuthalIntegrator(py::module& m)
 {
-  m.doc() = "Azimuthal integration.";
-
-  xt::import_numpy();
-
-  py::enum_<foam::AzimuthalIntegrationMethod>(m, "AzimuthalIntegrationMethod", py::arithmetic())
-    .value("Histogram", foam::AzimuthalIntegrationMethod::HISTOGRAM);
-
   using Integrator = foam::AzimuthalIntegrator;
 
   std::string py_class_name = "AzimuthalIntegrator";
@@ -38,10 +31,46 @@ PYBIND11_MODULE(azimuthal_integrator, m)
                                     foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                 \
                           (Integrator::*)(const xt::pytensor<DTYPE, 2>&, size_t, size_t,             \
                                           foam::AzimuthalIntegrationMethod) const)                   \
-       &Integrator::integrate1d<const xt::pytensor<DTYPE, 2>&>,                                      \
-       py::arg("src").noconvert(), py::arg("npt").noconvert(), py::arg("min_count").noconvert()=1,   \
-       py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
+     &Integrator::integrate1d<const xt::pytensor<DTYPE, 2>&>,                                        \
+     py::arg("src").noconvert(), py::arg("npt").noconvert(), py::arg("min_count").noconvert()=1,     \
+     py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
 
   AZIMUTHAL_INTEGRATE1D(double)
   AZIMUTHAL_INTEGRATE1D(float)
+}
+
+void declareConcentricRingFinder(py::module& m)
+{
+  using Finder = foam::ConcentricRingFinder;
+
+  std::string py_class_name = "ConcentricRingFinder";
+  py::class_<Finder> cls(m, py_class_name.c_str());
+
+  cls.def(py::init<double, double>(), py::arg("pixel_x"), py::arg("pixel_y"));
+
+#define CONCENTRIC_RING_FINDER_SEARCH(DTYPE)                                                            \
+  cls.def("search", (std::array<double, 2>                                                              \
+                     (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t, size_t) const)  \
+     &Finder::search<const xt::pytensor<DTYPE, 2>&>,                                                    \
+     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"),                                        \
+     py::arg("n_grids").noconvert() = 128, py::arg("min_cunt").noconvert() = 1);
+
+  CONCENTRIC_RING_FINDER_SEARCH(double)
+  CONCENTRIC_RING_FINDER_SEARCH(float)
+}
+
+
+PYBIND11_MODULE(azimuthal_integrator, m)
+{
+  m.doc() = "Azimuthal integration.";
+
+  xt::import_numpy();
+
+  py::enum_<foam::AzimuthalIntegrationMethod>(m, "AzimuthalIntegrationMethod", py::arithmetic())
+    .value("Histogram", foam::AzimuthalIntegrationMethod::HISTOGRAM);
+
+  declareAzimuthalIntegrator(m);
+
+  declareConcentricRingFinder(m);
+
 }

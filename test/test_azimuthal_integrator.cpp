@@ -26,7 +26,7 @@ using ::testing::ElementsAre;
 
 static constexpr auto nan = std::numeric_limits<double>::quiet_NaN();
 
-TEST(TestAzimuthalIntegrate, TestGeneral)
+TEST(TestAzimuthalIntegrator, TestIntegrator1D)
 {
   xt::xtensor<double, 2> src = xt::arange(1024).reshape({16, 128});
 
@@ -43,6 +43,19 @@ TEST(TestAzimuthalIntegrate, TestGeneral)
   std::cout << ret.first << "\n" << ret.second;
 }
 
+TEST(TestConcentricRingFinder, TestGeneral)
+{
+  xt::xtensor<double, 2> src = xt::ones<double>({16, 128});
+
+  double pixel1 = 1e-4;
+  double pixel2 = 2e-4;
+  double cx = 128;
+  double cy = -6;
+
+  ConcentricRingFinder finder(pixel2, pixel1);
+  auto ret = finder.search(src, cx, cy, 32);
+  std::cout << ret[0] << ", " << ret[1];
+}
 
 } //test
 } //foam
