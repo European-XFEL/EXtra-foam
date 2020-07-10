@@ -77,7 +77,8 @@ class ImageTransformProcessor(_BaseProcessor):
 
     @profiler("Image transform processor")
     def process(self, data):
-        if self._transform_type == ImageTransformType.UNDEFINED:
+        transform_type = self._transform_type
+        if transform_type == ImageTransformType.UNDEFINED:
             return
 
         processed = data['processed']
@@ -86,13 +87,14 @@ class ImageTransformProcessor(_BaseProcessor):
         self._masked_ma = processed.image.masked_mean
         masked_ma = self._masked_ma
 
-        transformed.origin = masked_ma
-        if self._transform_type == ImageTransformType.FOURIER_TRANSFORM:
+        transformed.original = masked_ma
+        if transform_type == ImageTransformType.CONCENTRIC_RINGS:
+            transformed.transformed = masked_ma
+        elif transform_type == ImageTransformType.FOURIER_TRANSFORM:
             fft = self._fft
             transformed.transformed = fourier_transform_2d(
                 masked_ma, logrithmic=fft.logrithmic)
-
-        elif self._transform_type == ImageTransformType.EDGE_DETECTION:
+        elif transform_type == ImageTransformType.EDGE_DETECTION:
             ed = self._ed
             transformed.transformed = edge_detect(
                 masked_ma,

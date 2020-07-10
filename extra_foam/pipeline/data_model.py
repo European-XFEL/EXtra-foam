@@ -450,10 +450,10 @@ class ImageData:
                  "reference", "transformed"]
 
     class _Transformed:
-        __slots__ = ['origin', 'transformed']
+        __slots__ = ['original', 'transformed']
 
         def __init__(self):
-            self.origin = None
+            self.original = None
             self.transformed = None
 
     def __init__(self):

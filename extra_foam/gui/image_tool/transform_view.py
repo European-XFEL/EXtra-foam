@@ -7,11 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtWidgets import QGridLayout
+from PyQt5.QtCore import pyqtSlot, Qt
+from PyQt5.QtWidgets import QVBoxLayout, QSplitter
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
+from ..misc_widgets import FColor
 from ..ctrl_widgets import ImageTransformCtrlWidget
-from ..plot_widgets import ImageViewF
+from ..plot_widgets import ImageViewF, RingItem
 
 
 @create_imagetool_view(ImageTransformCtrlWidget)
@@ -25,31 +27,38 @@ class TransformView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._corrected = ImageViewF(hide_axis=False)
-        self._corrected.setTitle("Origin")
+        self._corrected.setTitle("Original")
         self._transformed = ImageViewF(hide_axis=False)
         self._transformed.setTitle("Transformed")
+
+        self._ring_item = RingItem(pen=FColor.mkPen('g', alpha=180, width=10))
+        self._transformed.addItem(self._ring_item)
 
         self.initUI()
         self.initConnections()
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
-        layout.addWidget(self._corrected, 0, 0)
-        layout.addWidget(self._transformed, 0, 1)
-        layout.addWidget(self._ctrl_widget, 1, 0, 1, 2)
+        view_splitter = QSplitter(Qt.Horizontal)
+        view_splitter.addWidget(self._corrected)
+        view_splitter.addWidget(self._transformed)
+
+        layout = QVBoxLayout()
+        layout.addWidget(view_splitter)
+        layout.addWidget(self._ctrl_widget)
         layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.extract_concentric_rings_sgn.connect(
+            self._extractConcentricRings)
 
     def updateF(self, data, auto_update):
         """Override."""
         transformed = data.image.transformed
         if auto_update or self._corrected.image is None:
-            self._corrected.setImage(transformed.origin)
+            self._corrected.setImage(transformed.original)
             self._transformed.setImage(transformed.transformed)
 
     def onActivated(self):
@@ -60,8 +69,12 @@ class TransformView(_AbstractImageToolView):
         """Override."""
         self._ctrl_widget.unregisterTransformType()
 
-    def _extractFeature(self):
-        marked, transformed = self._ctrl_widget.extractFeature(
-            self._corrected.image)
-        self._corrected.setImage(marked)
-        self._transformed.setImage(transformed)
+    @pyqtSlot()
+    def _extractConcentricRings(self):
+        img = self._transformed.image
+        if img is None:
+            return
+
+        cx, cy, radials = self._ctrl_widget.extractFeature(
+            self._transformed.image)
+        self._ring_item.setGeometry(cx, cy, radials)

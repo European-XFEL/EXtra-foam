@@ -32,7 +32,7 @@ void declareAzimuthalIntegrator(py::module& m)
                           (Integrator::*)(const xt::pytensor<DTYPE, 2>&, size_t, size_t,             \
                                           foam::AzimuthalIntegrationMethod) const)                   \
      &Integrator::integrate1d<const xt::pytensor<DTYPE, 2>&>,                                        \
-     py::arg("src").noconvert(), py::arg("npt").noconvert(), py::arg("min_count").noconvert()=1,     \
+     py::arg("src").noconvert(), py::arg("npt"), py::arg("min_count")=1,                             \
      py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
 
   AZIMUTHAL_INTEGRATE1D(double)
@@ -53,10 +53,22 @@ void declareConcentricRingFinder(py::module& m)
                      (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t, size_t) const)  \
      &Finder::search<const xt::pytensor<DTYPE, 2>&>,                                                    \
      py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"),                                        \
-     py::arg("n_grids").noconvert() = 128, py::arg("min_cunt").noconvert() = 1);
+     py::arg("n_grids") = 128, py::arg("min_count") = 1);
 
   CONCENTRIC_RING_FINDER_SEARCH(double)
   CONCENTRIC_RING_FINDER_SEARCH(float)
+
+#define CONCENTRIC_RING_FINDER_INTEGRATE(DTYPE)                                                         \
+  cls.def("integrate", (std::pair<foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>,                      \
+                                  foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                      \
+                        (Finder::*)(const xt::pytensor<DTYPE, 2>&,                                      \
+                                    double, double, size_t, size_t) const)                              \
+     &Finder::integrate<const xt::pytensor<DTYPE, 2>&>,                                                 \
+     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"),                                        \
+     py::arg("npt") = 128, py::arg("min_count") = 1);
+
+  CONCENTRIC_RING_FINDER_INTEGRATE(double)
+  CONCENTRIC_RING_FINDER_INTEGRATE(float)
 }
 
 

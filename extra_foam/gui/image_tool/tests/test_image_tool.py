@@ -887,10 +887,12 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
 
         ctrl_widget = self.image_tool._transform_view._ctrl_widget
+        cr_widget = ctrl_widget._concentric_rings
         fft_widget = ctrl_widget._fourier_transform
         ed_widget = ctrl_widget._edge_detection
 
         proc = self.pulse_worker._image_transform_proc
+        cr = cr_widget  # offline
         fft = proc._fft
         ed = proc._ed
 
@@ -898,12 +900,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # also test only parameters of the activated transform type are updated
         proc.update()
         self.assertEqual(1, proc._ma_window)
-        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
+        self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, proc._transform_type)
         self.assertIsNone(ed.kernel_size)
         # fourier transform
+        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
+        proc.update()
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
         self.assertTrue(fft.logrithmic)
         # edge detection
-        ctrl_widget._opt_tab.setCurrentIndex(1)
+        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.EDGE_DETECTION))
         proc.update()
         self.assertEqual(ImageTransformType.EDGE_DETECTION, proc._transform_type)
         self.assertEqual(5, ed.kernel_size)
@@ -912,17 +917,27 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test setting new values
         ctrl_widget._ma_window_le.setText("10")
+        cr_widget.cx_le.setText("-10.1")
+        cr_widget.cy_le.setText("-10.2")
+        cr_widget.prominence_le.setText("99.3")
+        cr_widget.distance_le.setText("99")
+        cr_widget.min_count_le.setText("999")
         fft_widget.logrithmic_cb.setChecked(False)
         ed_widget.kernel_size_sp.setValue(3)
         ed_widget.sigma_sp.setValue(0.5)
         ed_widget.threshold_le.setText("-1, 1")
         proc.update()
+        self.assertEqual(-10.1, cr._cx)
+        self.assertEqual(-10.2, cr._cy)
+        self.assertEqual(99.3, cr._prominence)
+        self.assertEqual(99, cr._distance)
+        self.assertEqual(999, cr._min_count)
         self.assertEqual(10, proc._ma_window)
         self.assertTrue(fft.logrithmic)
         self.assertEqual(3, ed.kernel_size)
         self.assertEqual(0.5, ed.sigma)
         self.assertEqual((-1, 1), ed.threshold)
-        ctrl_widget._opt_tab.setCurrentIndex(0)
+        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
         proc.update()
         self.assertFalse(fft.logrithmic)
 
@@ -947,6 +962,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test loading meta data
         mediator = ctrl_widget._mediator
+        mediator.onItCrCxChange("11.1")
+        mediator.onItCrCyChange("22.2")
+        mediator.onItCrProminenceChange("33.3")
+        mediator.onItCrDistanceChange("444")
+        mediator.onItCrMinCountChange("555")
         mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM)
         mediator.onItMaWindowChange("100")
         mediator.onItFftLogrithmicScaleChange(True)
@@ -956,6 +976,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         ctrl_widget.loadMetaData()
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)  # unchanged
         self.assertEqual("100", ctrl_widget._ma_window_le.text())
+        self.assertEqual("11.1", cr_widget.cx_le.text())
+        self.assertEqual("22.2", cr_widget.cy_le.text())
+        self.assertEqual("33.3", cr_widget.prominence_le.text())
+        self.assertEqual("444", cr_widget.distance_le.text())
+        self.assertEqual("555", cr_widget.min_count_le.text())
         self.assertTrue(fft_widget.logrithmic_cb.isChecked())
         self.assertEqual("3", ed_widget.kernel_size_sp.text())
         self.assertEqual("2.10", ed_widget.sigma_sp.text())

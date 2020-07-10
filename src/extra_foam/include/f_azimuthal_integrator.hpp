@@ -87,7 +87,7 @@ auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixe
   {
     for (size_t i = 0; i < npt; ++i)
     {
-      if (counts(i) < min_count) hist(i) = 0;
+      if (counts(i) < min_count) hist(i) = value_type(0);
     }
   }
 
@@ -97,7 +97,7 @@ auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixe
 
   for (size_t i = 0; i < npt; ++i)
   {
-    if (counts(i) == 0) hist(i) = 0;
+    if (counts(i) == 0) hist(i) = value_type(0);
     else
       hist(i) /= counts(i);
   }
@@ -221,6 +221,9 @@ public:
   template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
   std::array<double, 2> search(E&& src, double cx0, double cy0,
                                size_t n_grids=128, size_t min_count=1) const;
+
+  template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
+  auto integrate(E&& src, double cx, double cy, size_t npt, size_t min_count=1) const;
 };
 
 ConcentricRingFinder::ConcentricRingFinder(double pixel_x, double pixel_y)
@@ -239,8 +242,8 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
   double max_s = -1;
 
   int initial_space = 5;
-  tbb::mutex mtx;
 #if defined(FOAM_USE_TBB)
+  tbb::mutex mtx;
   tbb::parallel_for(tbb::blocked_range<int>(0, initial_space),
     [&src, cx0, cy0, n_grids, min_count, &cx_max, &cy_max, &max_s, initial_space, &mtx, this]
     (const tbb::blocked_range<int> &block)
@@ -263,16 +266,19 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
           std::array<double, 2> bounds = xt::minmax(xt::xtensor<double, 1>(ret.second))();
           double curr_max = bounds[1];
 
+#if defined(FOAM_USE_TBB)
           {
             tbb::mutex::scoped_lock lock(mtx);
+#endif
             if (curr_max > max_s)
             {
               max_s = curr_max;
               cx_max = cx;
               cy_max = cy;
             }
+#if defined(FOAM_USE_TBB)
           }
-
+#endif
         }
       }
 #if defined(FOAM_USE_TBB)
@@ -281,6 +287,13 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
 #endif
 
   return {cx_max, cy_max};
+}
+
+template<typename E, EnableIf<std::decay_t<E>, IsImage>>
+auto ConcentricRingFinder::integrate(E&& src, double cx, double cy, size_t npt, size_t min_count) const
+{
+  // FIXME: what if pixel x != pixel y
+  return histogramAI(std::forward<E>(src), cy, cx, 1., 1., npt, min_count);
 }
 
 } //foam

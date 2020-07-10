@@ -3,6 +3,8 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 import numpy as np
 
+from PyQt5.QtTest import QTest
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget
 
 from extra_foam.pipeline.tests import _TestDataMixin
@@ -10,6 +12,8 @@ from extra_foam.pipeline.data_model import ProcessedData
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool.corrected_view import CorrectedView
 from extra_foam.gui.image_tool.azimuthal_integ_1d_view import AzimuthalInteg1dView
+from extra_foam.gui.image_tool.transform_view import TransformView, ImageTransformCtrlWidget
+from extra_foam.config import ImageTransformType
 from extra_foam.logger import logger
 
 
@@ -20,12 +24,19 @@ logger.setLevel('CRITICAL')
 
 class TestViews(_TestDataMixin, unittest.TestCase):
 
+    class MockedImageToolWindow(QMainWindow):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._ctrl_widgets = []
+
+        def createCtrlWidget(self, widget_class, *args, **kwargs):
+            widget = widget_class(*args, pulse_resolved=True, require_geometry=True, **kwargs)
+            self._ctrl_widgets.append(widget)
+            return widget
+
     @classmethod
     def setUpClass(cls):
-        cls.gui = QMainWindow()  # dummy MainGUI
-        widget = QWidget()
-        widget.setRois = MagicMock()
-        cls.gui.createCtrlWidget = MagicMock(return_value=widget)
+        cls.gui = cls.MockedImageToolWindow()
 
     @classmethod
     def tearDownClass(cls):
@@ -36,23 +47,25 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         # pulse-resolved
 
         view = CorrectedView(pulse_resolved=True, parent=self.gui)
+
         # empty data
         data = ProcessedData(1)
-        view._corrected.updateF(data)
-        view._roi_hist.updateF(data)
+        view.updateF(data, True)
+
         # non-empty data
         data = self.processed_data(1001, (2, 2), roi_histogram=True)
-        view._roi_hist.updateF(data)
+        view.updateF(data, True)
 
         # train-resolved
 
         view = CorrectedView(pulse_resolved=False, parent=self.gui)
         # empty data
         data = ProcessedData(1)
-        view._roi_hist.updateF(data)
+        view.updateF(data, True)
+
         # non-empty data
         data = self.processed_data(1001, (2, 2), roi_histogram=True)
-        view._roi_hist.updateF(data)
+        view.updateF(data, True)
 
     def testAzimuthalIntegrationView(self):
 
@@ -61,16 +74,58 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         view = AzimuthalInteg1dView(pulse_resolved=True, parent=self.gui)
         # empty data
         data = ProcessedData(1)
-        view._corrected.updateF(data)
-        view._azimuthal_integ_1d_curve.updateF(data)
-        view._q_view.updateF(data)
+        view.updateF(data, True)
 
         # non-empty data
         data = self.processed_data(1001, (2, 2))
         data.ai.x = np.arange(10)
         data.ai.y = np.arange(10)
-        view._azimuthal_integ_1d_curve.updateF(data)
+        view.updateF(data, True)
         data.ai.peaks = np.arange(10)
         with patch.object(view._azimuthal_integ_1d_curve, "setAnnotationList") as mocked:
             view._azimuthal_integ_1d_curve.updateF(data)
             mocked.assert_called_once()
+
+    def testTransformedView(self):
+
+        view = TransformView(pulse_resolved=True, parent=self.gui)
+
+        # ------------------------------
+        # test concentric ring detection
+        # ------------------------------
+
+        view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.CONCENTRIC_RINGS))
+
+        ctrl_widget = view._ctrl_widget._concentric_rings
+
+        with patch.object(ctrl_widget, "extractFeature") as mockedExtractFeature:
+            with patch.object(view._ring_item, "setGeometry") as mockedSetGeometry:
+
+                data = self.processed_data(1001, (2, 2))
+
+                # empty data
+                view.updateF(data, True)
+                QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
+
+                # non-empty data
+                original = np.ones((4, 4))
+                transformed = 2 * original
+                data.image.transformed.original = original
+                data.image.transformed.transformed = transformed
+                view.updateF(data, True)
+
+                mockedExtractFeature.return_value = (1, 2, [50, 100])
+                QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
+                mockedExtractFeature.assert_called_once_with(transformed)
+                mockedSetGeometry.assert_called_once_with(1, 2, [50, 100])
+
+        # ------------------------------
+        # test fourier transform
+        # ------------------------------
+        view._ctrl_widget._opt_tab.currentChanged.disconnect()
+        view._ctrl_widget._opt_tab.setCurrentIndex(
+            int(ImageTransformType.FOURIER_TRANSFORM))
+
+        # empty data
+        data = self.processed_data(1001, (3, 3))
+        view.updateF(data, True)
