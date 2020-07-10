@@ -24,6 +24,27 @@ from extra_foam.algorithms import (
 )
 
 
+class _ConcentricRingsCtrlWidget(QWidget):
+    """Concentric rings detection control widget."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.cx0_le = SmartLineEdit("0")
+        self.cy0_le = SmartLineEdit("0")
+        self.search_btn = QPushButton("Search")
+
+        self.initUI()
+
+    def initUI(self):
+        layout = QHBoxLayout()
+        layout.addWidget(QLabel("Cx: "))
+        layout.addWidget(self.cx0_le)
+        layout.addWidget(QLabel("Cy: "))
+        layout.addWidget(self.cy0_le)
+        layout.addWidget(self.search_btn)
+        self.setLayout(layout)
+
+
 class _FourierTransformCtrlWidget(QWidget):
     """Fourier transform control widget."""
     def __init__(self, *args, **kwargs):
@@ -85,19 +106,17 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         validator.setBottom(1)
         self._ma_window_le.setValidator(validator)
 
+        self._concentric_rings = _ConcentricRingsCtrlWidget()
         self._fourier_transform = _FourierTransformCtrlWidget()
         self._edge_detection = _EdgeDetectionCtrlWidget()
 
-        self._opt_index_map = dict()
         self._opt_tab = QTabWidget()
+        self._opt_tab.addTab(self._concentric_rings, "Concentric rings")
         self._opt_tab.addTab(self._fourier_transform, "Fourier transform")
-        idx = 0
-        self._opt_index_map[idx] = ImageTransformType.FOURIER_TRANSFORM
         self._opt_tab.addTab(self._edge_detection, "Edge detection")
-        idx += 1
-        self._opt_index_map[idx] = ImageTransformType.EDGE_DETECTION
 
         self._non_reconfigurable_widgets = [
+            self._concentric_rings.search_btn,
         ]
 
         self.initUI()
@@ -127,7 +146,7 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
         self._opt_tab.currentChanged.connect(
             lambda x: mediator.onItTransformTypeChange(
-                self._opt_index_map[x]))
+                ImageTransformType(x)))
 
         fft = self._fourier_transform
         fft.logrithmic_cb.toggled.connect(mediator.onItFftLogrithmicScaleChange)
@@ -177,7 +196,7 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
     def registerTransformType(self):
         self._mediator.onItTransformTypeChange(
-            self._opt_index_map[self._opt_tab.currentIndex()])
+            ImageTransformType(self._opt_tab.currentIndex()))
 
     def unregisterTransformType(self):
         self._mediator.onItTransformTypeChange(

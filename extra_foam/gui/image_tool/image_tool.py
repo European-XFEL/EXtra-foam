@@ -121,7 +121,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         geom_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
         if not self._require_geometry:
             self._views_tab.setTabEnabled(geom_idx, False)
-        transform_idx = self._views_tab.addTab(self._transform_view, "Image transform")
+        transform_idx = self._views_tab.addTab(
+            self._transform_view, "Feature extraction")
 
         assert(corrected_tab_idx == self.TabIndex.OVERVIEW)
         assert(cali_idx == self.TabIndex.GAIN_OFFSET)

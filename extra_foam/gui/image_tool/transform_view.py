@@ -18,7 +18,7 @@ from ..plot_widgets import ImageViewF
 class TransformView(_AbstractImageToolView):
     """TransformView class.
 
-    Widget for image transform.
+    Widget for image transform and feature extraction.
     """
 
     def __init__(self, *args, **kwargs):
