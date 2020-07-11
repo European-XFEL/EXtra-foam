@@ -36,25 +36,37 @@ TEST(TestAzimuthalIntegrator, TestIntegrator1D)
   double poni1 = -6 * pixel1;
   double poni2 = 130 * pixel2;
   double wavelength = 1e-10;
-  size_t npt = 10;
-
   AzimuthalIntegrator itgt(distance, poni1, poni2, pixel1, pixel2, wavelength);
-  auto ret = itgt.integrate1d(src, npt);
-  std::cout << ret.first << "\n" << ret.second;
+
+  auto ret0 = itgt.integrate1d(src, 0);
+  auto ret1 = itgt.integrate1d(src, 1);
+  EXPECT_EQ(ret0, ret1);
+
+  auto ret10 = itgt.integrate1d(src, 10);
+  auto ret10_cut = itgt.integrate1d(src, 10, src.size());
+  EXPECT_EQ(ret10.first, ret10_cut.first);
+  EXPECT_THAT(ret10_cut.second, Each(Eq(0.)));
+
+  auto ret100 = itgt.integrate1d(src, 999);
+
+  // data has a single value
+  xt::xtensor<double, 2> src2 = xt::ones<double>({16, 128});
+  xt::arange(1024).reshape({16, 128});
 }
 
 TEST(TestConcentricRingFinder, TestGeneral)
 {
   xt::xtensor<double, 2> src = xt::ones<double>({16, 128});
 
-  double pixel1 = 1e-4;
-  double pixel2 = 2e-4;
+  double pixel_x = 2e-4;
+  double pixel_y = 1e-4;
   double cx = 128;
   double cy = -6;
+  size_t min_count = 32;
 
-  ConcentricRingFinder finder(pixel2, pixel1);
-  auto ret = finder.search(src, cx, cy, 32);
-  std::cout << ret[0] << ", " << ret[1];
+  ConcentricRingFinder finder(pixel_x, pixel_y);
+  finder.search(src, cx, cy, min_count);
+  finder.integrate(src, cx, cy, min_count);
 }
 
 } //test

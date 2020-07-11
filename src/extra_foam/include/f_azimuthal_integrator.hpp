@@ -22,7 +22,6 @@
 #include <xtensor/xview.hpp>
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xfixed.hpp>
-#include <xtensor/xsort.hpp>
 
 #include "f_traits.hpp"
 
@@ -75,8 +74,11 @@ auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixe
     auto v = dists(i);
     if (v == 0) continue;
 
-    value_type frac = (v - lb) * norm;
-    size_t i_bin = npt * frac;
+    size_t i_bin;
+    if ( v == ub ) i_bin = npt - 1;
+    else
+      i_bin = static_cast<size_t>(static_cast<value_type>(npt) * (v - lb) * norm);
+
     hist(i_bin) += weights(i);
     counts(i_bin) += 1;
   }
@@ -126,7 +128,7 @@ class AzimuthalIntegrator
   AzimuthalIntegrationMethod method_;
 
   /**
-   * Convert radials to q.
+   * Convert radial distances to q.
    *
    * q = 4 * pi * sin(theta) / lambda
    *
@@ -147,6 +149,8 @@ public:
    * @param src: source image.
    * @param npt: number of integration points.
    * @param min_count: minimum number of pixels required.
+   * @param method: azimuthal integration method.
+   *
    * @return (q, s): (momentum transfer, scattering)
    */
   template<typename E>
@@ -158,8 +162,8 @@ template<typename E>
 void AzimuthalIntegrator::distance2q(E& x) const
 {
   using value_type = typename std::decay_t<E>::value_type;
-  value_type c = 4 / wavelength_;
-  x = c * static_cast<value_type>(M_PI) / xt::sqrt(4 * dist_ * dist_ / (x * x) + 1);
+  x = static_cast<value_type>(4 / wavelength_) *
+      static_cast<value_type>(M_PI) / xt::sqrt(4 * dist_ * dist_ / (x * x) + 1);
 }
 
 AzimuthalIntegrator::AzimuthalIntegrator(double dist,
@@ -201,6 +205,9 @@ class ConcentricRingFinder
   double pixel_x_; // pixel size in x direction
   double pixel_y_; // pixel size in y direction
 
+  template<typename E>
+  size_t estimateNPoints(const E& src, double cx, double cy) const;
+
 public:
 
   ConcentricRingFinder(double pixel_x, double pixel_y);
@@ -213,17 +220,15 @@ public:
    * @param src: source image.
    * @param cx0: starting x position, in pixels.
    * @param cy0: starting y position, in pixels.
-   * @param n_grids: number of grids in searching.
    * @param min_count: minimum number of pixels required for each grid.
    *
-   * @return: the best (cx, cy) position in pixels.
+   * @return: the optimized (cx, cy) position in pixels.
    */
   template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-  std::array<double, 2> search(E&& src, double cx0, double cy0,
-                               size_t n_grids=128, size_t min_count=1) const;
+  std::array<double, 2> search(E&& src, double cx0, double cy0, size_t min_count=1) const;
 
   template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-  auto integrate(E&& src, double cx, double cy, size_t npt, size_t min_count=1) const;
+  auto integrate(const E& src, double cx, double cy, size_t min_count=1) const;
 };
 
 ConcentricRingFinder::ConcentricRingFinder(double pixel_x, double pixel_y)
@@ -231,21 +236,39 @@ ConcentricRingFinder::ConcentricRingFinder(double pixel_x, double pixel_y)
 {
 }
 
-template<typename E, EnableIf<std::decay_t<E>, IsImage>>
-std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double cy0,
-                                                   size_t n_grids, size_t min_count) const
+template<typename E>
+size_t ConcentricRingFinder::estimateNPoints(const E& src, double cx, double cy) const
 {
-  if (n_grids == 0) n_grids = 1;
+  auto shape = src.shape();
+  auto h = static_cast<double>(shape[0]);
+  auto w = static_cast<double>(shape[1]);
 
+  double dx = cx - w;
+  double dy = cy - h;
+  double max_dist = std::sqrt(cx * cx + cy * cy);
+  double dist = std::sqrt(dx * dx + cy * cy);
+  if (dist > max_dist) max_dist = dist;
+  dist = std::sqrt(cx * cx + dy * dy);
+  if (dist > max_dist) max_dist = dist;
+  dist = std::sqrt(dx * dx + dy * dy);
+  if (dist > max_dist) max_dist = dist;
+
+  return static_cast<size_t>(dist / 2);
+}
+
+template<typename E, EnableIf<std::decay_t<E>, IsImage>>
+std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double cy0, size_t min_count) const
+{
   double cx_max = cx0;
   double cy_max = cy0;
   double max_s = -1;
+  size_t npt = estimateNPoints(src, cx0, cy0);
 
-  int initial_space = 5;
+  int initial_space = 10;
 #if defined(FOAM_USE_TBB)
   tbb::mutex mtx;
-  tbb::parallel_for(tbb::blocked_range<int>(0, initial_space),
-    [&src, cx0, cy0, n_grids, min_count, &cx_max, &cy_max, &max_s, initial_space, &mtx, this]
+  tbb::parallel_for(tbb::blocked_range<int>(-initial_space, initial_space),
+    [&src, cx0, cy0, npt, min_count, &cx_max, &cy_max, &max_s, initial_space, &mtx, this]
     (const tbb::blocked_range<int> &block)
     {
       for(int i=block.begin(); i != block.end(); ++i)
@@ -261,7 +284,7 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
           double poni1 = cy * pixel_y_;
           double poni2 = cx * pixel_x_;
 
-          auto ret = histogramAI(std::forward<E>(src), poni1, poni2, pixel_y_, pixel_x_, n_grids, 10);
+          auto ret = histogramAI(src, poni1, poni2, pixel_y_, pixel_x_, npt, min_count);
           // strangely xt::minmax does support pytensor
           std::array<double, 2> bounds = xt::minmax(xt::xtensor<double, 1>(ret.second))();
           double curr_max = bounds[1];
@@ -290,10 +313,12 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
 }
 
 template<typename E, EnableIf<std::decay_t<E>, IsImage>>
-auto ConcentricRingFinder::integrate(E&& src, double cx, double cy, size_t npt, size_t min_count) const
+auto ConcentricRingFinder::integrate(const E& src, double cx, double cy, size_t min_count) const
 {
+  size_t npt = estimateNPoints(src, cx, cy);
+
   // FIXME: what if pixel x != pixel y
-  return histogramAI(std::forward<E>(src), cy, cx, 1., 1., npt, min_count);
+  return histogramAI(src, cy, cx, 1., 1., npt, min_count);
 }
 
 } //foam

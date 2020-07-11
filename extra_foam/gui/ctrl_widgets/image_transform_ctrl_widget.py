@@ -103,12 +103,9 @@ class _ConcentricRingsCtrlWidget(_FeatureExtractionMixIn, QWidget):
 
     def extractFeature(self, img):
         """Override."""
-        cx, cy = self._finder.search(img, self._cx, self._cy,
-                                     n_grids=512,
-                                     min_count=self._min_count)
-        s, q = self._finder.integrate(img, cx, cy,
-                                      npt=512,
-                                      min_count=self._min_count)
+        cx, cy = self._finder.search(
+            img, self._cx, self._cy, min_count=self._min_count)
+        s, q = self._finder.integrate(img, cx, cy, min_count=self._min_count)
         radials = s[find_peaks_1d(q,
                                   prominence=self._prominence,
                                   distance=self._distance)[0]]

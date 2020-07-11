@@ -50,10 +50,9 @@ void declareConcentricRingFinder(py::module& m)
 
 #define CONCENTRIC_RING_FINDER_SEARCH(DTYPE)                                                            \
   cls.def("search", (std::array<double, 2>                                                              \
-                     (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t, size_t) const)  \
+                     (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t) const)          \
      &Finder::search<const xt::pytensor<DTYPE, 2>&>,                                                    \
-     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"),                                        \
-     py::arg("n_grids") = 128, py::arg("min_count") = 1);
+     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"), py::arg("min_count") = 1);
 
   CONCENTRIC_RING_FINDER_SEARCH(double)
   CONCENTRIC_RING_FINDER_SEARCH(float)
@@ -61,11 +60,9 @@ void declareConcentricRingFinder(py::module& m)
 #define CONCENTRIC_RING_FINDER_INTEGRATE(DTYPE)                                                         \
   cls.def("integrate", (std::pair<foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>,                      \
                                   foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                      \
-                        (Finder::*)(const xt::pytensor<DTYPE, 2>&,                                      \
-                                    double, double, size_t, size_t) const)                              \
+                        (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t) const)       \
      &Finder::integrate<const xt::pytensor<DTYPE, 2>&>,                                                 \
-     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"),                                        \
-     py::arg("npt") = 128, py::arg("min_count") = 1);
+     py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"), py::arg("min_count") = 1);
 
   CONCENTRIC_RING_FINDER_INTEGRATE(double)
   CONCENTRIC_RING_FINDER_INTEGRATE(float)
