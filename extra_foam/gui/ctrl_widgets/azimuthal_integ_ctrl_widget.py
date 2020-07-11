@@ -60,11 +60,11 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         # coordinate of the point of normal incidence along the detector's
         # second dimension, in pixels, PONI2 in pyFAI
         self._cx_le = SmartLineEdit(str(0))
-        self._cx_le.setValidator(QIntValidator())
+        self._cx_le.setValidator(QDoubleValidator())
         # coordinate of the point of normal incidence along the detector's
         # first dimension, in pixels, PONI1 in pyFAI
         self._cy_le = SmartLineEdit(str(0))
-        self._cy_le.setValidator(QIntValidator())
+        self._cy_le.setValidator(QDoubleValidator())
 
         self._px_le = SmartLineEdit(str(config["PIXEL_SIZE"]))
         self._py_le = SmartLineEdit(str(config["PIXEL_SIZE"]))
@@ -190,9 +190,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             lambda x: mediator.onAiPixelSizeYChange(float(x)))
 
         self._cx_le.value_changed_sgn.connect(
-            lambda x: mediator.onAiIntegCenterXChange(int(x)))
+            lambda x: mediator.onAiIntegCenterXChange(float(x)))
         self._cy_le.value_changed_sgn.connect(
-            lambda x: mediator.onAiIntegCenterYChange(int(x)))
+            lambda x: mediator.onAiIntegCenterYChange(float(x)))
 
         self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)

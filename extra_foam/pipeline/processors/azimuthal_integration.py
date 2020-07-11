@@ -99,8 +99,8 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
         self._pixel1 = float(cfg['pixel_size_y'])
         self._pixel2 = float(cfg['pixel_size_x'])
-        self._poni1 = int(cfg['integ_center_y']) * self._pixel1
-        self._poni2 = int(cfg['integ_center_x']) * self._pixel2
+        self._poni1 = float(cfg['integ_center_y']) * self._pixel1
+        self._poni2 = float(cfg['integ_center_x']) * self._pixel2
 
         self._integ_method = cfg['integ_method']
         self._integ_range = self.str2tuple(cfg['integ_range'])
