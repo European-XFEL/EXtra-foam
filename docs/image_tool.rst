@@ -230,6 +230,8 @@ Reference image
     `.png` file due to the auto scaling of pixel values.
 
 
+.. _Azimuthal integration:
+
 Azimuthal integration 1D
 ------------------------
 
@@ -389,21 +391,78 @@ all modules (1, 2, 3, 6, 7, 8) are arranged in closewise order.
 |                                 | alternative to check the data from different modules.              |
 +---------------------------------+--------------------------------------------------------------------+
 
-.. _Image transform:
-
-Image Transform
----------------
-
-Here, one can visualize the original image and its transform side by side. The transformed image is
-only for visualization unless it is required by `Feature extract`_.
-
-The reason for separating `Image transform`_ and `Feature extract`_ is that the latter
-is usually an expensive operation and cannot be carried out in real-time. Nevertheless, it is sometimes
-not necessary to perform the feature extraction step in real time. For example, it is enough to
-find the center of concentric rings only once, using a moving averaged image.
+.. _Feature extraction:
 
 
-.. _Feature extract:
+Feature Extraction
+------------------
 
-Feature Extract
----------------
+Here, one can visualize the original image and its transform side by side. The transformed image can be
+further used for feature extraction. A feature extraction analysis will be activated
+only if the corresponding control widget tab is activated. *Not all transformed images support feature
+extraction and not all feature extractions require a prior image transform.*
+
++---------------------------------+--------------------------------------------------------------------+
+| Input                           | Description                                                        |
++=================================+====================================================================+
+| ``Moving average window``       | Use moving averaged image to suppress background noise and         |
+|                                 | enhance features.                                                  |
++---------------------------------+--------------------------------------------------------------------+
+
+Concentric rings
+""""""""""""""""
+
+Find the center of concentric rings in an image. It is typically used in finding the center for
+:ref:`Azimuthal integration`. It is only available when the data processing pipeline is not running,
+i.e., it cannot be used in real-time analysis.
+
++---------------------------------+--------------------------------------------------------------------+
+| Input                           | Description                                                        |
++=================================+====================================================================+
+| ``Cx``                          | Initial guess for the x coordinate of the center, in pixel.        |
++---------------------------------+--------------------------------------------------------------------+
+| ``Cy``                          | Initial guess for the y coordinate of the center, in pixel.        |
++---------------------------------+--------------------------------------------------------------------+
+| ``Prominence``                  | Prominence of the ring.                                            |
++---------------------------------+--------------------------------------------------------------------+
+| ``distance``                    | Minimum horizontal distance between neighbouring rings.            |
++---------------------------------+--------------------------------------------------------------------+
+| ``Min. count``                  | Minimum number of valid pixels required for the ring. The nan      |
+|                                 | pixels are excluded.                                               |
++---------------------------------+--------------------------------------------------------------------+
+| ``Detect``                      | Click to find the optimized center. If found, the number in ``Cx`` |
+|                                 | and ``Cy`` will be updated and the detected rings will be marked   |
+|                                 | in the transformed image.                                          |
++---------------------------------+--------------------------------------------------------------------+
+
+Fourier transform
+"""""""""""""""""
+
+.. _fft2: https://numpy.org/doc/stable/reference/generated/numpy.fft.fft2.html#numpy.fft.fft2
+
+Apply 2D discrete Fourier Transform to the original image using fft2_ implemented in numpy.
+
++---------------------------------+--------------------------------------------------------------------+
+| Input                           | Description                                                        |
++=================================+====================================================================+
+| ``Logrithmic scale``            | Check to display the transformed image in logrithmic scale.        |
++---------------------------------+--------------------------------------------------------------------+
+
+Edge detection
+""""""""""""""
+
+.. _Canny: https://docs.opencv.org/trunk/da/d22/tutorial_py_canny.html
+
+Detect edges in the original image and the transformed image is a binary image which shows the
+edge and non-edge pixels. **EXtra-foam** uses a similar algorithm to Canny_ edge detection to detect
+edges.
+
++---------------------------------+--------------------------------------------------------------------+
+| Input                           | Description                                                        |
++=================================+====================================================================+
+| ``Kernel size``                 | kernel size for Gaussian blur.                                     |
++---------------------------------+--------------------------------------------------------------------+
+| ``Sigma``                       | Gaussian kernel standard deviation.                                |
++---------------------------------+--------------------------------------------------------------------+
+| ``Threshold``                   | (first, second) thresholds for the hysteresis procedure.           |
++---------------------------------+--------------------------------------------------------------------+
