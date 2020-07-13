@@ -41,11 +41,11 @@ void declareAzimuthalIntegrator(py::module& m)
   AZIMUTHAL_INTEGRATE1D(int16_t)
 }
 
-void declareConcentricRingFinder(py::module& m)
+void declareConcentricRingsFinder(py::module& m)
 {
-  using Finder = foam::ConcentricRingFinder;
+  using Finder = foam::ConcentricRingsFinder;
 
-  std::string py_class_name = "ConcentricRingFinder";
+  std::string py_class_name = "ConcentricRingsFinder";
   py::class_<Finder> cls(m, py_class_name.c_str());
 
   cls.def(py::init<double, double>(), py::arg("pixel_x"), py::arg("pixel_y"));
@@ -85,6 +85,6 @@ PYBIND11_MODULE(azimuthal_integrator, m)
 
   declareAzimuthalIntegrator(m);
 
-  declareConcentricRingFinder(m);
+  declareConcentricRingsFinder(m);
 
 }

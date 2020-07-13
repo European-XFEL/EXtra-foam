@@ -199,7 +199,7 @@ auto AzimuthalIntegrator::integrate1d(E&& src,
 /**
  * class for finding the center of concentric rings in an image.
  */
-class ConcentricRingFinder
+class ConcentricRingsFinder
 {
   double pixel_x_; // pixel size in x direction
   double pixel_y_; // pixel size in y direction
@@ -209,9 +209,9 @@ class ConcentricRingFinder
 
 public:
 
-  ConcentricRingFinder(double pixel_x, double pixel_y);
+  ConcentricRingsFinder(double pixel_x, double pixel_y);
 
-  ~ConcentricRingFinder() = default;
+  ~ConcentricRingsFinder() = default;
 
   /**
    * Search for the center of concentric rings in an image.
@@ -230,13 +230,13 @@ public:
   auto integrate(const E& src, double cx, double cy, size_t min_count=1) const;
 };
 
-ConcentricRingFinder::ConcentricRingFinder(double pixel_x, double pixel_y)
+ConcentricRingsFinder::ConcentricRingsFinder(double pixel_x, double pixel_y)
   : pixel_x_(pixel_x), pixel_y_(pixel_y)
 {
 }
 
 template<typename E>
-size_t ConcentricRingFinder::estimateNPoints(const E& src, double cx, double cy) const
+size_t ConcentricRingsFinder::estimateNPoints(const E& src, double cx, double cy) const
 {
   auto shape = src.shape();
   auto h = static_cast<double>(shape[0]);
@@ -256,7 +256,7 @@ size_t ConcentricRingFinder::estimateNPoints(const E& src, double cx, double cy)
 }
 
 template<typename E, EnableIf<std::decay_t<E>, IsImage>>
-std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double cy0, size_t min_count) const
+std::array<double, 2> ConcentricRingsFinder::search(E&& src, double cx0, double cy0, size_t min_count) const
 {
   double cx_max = cx0;
   double cy_max = cy0;
@@ -285,8 +285,7 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
           double poni2 = cx * pixel_x_;
 
           auto ret = histogramAI(src, poni1, poni2, pixel_y_, pixel_x_, npt, min_count);
-          // returns std::array<value_type, 2> with value type the same as the
-          // value_type of ret.second
+
           std::array<double, 2> bounds = xt::minmax(ret.second)();
           double curr_max = bounds[1];
 
@@ -314,7 +313,7 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
 }
 
 template<typename E, EnableIf<std::decay_t<E>, IsImage>>
-auto ConcentricRingFinder::integrate(const E& src, double cx, double cy, size_t min_count) const
+auto ConcentricRingsFinder::integrate(const E& src, double cx, double cy, size_t min_count) const
 {
   size_t npt = estimateNPoints(src, cx, cy);
 

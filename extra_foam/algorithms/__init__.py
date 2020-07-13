@@ -22,7 +22,7 @@ from .data_structures import (
     SimplePairSequence, OneWayAccuPairSequence,
 )
 from .azimuthal_integ import (
-    compute_q, energy2wavelength, AzimuthalIntegrator, ConcentricRingFinder,
+    compute_q, energy2wavelength, AzimuthalIntegrator, ConcentricRingsFinder,
 )
 
 from .helpers import intersection

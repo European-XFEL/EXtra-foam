@@ -60,7 +60,7 @@ TEST(TestAzimuthalIntegrator, TestIntegrator1D)
   EXPECT_THAT(ret10.second, ret10_uint16.second);
 }
 
-TEST(TestConcentricRingFinder, TestGeneral)
+TEST(TestConcentricRingsFinder, TestGeneral)
 {
   xt::xtensor<double, 2> src = xt::ones<double>({16, 128});
 
@@ -70,7 +70,7 @@ TEST(TestConcentricRingFinder, TestGeneral)
   double cy = -6;
   size_t min_count = 32;
 
-  ConcentricRingFinder finder(pixel_x, pixel_y);
+  ConcentricRingsFinder finder(pixel_x, pixel_y);
   finder.search(src, cx, cy, min_count);
   finder.integrate(src, cx, cy, min_count);
 }

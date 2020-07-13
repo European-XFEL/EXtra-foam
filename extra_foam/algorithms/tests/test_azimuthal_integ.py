@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 from extra_foam.algorithms.azimuthal_integ import (
-    AzimuthalIntegrator, ConcentricRingFinder, energy2wavelength, compute_q
+    AzimuthalIntegrator, ConcentricRingsFinder, energy2wavelength, compute_q
 )
 
 
@@ -54,7 +54,7 @@ class TestConcentricRingsFinder:
         cx, cy = 10, 20
         min_count = 5
 
-        finder = ConcentricRingFinder(pixel_x, pixel_y)
+        finder = ConcentricRingsFinder(pixel_x, pixel_y)
         finder.search(img, cx, cy, min_count)
         finder.integrate(img, cx, cy, min_count)
 

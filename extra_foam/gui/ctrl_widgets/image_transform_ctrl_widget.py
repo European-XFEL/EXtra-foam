@@ -22,7 +22,7 @@ from ...config import config, ImageTransformType
 from ...database import Metadata as mt
 
 from extra_foam.algorithms import (
-    ConcentricRingFinder, find_peaks_1d
+    ConcentricRingsFinder, find_peaks_1d
 )
 
 
@@ -59,7 +59,7 @@ class _ConcentricRingsCtrlWidget(_FeatureExtractionMixIn, QWidget):
 
         pixel1 = config["PIXEL_SIZE"]  # y
         pixel2 = pixel1  # x
-        self._finder = ConcentricRingFinder(pixel2, pixel1)
+        self._finder = ConcentricRingsFinder(pixel2, pixel1)
 
         self.initUI()
         self.initConnections()
