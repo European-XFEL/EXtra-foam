@@ -13,7 +13,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from ..config import config, AnalysisType, PumpProbeMode
+from ..config import config, AnalysisType, PumpProbeMode, ImageTransformType
 
 from extra_foam.algorithms import (
     intersection, movingAvgImageData, mask_image_data, nanmean_image_data
@@ -438,6 +438,9 @@ class ImageData:
             will be masked as Nan/0, depending on the masking policy.
         mask (numpy.ndarray): overall mask for the average image.
             Shape = (y, x), dtype = np.bool
+        masked_mean_ma (numpy.ndarray): moving averaged masked_mean.
+        transform_type (ImageTransformType): image transform type.
+        transformed (numpy.ndarray): transformed image.
         reference (numpy.ndarray): reference image.
     """
 
@@ -447,14 +450,8 @@ class ImageData:
                  "gain_mean", "offset_mean",
                  "n_dark_pulses", "dark_mean", "dark_count",
                  "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
-                 "reference", "transformed"]
-
-    class _Transformed:
-        __slots__ = ['original', 'transformed']
-
-        def __init__(self):
-            self.original = None
-            self.transformed = None
+                 "reference",
+                 "masked_mean_ma", "transform_type", "transformed"]
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
@@ -479,8 +476,11 @@ class ImageData:
         self.threshold_mask = None
         self.mask = None
 
-        self.transformed = self._Transformed()
         self.reference = None
+
+        self.masked_mean_ma = None
+        self.transform_type = ImageTransformType.UNDEFINED
+        self.transformed = None
 
     @property
     def pixel_size(self):

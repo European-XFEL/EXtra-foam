@@ -175,6 +175,9 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
 
+        self._transform_view.transform_type_changed_sgn.connect(
+            self._onTransformViewTypeChanged)
+
     def onStart(self):
         for widget in self._ctrl_widgets:
             widget.onStart()
@@ -222,13 +225,13 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     @pyqtSlot()
     def onUpdateWidgets(self):
         """Used for updating manually."""
-        self.updateWidgets(True)
+        self._updateWidgets(True)
 
     def updateWidgetsF(self):
         """Override."""
-        self.updateWidgets(self._auto_update)
+        self._updateWidgets(self._auto_update)
 
-    def updateWidgets(self, auto_update):
+    def _updateWidgets(self, auto_update):
         if len(self._queue) == 0:
             return
         data = self._queue[0]
@@ -247,7 +250,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     @pyqtSlot(int)
     def onViewsTabChanged(self, idx):
         self._views_tab.currentWidget().onActivated()
-        self.updateWidgets(True)  # force update
+        if self._views_tab.currentIndex() != self.TabIndex.IMAGE_TRANSFORM:
+            self._updateWidgets(True)  # force update
 
         self._mask_ctrl_widget.setInteractiveButtonsEnabled(
             self._views_tab.currentIndex() == self.TabIndex.OVERVIEW)
@@ -255,3 +259,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):
         self._auto_update = state
+
+    @pyqtSlot(int)
+    def _onTransformViewTypeChanged(self, tp):
+        if self._views_tab.currentIndex() == self.TabIndex.IMAGE_TRANSFORM:
+            self._updateWidgets(True)

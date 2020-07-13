@@ -20,14 +20,65 @@ np.warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 class TestImageTransform(_TestDataMixin):
-    @pytest.fixture(autouse=True)
-    def setUp(self):
+    def setup_method(self):
         self._proc = ImageTransformProcessor()
+        self._proc._set_ma_window(2)
 
-    def testFourierTransform(self):
+    def teardown_method(self):
+        self._proc._reset_ma()
+
+    def testUndefined(self):
+        self._proc._transform_type = ImageTransformType.UNDEFINED
+
+        for i in range(2):
+            data, processed = self.data_with_assembled(1001, (4, 10, 10))
+            image = processed.image
+            self._proc.process(data)
+            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
+            assert image.transformed is None
+            assert image.transform_type == ImageTransformType.UNDEFINED
+
+    def testConcentricRings(self):
+        self._proc._transform_type = ImageTransformType.CONCENTRIC_RINGS
+
+        for i in range(2):
+            data, processed = self.data_with_assembled(1000 + i, (4, 10, 10))
+            image = processed.image
+            self._proc.process(data)
+            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
+            assert image.transformed is None
+            assert image.transform_type == ImageTransformType.CONCENTRIC_RINGS
+
+    @patch("extra_foam.pipeline.processors.image_transform.fourier_transform_2d")
+    def testFourierTransform(self, mocked_f):
         self._proc._transform_type = ImageTransformType.FOURIER_TRANSFORM
-        # self._proc.process({})
 
-    def testEdgeDetection(self):
+        fft = self._proc._fft
+
+        for i in range(2):
+            data, processed = self.data_with_assembled(1001, (4, 10, 10))
+            image = processed.image
+            self._proc.process(data)
+            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
+            mocked_f.assert_called_with(image.masked_mean_ma, logrithmic=fft.logrithmic)
+            assert image.transform_type == ImageTransformType.FOURIER_TRANSFORM
+
+    @patch("extra_foam.pipeline.processors.image_transform.edge_detect")
+    def testEdgeDetection(self, mocked_f):
         self._proc._transform_type = ImageTransformType.EDGE_DETECTION
-        # self._proc.process({})
+
+        ed = self._proc._ed
+        ed.kernel_size = 3
+        ed.sigma = 1.0
+        ed.threshold = (50, 100)
+
+        for i in range(2):
+            data, processed = self.data_with_assembled(1001, (4, 10, 10))
+            image = processed.image
+            self._proc.process(data)
+            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
+            mocked_f.assert_called_with(image.masked_mean_ma,
+                                        kernel_size=ed.kernel_size,
+                                        sigma=ed.sigma,
+                                        threshold=ed.threshold)
+            assert image.transform_type == ImageTransformType.EDGE_DETECTION

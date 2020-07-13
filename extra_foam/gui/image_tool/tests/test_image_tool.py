@@ -108,10 +108,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertTrue(self.image_tool._auto_update)
 
         # test update image manually
-        self.image_tool.updateWidgets = MagicMock()
+        self.image_tool._updateWidgets = MagicMock()
         widget.auto_update_cb.setChecked(False)
         widget.update_image_btn.clicked.emit()
-        self.image_tool.updateWidgets.assert_called_once_with(True)
+        self.image_tool._updateWidgets.assert_called_once_with(True)
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
@@ -882,9 +882,13 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
     def testImageTransformCtrlWidget(self):
         tab = self.image_tool._views_tab
+        view = self.image_tool._transform_view
         TabIndex = self.image_tool.TabIndex
-        tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
-        tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
+            tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+            self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, view._transform_type)
+            mocked.assert_called_once_with(True)
 
         ctrl_widget = self.image_tool._transform_view._ctrl_widget
         cr_widget = ctrl_widget._concentric_rings
@@ -903,12 +907,18 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, proc._transform_type)
         self.assertIsNone(ed.kernel_size)
         # fourier transform
-        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
+            mocked.assert_called_once_with(True)
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, view._transform_type)
         proc.update()
         self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
         self.assertTrue(fft.logrithmic)
         # edge detection
-        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.EDGE_DETECTION))
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.EDGE_DETECTION))
+            mocked.assert_called_once_with(True)
+        self.assertEqual(ImageTransformType.EDGE_DETECTION, view._transform_type)
         proc.update()
         self.assertEqual(ImageTransformType.EDGE_DETECTION, proc._transform_type)
         self.assertEqual(5, ed.kernel_size)
@@ -948,7 +958,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 mocked_unregister.assert_not_called()
 
         # switch back to "overview"
-        tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+            tab.setCurrentIndex(TabIndex.OVERVIEW)
+            mocked.assert_called_once_with(True)
         proc.update()
         # test unregistration
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)

@@ -86,15 +86,20 @@ class TestViews(_TestDataMixin, unittest.TestCase):
             view._azimuthal_integ_1d_curve.updateF(data)
             mocked.assert_called_once()
 
-    def testTransformedView(self):
+    @patch("extra_foam.gui.mediator.Mediator.onItTransformTypeChange")
+    def testTransformedView(self, mocked):
 
         view = TransformView(pulse_resolved=True, parent=self.gui)
+        view.onActivated()
+        opt_tab = view._ctrl_widget._opt_tab
 
         # ------------------------------
         # test concentric ring detection
         # ------------------------------
-
-        view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.CONCENTRIC_RINGS))
+        self.assertEqual(int(ImageTransformType.CONCENTRIC_RINGS), opt_tab.currentIndex())
+        self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, view._transform_type)
+        opt_tab.currentChanged.emit(opt_tab.currentIndex())
+        self.assertTrue(view._ring_item.isVisible())
 
         ctrl_widget = view._ctrl_widget._concentric_rings
 
@@ -108,24 +113,49 @@ class TestViews(_TestDataMixin, unittest.TestCase):
                 QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
 
                 # non-empty data
-                original = np.ones((4, 4))
-                transformed = 2 * original
-                data.image.transformed.original = original
-                data.image.transformed.transformed = transformed
+                image_data = np.random.randn(2, 2).astype(np.float)
+                data.image.transform_type = ImageTransformType.CONCENTRIC_RINGS
+                data.image.masked_mean_ma = image_data
+                data.image.transformed = None
                 view.updateF(data, True)
+                np.testing.assert_array_equal(image_data, view._corrected.image)
+                np.testing.assert_array_equal(image_data, view._transformed.image)
 
                 mockedExtractFeature.return_value = (1, 2, [50, 100])
                 QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
-                mockedExtractFeature.assert_called_once_with(transformed)
+                mockedExtractFeature.assert_called_once_with(image_data)
                 mockedSetGeometry.assert_called_once_with(1, 2, [50, 100])
 
         # ------------------------------
         # test fourier transform
         # ------------------------------
-        view._ctrl_widget._opt_tab.currentChanged.disconnect()
-        view._ctrl_widget._opt_tab.setCurrentIndex(
-            int(ImageTransformType.FOURIER_TRANSFORM))
+        view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, view._transform_type)
+        self.assertFalse(view._ring_item.isVisible())
 
         # empty data
         data = self.processed_data(1001, (3, 3))
         view.updateF(data, True)
+
+        # non-empty data
+        image_data = np.random.randn(3, 3).astype(np.float)
+        data.image.transform_type = ImageTransformType.FOURIER_TRANSFORM
+        data.image.masked_mean_ma = image_data
+        data.image.transformed = 2 * image_data
+        view.updateF(data, True)
+        np.testing.assert_array_equal(image_data, view._corrected.image)
+        np.testing.assert_array_equal(2 * image_data, view._transformed.image)
+
+        # ------------------------------
+        # test edge detection
+        # ------------------------------
+        view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.EDGE_DETECTION))
+        self.assertEqual(ImageTransformType.EDGE_DETECTION, view._transform_type)
+        self.assertFalse(view._ring_item.isVisible())
+
+        # ------------------------------
+        # back to concentric rings
+        # ------------------------------
+        view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.CONCENTRIC_RINGS))
+        self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, view._transform_type)
+        self.assertTrue(view._ring_item.isVisible())

@@ -171,6 +171,8 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
     extract_concentric_rings_sgn = pyqtSignal()
 
+    transform_type_changed_sgn = pyqtSignal(int)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -218,6 +220,7 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
             mediator.onItMaWindowChange)
 
         self._opt_tab.currentChanged.connect(mediator.onItTransformTypeChange)
+        self._opt_tab.currentChanged.connect(self.transform_type_changed_sgn)
 
         cr = self._concentric_rings
         cr.detect_btn.clicked.connect(self.extract_concentric_rings_sgn)
@@ -291,7 +294,7 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         self._updateWidgetValue(ed.threshold_le, cfg, "ed:threshold")
 
     def registerTransformType(self):
-        self._mediator.onItTransformTypeChange(self._opt_tab.currentIndex())
+        self._opt_tab.currentChanged.emit(self._opt_tab.currentIndex())
 
     def unregisterTransformType(self):
         self._mediator.onItTransformTypeChange(

@@ -7,13 +7,14 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..misc_widgets import FColor
 from ..ctrl_widgets import ImageTransformCtrlWidget
 from ..plot_widgets import ImageViewF, RingItem
+from ...config import ImageTransformType
 
 
 @create_imagetool_view(ImageTransformCtrlWidget)
@@ -22,6 +23,8 @@ class TransformView(_AbstractImageToolView):
 
     Widget for image transform and feature extraction.
     """
+
+    transform_type_changed_sgn = pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,6 +36,8 @@ class TransformView(_AbstractImageToolView):
 
         self._ring_item = RingItem(pen=FColor.mkPen('g', alpha=180, width=10))
         self._transformed.addItem(self._ring_item)
+
+        self._transform_type = ImageTransformType.UNDEFINED
 
         self.initUI()
         self.initConnections()
@@ -53,13 +58,21 @@ class TransformView(_AbstractImageToolView):
         """Override."""
         self._ctrl_widget.extract_concentric_rings_sgn.connect(
             self._extractConcentricRings)
+        self._ctrl_widget.transform_type_changed_sgn.connect(
+            self._onTransformTypeChanged)
 
     def updateF(self, data, auto_update):
         """Override."""
-        transformed = data.image.transformed
+        image = data.image
         if auto_update or self._corrected.image is None:
-            self._corrected.setImage(transformed.original)
-            self._transformed.setImage(transformed.transformed)
+            self._corrected.setImage(image.masked_mean_ma)
+
+        if self._transform_type == ImageTransformType.CONCENTRIC_RINGS:
+            self._transformed.setImage(image.masked_mean_ma)
+        elif image.transform_type == self._transform_type:
+            self._transformed.setImage(image.transformed)
+        else:
+            self._transformed.setImage(None)
 
     def onActivated(self):
         """Override."""
@@ -71,10 +84,20 @@ class TransformView(_AbstractImageToolView):
 
     @pyqtSlot()
     def _extractConcentricRings(self):
-        img = self._transformed.image
+        img = self._corrected.image
         if img is None:
             return
 
-        cx, cy, radials = self._ctrl_widget.extractFeature(
-            self._transformed.image)
+        cx, cy, radials = self._ctrl_widget.extractFeature(img)
         self._ring_item.setGeometry(cx, cy, radials)
+
+    @pyqtSlot(int)
+    def _onTransformTypeChanged(self, tp):
+        self._transform_type = ImageTransformType(tp)
+
+        if self._transform_type == ImageTransformType.CONCENTRIC_RINGS:
+            self._ring_item.show()
+        else:
+            self._ring_item.hide()
+
+        self.transform_type_changed_sgn.emit(tp)
