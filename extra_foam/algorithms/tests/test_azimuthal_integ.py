@@ -19,7 +19,7 @@ class TestAzimuthalIntegrationMisc(unittest.TestCase):
 
 
 class TestAzimuthalIntegrator:
-    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("dtype", [np.float32, np.uint16, np.int16])
     def testIntegrate1D(self, dtype):
         img = np.arange(1024).reshape((16, 64)).astype(dtype)
 
@@ -46,7 +46,7 @@ class TestAzimuthalIntegrator:
 
 
 class TestConcentricRingsFinder:
-    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("dtype", [np.float32, np.uint16, np.int16])
     def testRingDetection(self, dtype):
         img = np.arange(1024).reshape((16, 64)).astype(dtype)
 

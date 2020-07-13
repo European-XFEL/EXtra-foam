@@ -28,7 +28,7 @@ static constexpr auto nan = std::numeric_limits<double>::quiet_NaN();
 
 TEST(TestAzimuthalIntegrator, TestIntegrator1D)
 {
-  xt::xtensor<double, 2> src = xt::arange(1024).reshape({16, 128});
+  xt::xtensor<float, 2> src = xt::arange(1024).reshape({16, 128});
 
   double distance = 0.2;
   double pixel1 = 1e-4;
@@ -52,6 +52,12 @@ TEST(TestAzimuthalIntegrator, TestIntegrator1D)
   // data has a single value
   xt::xtensor<double, 2> src2 = xt::ones<double>({16, 128});
   xt::arange(1024).reshape({16, 128});
+
+  // integral source value type
+  xt::xtensor<uint16_t, 2> src_int = xt::arange(1024).reshape({16, 128});
+  auto ret10_uint16 = itgt.integrate1d(src, 10);
+  EXPECT_EQ(ret10.first, ret10_uint16.first);
+  EXPECT_THAT(ret10.second, ret10_uint16.second);
 }
 
 TEST(TestConcentricRingFinder, TestGeneral)

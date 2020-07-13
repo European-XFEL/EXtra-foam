@@ -35,74 +35,73 @@ namespace
 template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
 auto histogramAI(E&& src, double poni1, double poni2, double pixel1, double pixel2, size_t npt, size_t min_count=1)
 {
-  using value_type = std::conditional_t<std::is_floating_point<typename std::decay_t<E>::value_type>::value,
-                                        typename std::decay_t<E>::value_type,
-                                        double>;
-  using vector_type = ReducedVectorType<E, value_type>;
-
   auto shape = src.shape();
 
-  vector_type dists = xt::zeros<value_type>({src.size()});
-  vector_type weights = xt::zeros<value_type>({src.size()});
+  // TODO: Separate the geometry and histogram steps. For the same image and integration center, geometry
+  //       is only required to calculate once.
 
-  size_t index = 0;
+  // compute geometry
+
+  xt::xtensor<double, 2> dists = xt::zeros_like(src);
   for (int i = 0; i < static_cast<int>(shape[0]); ++i)
   {
     for (int j = 0; j < static_cast<int>(shape[1]); ++j)
     {
       if (std::isnan(src(i, j))) continue;
-      value_type dx = j * pixel2 - poni2;
-      value_type dy = i * pixel1 - poni1;
-      dists(index) = std::sqrt(dx * dx + dy * dy);
-      weights(index++) = src(i, j);
+      double dx = j * pixel2 - poni2;
+      double dy = i * pixel1 - poni1;
+      dists(i, j) = std::sqrt(dx * dx + dy * dy);
     }
   }
 
   // do histogram
 
-  std::array<value_type, 2> bounds;
-  bounds = xt::minmax(dists)();
-  value_type lb = bounds[0];
-  value_type ub = bounds[1];
-  vector_type edges = xt::linspace<value_type>(lb, ub, npt + 1);
-  vector_type hist = xt::zeros<value_type>({ npt });
-  vector_type counts = xt::zeros<value_type>({ npt });
+  using vector_type = ReducedVectorType<E, double>;
 
-  value_type norm = 1. / (ub - lb);
-  for (size_t i = 0; i < dists.size(); ++i)
+  std::array<double, 2> bounds = xt::minmax(dists)();
+  double lb = bounds[0];
+  double ub = bounds[1];
+  double norm = 1. / (ub - lb);
+
+  vector_type edges = xt::linspace<double>(lb, ub, npt + 1);
+  vector_type hist = xt::zeros<double>({ npt });
+  xt::xtensor<size_t, 1> counts = xt::zeros<size_t>({ npt });
+
+  for (int i = 0; i < static_cast<int>(shape[0]); ++i)
   {
-    auto v = dists(i);
-    if (v == 0) continue;
+    for (int j = 0; j < static_cast<int>(shape[1]); ++j)
+    {
+      double v = dists(i, j);
+      if (v == 0.) continue;
 
-    size_t i_bin;
-    if ( v == ub ) i_bin = npt - 1;
-    else
-      i_bin = static_cast<size_t>(static_cast<value_type>(npt) * (v - lb) * norm);
+      size_t i_bin;
+      if (v == ub) i_bin = npt - 1;
+      else
+        i_bin = static_cast<size_t>(static_cast<double>(npt) * (v - lb) * norm);
 
-    hist(i_bin) += weights(i);
-    counts(i_bin) += 1;
+      hist(i_bin) += src(i, j);
+      counts(i_bin) += 1;
+    }
   }
 
   // thresholding
-
   if (min_count > 1)
   {
     for (size_t i = 0; i < npt; ++i)
     {
-      if (counts(i) < min_count) hist(i) = value_type(0);
+      if (counts(i) < min_count) hist(i) = 0.;
     }
   }
 
-  auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
-
   // normalizing
-
   for (size_t i = 0; i < npt; ++i)
   {
-    if (counts(i) == 0) hist(i) = value_type(0);
+    if (counts(i) == 0) hist(i) = 0.;
     else
       hist(i) /= counts(i);
   }
+
+  auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
 
   return std::make_pair<vector_type, vector_type>(centers, std::move(hist));
 }
@@ -263,6 +262,7 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
   double cy_max = cy0;
   double max_s = -1;
   size_t npt = estimateNPoints(src, cx0, cy0);
+  using value_type = typename std::decay_t<E>::value_type;
 
   int initial_space = 10;
 #if defined(FOAM_USE_TBB)
@@ -285,8 +285,9 @@ std::array<double, 2> ConcentricRingFinder::search(E&& src, double cx0, double c
           double poni2 = cx * pixel_x_;
 
           auto ret = histogramAI(src, poni1, poni2, pixel_y_, pixel_x_, npt, min_count);
-          // strangely xt::minmax does support pytensor
-          std::array<double, 2> bounds = xt::minmax(xt::xtensor<double, 1>(ret.second))();
+          // returns std::array<value_type, 2> with value type the same as the
+          // value_type of ret.second
+          std::array<double, 2> bounds = xt::minmax(ret.second)();
           double curr_max = bounds[1];
 
 #if defined(FOAM_USE_TBB)

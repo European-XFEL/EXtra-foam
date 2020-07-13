@@ -27,16 +27,18 @@ void declareAzimuthalIntegrator(py::module& m)
           py::arg("pixel1"), py::arg("pixel2"), py::arg("wavelength"));
 
 #define AZIMUTHAL_INTEGRATE1D(DTYPE)                                                                 \
-  cls.def("integrate1d", (std::pair<foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>,                 \
-                                    foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                 \
+  cls.def("integrate1d", (std::pair<foam::ReducedVectorType<xt::pytensor<double, 2>>,                \
+                                    foam::ReducedVectorType<xt::pytensor<double, 2>>>                \
                           (Integrator::*)(const xt::pytensor<DTYPE, 2>&, size_t, size_t,             \
                                           foam::AzimuthalIntegrationMethod) const)                   \
      &Integrator::integrate1d<const xt::pytensor<DTYPE, 2>&>,                                        \
      py::arg("src").noconvert(), py::arg("npt"), py::arg("min_count")=1,                             \
      py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
 
-  AZIMUTHAL_INTEGRATE1D(double)
+  // for image data type at XFEL
   AZIMUTHAL_INTEGRATE1D(float)
+  AZIMUTHAL_INTEGRATE1D(uint16_t)
+  AZIMUTHAL_INTEGRATE1D(int16_t)
 }
 
 void declareConcentricRingFinder(py::module& m)
@@ -54,18 +56,21 @@ void declareConcentricRingFinder(py::module& m)
      &Finder::search<const xt::pytensor<DTYPE, 2>&>,                                                    \
      py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"), py::arg("min_count") = 1);
 
-  CONCENTRIC_RING_FINDER_SEARCH(double)
   CONCENTRIC_RING_FINDER_SEARCH(float)
+  CONCENTRIC_RING_FINDER_SEARCH(uint16_t)
+  CONCENTRIC_RING_FINDER_SEARCH(int16_t)
+
 
 #define CONCENTRIC_RING_FINDER_INTEGRATE(DTYPE)                                                         \
-  cls.def("integrate", (std::pair<foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>,                      \
-                                  foam::ReducedVectorType<xt::pytensor<DTYPE, 2>>>                      \
+  cls.def("integrate", (std::pair<foam::ReducedVectorType<xt::pytensor<double, 2>>,                     \
+                                  foam::ReducedVectorType<xt::pytensor<double, 2>>>                     \
                         (Finder::*)(const xt::pytensor<DTYPE, 2>&, double, double, size_t) const)       \
      &Finder::integrate<const xt::pytensor<DTYPE, 2>&>,                                                 \
      py::arg("src").noconvert(), py::arg("cx0"), py::arg("cy0"), py::arg("min_count") = 1);
 
-  CONCENTRIC_RING_FINDER_INTEGRATE(double)
   CONCENTRIC_RING_FINDER_INTEGRATE(float)
+  CONCENTRIC_RING_FINDER_INTEGRATE(uint16_t)
+  CONCENTRIC_RING_FINDER_INTEGRATE(int16_t)
 }
 
 
