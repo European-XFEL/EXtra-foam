@@ -26,7 +26,8 @@ from ..misc_widgets import FColor
 class CurvePlotItem(pg.PlotItem):
     """CurvePlotItem."""
 
-    def __init__(self, x=None, y=None, *, pen=None, name=None, parent=None):
+    def __init__(self, x=None, y=None, *,
+                 pen=None, name=None, check_finite=True, parent=None):
         """Initialization."""
         super().__init__(name=name, parent=parent)
 
@@ -34,6 +35,8 @@ class CurvePlotItem(pg.PlotItem):
         self._y = None
 
         self._pen = FColor.mkPen('g') if pen is None else pen
+
+        self._check_finite = check_finite
 
         self.setData(x, y)
 
@@ -48,6 +51,9 @@ class CurvePlotItem(pg.PlotItem):
 
     def transformedData(self):
         """Override."""
+        if not self._check_finite:
+            return super().transformedData()
+
         # inf/nans completely prevent the plot from being displayed starting on
         # Qt version 5.12.3
         # we do not expect to have nan in x
