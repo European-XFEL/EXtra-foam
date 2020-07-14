@@ -90,9 +90,10 @@ class GeomAssembler(IntEnum):
 
 
 class ImageTransformType(IntEnum):
-    UNDEFINED = 0
+    CONCENTRIC_RINGS = 0
     FOURIER_TRANSFORM = 1
     EDGE_DETECTION = 2
+    UNDEFINED = 255
 
 
 class PipelineSlowPolicy(IntEnum):

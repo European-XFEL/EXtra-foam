@@ -27,6 +27,7 @@ using ::testing::FloatNear;
 TEST(TestGetGaussianKernel, TestGeneral)
 {
   EXPECT_THROW(getGaussianKernel<double>(2), std::invalid_argument);
+  EXPECT_THAT(getGaussianKernel<double>(-1), ElementsAre(1.));
   EXPECT_THAT(getGaussianKernel<double>(1), ElementsAre(1.));
   EXPECT_THAT(getGaussianKernel<float>(3, 0.85),
               ElementsAre(FloatNear(0.25, 1e-3), FloatNear(0.50, 1e-3), FloatNear(0.25, 1e-3)));

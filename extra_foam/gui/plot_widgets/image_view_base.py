@@ -54,7 +54,6 @@ class ImageViewF(QWidget):
             display the image.
 
     """
-
     def __init__(self, *,
                  has_roi=False,
                  hide_axis=True,

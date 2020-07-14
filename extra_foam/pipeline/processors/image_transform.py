@@ -41,30 +41,22 @@ class ImageTransformProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-        self._ma_window = 1
-        del self._masked_ma
-        self.__class__._masked_ma.window = 1
+        self._set_ma_window(1)
 
         self._transform_type = ImageTransformType.UNDEFINED
 
         self._fft = _FourierTransform()
         self._ed = _EdgeDetection()
 
-        self._reset = False
-
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_TRANSFORM_PROC)
 
-        v = int(cfg['ma_window'])
-        if self._ma_window != v:
-            self._ma_window = v
-            self.__class__._masked_ma.window = v
+        self._update_moving_average(cfg)
 
         transform_type = ImageTransformType(int(cfg["transform_type"]))
         if self._transform_type != transform_type:
             self._transform_type = transform_type
-            self._reset = True
 
         if transform_type == ImageTransformType.FOURIER_TRANSFORM:
             fft = self._fft
@@ -75,26 +67,38 @@ class ImageTransformProcessor(_BaseProcessor):
             ed.sigma = float(cfg["ed:sigma"])
             ed.threshold = self.str2tuple(cfg["ed:threshold"])
 
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._masked_ma.window = v
+
+    def _reset_ma(self):
+        del self._masked_ma
+
+    def _update_moving_average(self, cfg):
+        v = int(cfg['ma_window'])
+        if self._ma_window != v:
+            self._set_ma_window(v)
+
     @profiler("Image transform processor")
     def process(self, data):
-        if self._transform_type == ImageTransformType.UNDEFINED:
-            return
-
         processed = data['processed']
-        transformed = processed.image.transformed
+        image = processed.image
 
-        self._masked_ma = processed.image.masked_mean
+        # moving average will continue even if the type is undefined
+        self._masked_ma = image.masked_mean
         masked_ma = self._masked_ma
+        transform_type = self._transform_type
 
-        transformed.origin = masked_ma
-        if self._transform_type == ImageTransformType.FOURIER_TRANSFORM:
+        image.masked_mean_ma = masked_ma
+        image.transform_type = transform_type
+
+        if transform_type == ImageTransformType.FOURIER_TRANSFORM:
             fft = self._fft
-            transformed.transformed = fourier_transform_2d(
+            image.transformed = fourier_transform_2d(
                 masked_ma, logrithmic=fft.logrithmic)
-
-        elif self._transform_type == ImageTransformType.EDGE_DETECTION:
+        elif transform_type == ImageTransformType.EDGE_DETECTION:
             ed = self._ed
-            transformed.transformed = edge_detect(
+            image.transformed = edge_detect(
                 masked_ma,
                 kernel_size=ed.kernel_size,
                 sigma=ed.sigma,

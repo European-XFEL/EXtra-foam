@@ -43,6 +43,7 @@ find_package(Threads REQUIRED)
 
 set(_FOAM_UNITTESTS
     test_tbb.cpp
+    test_azimuthal_integrator.cpp
     test_blas.cpp
     test_canny.cpp
     test_geometry.cpp
@@ -50,6 +51,7 @@ set(_FOAM_UNITTESTS
     test_imageproc.cpp
     test_smooth.cpp
     test_statistics.cpp
+    test_traits.cpp
     )
 
 set(_FOAM_UNITTEST_TARGETS_NEED_BLAS

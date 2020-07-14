@@ -18,6 +18,9 @@ template<typename T, xt::layout_type L>
 struct IsArray<xt::pyarray<T, L>> : std::true_type {};
 
 template<typename T, xt::layout_type L>
+struct IsVector<xt::pytensor<T, 1, L>> : std::true_type {};
+
+template<typename T, xt::layout_type L>
 struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
 
 template<xt::layout_type L>

@@ -108,10 +108,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertTrue(self.image_tool._auto_update)
 
         # test update image manually
-        self.image_tool.updateWidgets = MagicMock()
+        self.image_tool._updateWidgets = MagicMock()
         widget.auto_update_cb.setChecked(False)
         widget.update_image_btn.clicked.emit()
-        self.image_tool.updateWidgets.assert_called_once_with(True)
+        self.image_tool._updateWidgets.assert_called_once_with(True)
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
@@ -605,8 +605,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._fom_integ_range_le.setText("0.3, 0.4")
         widget._px_le.setText("0.000001")
         widget._py_le.setText("0.000002")
-        widget._cx_le.setText("-1000")
-        widget._cy_le.setText("1000")
+        widget._cx_le.setText("-1000.2")
+        widget._cy_le.setText("500.3")
         widget._peak_finding_cb.setChecked(False)
         widget._peak_prominence_le.setText("50")
         widget._peak_slicer_le.setText("1:-1")
@@ -621,8 +621,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertTupleEqual((0.3, 0.4), proc._fom_integ_range)
         self.assertEqual(0.000001, proc._pixel2)
         self.assertEqual(0.000002, proc._pixel1)
-        self.assertEqual(-1000 * 0.000001, proc._poni2)
-        self.assertEqual(1000 * 0.000002, proc._poni1)
+        self.assertEqual(-1000.2 * 0.000001, proc._poni2)
+        self.assertEqual(500.3 * 0.000002, proc._poni1)
         self.assertFalse(proc._find_peaks)
         self.assertEqual(50, proc._peak_prominence)
         self.assertEqual(slice(1, -1), proc._peak_slicer)
@@ -639,8 +639,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onAiFomIntegRangeChange((3, 4))
         mediator.onAiPixelSizeXChange(0.001)
         mediator.onAiPixelSizeYChange(0.002)
-        mediator.onAiIntegCenterXChange(1)
-        mediator.onAiIntegCenterYChange(2)
+        mediator.onAiIntegCenterXChange(1.5)
+        mediator.onAiIntegCenterYChange(2.8)
         mediator.onAiPeakFindingChange(True)
         mediator.onAiPeakProminenceChange(20)
         mediator.onAiPeakSlicerChange([0, None, 2])
@@ -655,8 +655,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("3, 4", widget._fom_integ_range_le.text())
         self.assertEqual("0.001", widget._px_le.text())
         self.assertEqual("0.002", widget._py_le.text())
-        self.assertEqual("1", widget._cx_le.text())
-        self.assertEqual("2", widget._cy_le.text())
+        self.assertEqual("1.5", widget._cx_le.text())
+        self.assertEqual("2.8", widget._cy_le.text())
         self.assertTrue(widget._peak_finding_cb.isChecked())
         self.assertEqual("20", widget._peak_prominence_le.text())
         self.assertEqual("0::2", widget._peak_slicer_le.text())
@@ -882,15 +882,21 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
     def testImageTransformCtrlWidget(self):
         tab = self.image_tool._views_tab
+        view = self.image_tool._transform_view
         TabIndex = self.image_tool.TabIndex
-        tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
-        tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            tab.tabBarClicked.emit(TabIndex.IMAGE_TRANSFORM)
+            tab.setCurrentIndex(TabIndex.IMAGE_TRANSFORM)
+            self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, view._transform_type)
+            mocked.assert_called_once_with(True)
 
         ctrl_widget = self.image_tool._transform_view._ctrl_widget
+        cr_widget = ctrl_widget._concentric_rings
         fft_widget = ctrl_widget._fourier_transform
         ed_widget = ctrl_widget._edge_detection
 
         proc = self.pulse_worker._image_transform_proc
+        cr = cr_widget  # offline
         fft = proc._fft
         ed = proc._ed
 
@@ -898,12 +904,21 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # also test only parameters of the activated transform type are updated
         proc.update()
         self.assertEqual(1, proc._ma_window)
-        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
+        self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, proc._transform_type)
         self.assertIsNone(ed.kernel_size)
         # fourier transform
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
+            mocked.assert_called_once_with(True)
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, view._transform_type)
+        proc.update()
+        self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, proc._transform_type)
         self.assertTrue(fft.logrithmic)
         # edge detection
-        ctrl_widget._opt_tab.setCurrentIndex(1)
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.EDGE_DETECTION))
+            mocked.assert_called_once_with(True)
+        self.assertEqual(ImageTransformType.EDGE_DETECTION, view._transform_type)
         proc.update()
         self.assertEqual(ImageTransformType.EDGE_DETECTION, proc._transform_type)
         self.assertEqual(5, ed.kernel_size)
@@ -912,17 +927,27 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test setting new values
         ctrl_widget._ma_window_le.setText("10")
+        cr_widget.cx_le.setText("-10.1")
+        cr_widget.cy_le.setText("-10.2")
+        cr_widget.prominence_le.setText("99.3")
+        cr_widget.distance_le.setText("99")
+        cr_widget.min_count_le.setText("999")
         fft_widget.logrithmic_cb.setChecked(False)
         ed_widget.kernel_size_sp.setValue(3)
         ed_widget.sigma_sp.setValue(0.5)
         ed_widget.threshold_le.setText("-1, 1")
         proc.update()
+        self.assertEqual(-10.1, cr._cx)
+        self.assertEqual(-10.2, cr._cy)
+        self.assertEqual(99.3, cr._prominence)
+        self.assertEqual(99, cr._distance)
+        self.assertEqual(999, cr._min_count)
         self.assertEqual(10, proc._ma_window)
         self.assertTrue(fft.logrithmic)
         self.assertEqual(3, ed.kernel_size)
         self.assertEqual(0.5, ed.sigma)
         self.assertEqual((-1, 1), ed.threshold)
-        ctrl_widget._opt_tab.setCurrentIndex(0)
+        ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
         proc.update()
         self.assertFalse(fft.logrithmic)
 
@@ -933,7 +958,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 mocked_unregister.assert_not_called()
 
         # switch back to "overview"
-        tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+        with patch.object(self.image_tool, "_updateWidgets") as mocked:
+            tab.tabBarClicked.emit(TabIndex.OVERVIEW)
+            tab.setCurrentIndex(TabIndex.OVERVIEW)
+            mocked.assert_called_once_with(True)
         proc.update()
         # test unregistration
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)
@@ -947,6 +975,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test loading meta data
         mediator = ctrl_widget._mediator
+        mediator.onItCrCxChange("11.1")
+        mediator.onItCrCyChange("22.2")
+        mediator.onItCrProminenceChange("33.3")
+        mediator.onItCrDistanceChange("444")
+        mediator.onItCrMinCountChange("555")
         mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM)
         mediator.onItMaWindowChange("100")
         mediator.onItFftLogrithmicScaleChange(True)
@@ -956,6 +989,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         ctrl_widget.loadMetaData()
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)  # unchanged
         self.assertEqual("100", ctrl_widget._ma_window_le.text())
+        self.assertEqual("11.1", cr_widget.cx_le.text())
+        self.assertEqual("22.2", cr_widget.cy_le.text())
+        self.assertEqual("33.3", cr_widget.prominence_le.text())
+        self.assertEqual("444", cr_widget.distance_le.text())
+        self.assertEqual("555", cr_widget.min_count_le.text())
         self.assertTrue(fft_widget.logrithmic_cb.isChecked())
         self.assertEqual("3", ed_widget.kernel_size_sp.text())
         self.assertEqual("2.10", ed_widget.sigma_sp.text())
