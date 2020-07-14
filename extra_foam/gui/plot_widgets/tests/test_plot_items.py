@@ -55,6 +55,21 @@ class TestPlotItems:
         assert buf.readInt32() == 0
         assert buf.readInt32() == 0
 
+    def testCurvePlotItemCheckFinite(self):
+        item = CurvePlotItem(check_finite=False)
+        self._widget.addItem(item)
+        # nan and infinite values prevent generating plots
+        x = [1, 2, 3, 4, 5]
+        y = [1, 2, 3, np.nan, 5]
+        item.setData(x, y)
+        assert QRectF() == item.boundingRect()
+        self._widget.removeItem(item)
+
+        item2 = CurvePlotItem(check_finite=True)
+        self._widget.addItem(item2)
+        item2.setData(x, y)
+        assert QRectF(1., 0., 4., 5.) == item2.boundingRect()
+
     @pytest.mark.parametrize("dtype", [np.float, np.int64, np.uint16])
     def testCurvePlotItem(self, dtype):
         x = np.arange(10).astype(dtype)

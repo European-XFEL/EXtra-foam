@@ -255,7 +255,7 @@ class XasTimSpectraPlot(TimedPlotWidgetF):
             self._plots.append(
                 self.plotCurve(name=f"MCP{i+1}", pen=FColor.mkPen(c)))
         self._count = self.plotBar(
-            y2=True, brush=FColor.mkBrush('i', alpha=70))
+            name="Count", y2=True, brush=FColor.mkBrush('i', alpha=70))
 
     def refresh(self):
         """Override."""
