@@ -376,6 +376,9 @@ class PlotArea(pg.GraphicsWidget):
 
         if isinstance(item, pg.PlotItem):
             if y2:
+                if self._log_x_cb.isChecked():
+                    item.setLogX(True)
+
                 self._plot_items2.add(item)
             else:
                 if self._log_x_cb.isChecked():

@@ -200,21 +200,40 @@ class TestPlotArea(unittest.TestCase):
         area.addItem(plot_item)
         area.addItem(plot_item2, y2=True)
         transform_actions = menus[2].actions()
-        with patch.object(plot_item, "updateGraph") as mocked:
-            transform_actions[0].defaultWidget().setChecked(True)
-            self.assertTrue(area.getAxis("bottom").logMode)
-            # self.assertTrue(area.getAxis("top").logMode)
-            self.assertTrue(plot_item._log_x_mode)
-            self.assertTrue(plot_item2._log_x_mode)
-            mocked.assert_called_once()
 
         with patch.object(plot_item, "updateGraph") as mocked:
-            transform_actions[1].defaultWidget().setChecked(True)
-            self.assertTrue(area.getAxis("left").logMode)
-            # self.assertTrue(area.getAxis("right").logMode)
-            self.assertTrue(plot_item._log_y_mode)
-            self.assertFalse(plot_item2._log_y_mode)
-            mocked.assert_called_once()
+            with patch.object(plot_item2, "updateGraph") as mocked2:
+                transform_actions[0].defaultWidget().setChecked(True)
+                self.assertTrue(area.getAxis("bottom").logMode)
+                # self.assertTrue(area.getAxis("top").logMode)
+                self.assertTrue(plot_item._log_x_mode)
+                self.assertTrue(plot_item2._log_x_mode)
+                mocked.assert_called_once()
+                mocked2.assert_called_once()
+
+                plot_item3 = CurvePlotItem()
+                plot_item4 = ScatterPlotItem()
+                area.addItem(plot_item3)
+                area.addItem(plot_item4, y2=True)
+                self.assertTrue(plot_item3._log_x_mode)
+                self.assertTrue(plot_item4._log_x_mode)
+
+        with patch.object(plot_item, "updateGraph") as mocked:
+            with patch.object(plot_item2, "updateGraph") as mocked2:
+                transform_actions[1].defaultWidget().setChecked(True)
+                self.assertTrue(area.getAxis("left").logMode)
+                # self.assertTrue(area.getAxis("right").logMode)
+                self.assertTrue(plot_item._log_y_mode)
+                self.assertFalse(plot_item2._log_y_mode)
+                mocked.assert_called_once()
+                mocked2.assert_not_called()
+
+                plot_item5 = CurvePlotItem()
+                plot_item6 = ScatterPlotItem()
+                area.addItem(plot_item5)
+                area.addItem(plot_item6, y2=True)
+                self.assertTrue(plot_item5._log_y_mode)
+                self.assertFalse(plot_item6._log_y_mode)
 
         area._enable_meter = False
         menus = self._area.getContextMenus(event)
