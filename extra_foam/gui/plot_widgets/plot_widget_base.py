@@ -67,22 +67,12 @@ class PlotWidgetF(pg.GraphicsView):
             self._proxy = pg.SignalProxy(self._plot_area.scene().sigMouseMoved,
                                          rateLimit=60, slot=self.onMouseMoved)
 
-        self._vb2 = None  # ViewBox for y2 axis
-
         if parent is not None and hasattr(parent, 'registerPlotWidget'):
             parent.registerPlotWidget(self)
 
     def reset(self):
         """Clear the data of all the items in the PlotArea object."""
         self._plot_area.clearAllPlotItems()
-
-        # TODO: improve vb2 implementation
-        if self._vb2 is not None:
-            for item in self._vb2.addedItems:
-                try:
-                    item.setData([], [])
-                except TypeError:
-                    pass
 
     @abc.abstractmethod
     def updateF(self, data):
@@ -109,72 +99,30 @@ class PlotWidgetF(pg.GraphicsView):
     def plotCurve(self, *args, y2=False, **kwargs):
         """Add and return a new curve plot."""
         item = CurvePlotItem(*args, **kwargs)
-
-        if y2:
-            if self._vb2 is None:
-                self.createY2()
-            self._vb2.addItem(item)
-        else:
-            self._plot_area.addItem(item)
-
+        self._plot_area.addItem(item, y2=y2)
         return item
 
-    def plotScatter(self, *args, **kwargs):
+    def plotScatter(self, *args, y2=False, **kwargs):
         """Add and return a new scatter plot."""
         item = ScatterPlotItem(*args, **kwargs)
-        self._plot_area.addItem(item)
+        self._plot_area.addItem(item, y2=y2)
         return item
 
-    def plotBar(self, x=None, y=None, width=1.0, y2=False, **kwargs):
+    def plotBar(self, *args, y2=False, **kwargs):
         """Add and return a new bar plot."""
-        item = BarGraphItem(x=x, y=y, width=width, **kwargs)
-
-        if y2:
-            if self._vb2 is None:
-                self.createY2()
-            self._vb2.addItem(item)
-        else:
-            self._plot_area.addItem(item)
-
+        item = BarGraphItem(*args, **kwargs)
+        self._plot_area.addItem(item, y2=y2)
         return item
 
-    def plotStatisticsBar(self, x=None, y=None, y_min=None, y_max=None,
-                          beam=None, y2=False, **kwargs):
-        item = StatisticsBarItem(x=x, y=y, y_min=y_min, y_max=y_max,
-                                 beam=beam, **kwargs)
-        if y2:
-            if self._vb2 is None:
-                self.createY2()
-            self._vb2.addItem(item)
-        else:
-            self._plot_area.addItem(item)
-
+    def plotStatisticsBar(self, *args, y2=False, **kwargs):
+        item = StatisticsBarItem(*args, **kwargs)
+        self._plot_area.addItem(item, y2=y2)
         return item
 
     def plotImage(self, *args, **kargs):
         """Add and return a image item."""
         # TODO: this will be done when another branch is merged
         raise NotImplemented
-
-    def createY2(self):
-        vb = pg.ViewBox()
-        plot_item = self._plot_area
-        plot_item.scene().addItem(vb)
-        plot_item.getAxis('right').linkToView(vb)
-        # TODO: improve
-        vb.setXLink(self._plot_area._vb)
-        self._plot_area._vb.sigResized.connect(self.updateY2View)
-        self._vb2 = vb
-
-    def updateY2View(self):
-        vb = self._vb2
-        if vb is None:
-            return
-        # update ViewBox-y2 to match ViewBox-y
-        # TODO: improve
-        vb.setGeometry(self._plot_area._vb.sceneBoundingRect())
-        # not sure this is required
-        # vb.linkedViewChanged(self._plot_area.vb, vb.XAxis)
 
     def removeAllItems(self):
         """Remove all the items in the PlotArea object."""

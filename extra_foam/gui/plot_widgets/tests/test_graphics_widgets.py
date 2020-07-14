@@ -102,7 +102,7 @@ class TestPlotArea(unittest.TestCase):
         area.addItem(MaskItem(image_item))
         area.addItem(RectROI(0))
         bar_graph_item = BarGraphItem()
-        area.addItem(bar_graph_item)
+        area.addItem(bar_graph_item, y2=True)
         area.addItem(StatisticsBarItem())
         curve_plot_item = CurvePlotItem()
         area.addItem(curve_plot_item)
@@ -110,9 +110,11 @@ class TestPlotArea(unittest.TestCase):
         area.addItem(ScatterPlotItem())
         area.setAnnotationList([0], [0], [1])
 
-        self.assertEqual(4, len(area._plot_items))
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(1, len(area._plot_items2))
         self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
+        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(1, len(area._vb2.addedItems))
         self.assertEqual(4, len(area._legend.items))
         self.assertEqual(1, len(area._annotation_items))
 
@@ -124,21 +126,29 @@ class TestPlotArea(unittest.TestCase):
 
         # remove an item which does not exist
         area.removeItem(BarGraphItem())
-        self.assertEqual(4, len(area._plot_items))
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(1, len(area._plot_items2))
         self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
+        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(1, len(area._vb2.addedItems))
         self.assertEqual(4, len(area._legend.items))
 
+        # remove an existing item
         area.removeItem(bar_graph_item)
         self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(7, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(0, len(area._vb2.addedItems))
         self.assertEqual(3, len(area._legend.items))
 
+        # remove an existing item which is not a PlotItem
         area.removeItem(image_item)
         self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(6, len(area._items))
         self.assertEqual(6, len(area._vb.addedItems))
+        self.assertEqual(0, len(area._vb2.addedItems))
         self.assertEqual(3, len(area._legend.items))
 
         with self.assertRaisesRegex(RuntimeError, "not allowed to be removed"):
@@ -146,8 +156,10 @@ class TestPlotArea(unittest.TestCase):
 
         area.removeAllItems()
         self.assertEqual(0, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(0, len(area._items))
         self.assertEqual(0, len(area._vb.addedItems))
+        self.assertEqual(0, len(area._vb2.addedItems))
         self.assertEqual(0, len(area._legend.items))
 
     def testContextMenu(self):
@@ -184,20 +196,24 @@ class TestPlotArea(unittest.TestCase):
 
         # test "Transform" actions
         plot_item = CurvePlotItem()
+        plot_item2 = ScatterPlotItem()
         area.addItem(plot_item)
+        area.addItem(plot_item2, y2=True)
         transform_actions = menus[2].actions()
         with patch.object(plot_item, "updateGraph") as mocked:
             transform_actions[0].defaultWidget().setChecked(True)
             self.assertTrue(area.getAxis("bottom").logMode)
-            self.assertTrue(area.getAxis("top").logMode)
+            # self.assertTrue(area.getAxis("top").logMode)
             self.assertTrue(plot_item._log_x_mode)
+            self.assertTrue(plot_item2._log_x_mode)
             mocked.assert_called_once()
 
         with patch.object(plot_item, "updateGraph") as mocked:
             transform_actions[1].defaultWidget().setChecked(True)
             self.assertTrue(area.getAxis("left").logMode)
-            self.assertTrue(area.getAxis("right").logMode)
+            # self.assertTrue(area.getAxis("right").logMode)
             self.assertTrue(plot_item._log_y_mode)
+            self.assertFalse(plot_item2._log_y_mode)
             mocked.assert_called_once()
 
         area._enable_meter = False

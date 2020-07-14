@@ -46,6 +46,15 @@ class CurvePlotItem(pg.PlotItem):
         """Override."""
         return self._x, self._y
 
+    def transformedData(self):
+        """Override."""
+        # inf/nans completely prevent the plot from being displayed starting on
+        # Qt version 5.12.3
+        # we do not expect to have nan in x
+        return (self.toLogScale(self._x) if self._log_x_mode else self._x,
+                self.toLogScale(self._y)
+                if self._log_y_mode else np.nan_to_num(self._y))
+
     def _prepareGraph(self):
         """Override."""
         x, y = self.transformedData()

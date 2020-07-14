@@ -145,7 +145,8 @@ class TrXasSpectraPlot(TimedPlotWidgetF):
             # same color as ROI2
             self._a23 = self.plotCurve(name="ROI2/ROI3", pen=FColor.mkPen("r"))
 
-        self._count = self.plotBar(y2=True, brush=FColor.mkBrush('i', alpha=70))
+        self._count = self.plotBar(
+            name="Count", y2=True, brush=FColor.mkBrush('i', alpha=70))
 
     def refresh(self):
         """Override."""
