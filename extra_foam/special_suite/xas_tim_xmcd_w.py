@@ -113,7 +113,7 @@ class XasTimXmcdAbsorpPnSpectraPlot(TimedPlotWidgetF):
         self._xas_p = self.plotCurve(name="XAS-p", pen=FColor.mkPen('r'))
         self._xas_n = self.plotCurve(name="XAS-n", pen=FColor.mkPen('b'))
         self._count = self.plotBar(
-            name="Count", y2=True, brush=FColor.mkBrush('i', alpha=70))
+            y2=True, brush=FColor.mkBrush('i', alpha=70))
 
     def refresh(self):
         """Override."""
