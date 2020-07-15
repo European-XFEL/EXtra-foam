@@ -74,6 +74,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
 
 foreach(pathname IN LISTS _FOAM_UNITTESTS)
     get_filename_component(filename ${pathname} NAME)
