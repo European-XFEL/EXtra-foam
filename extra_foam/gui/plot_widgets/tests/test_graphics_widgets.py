@@ -95,19 +95,22 @@ class TestPlotArea(unittest.TestCase):
 
     def testPlotItemManipulation(self):
         area = self._area
-        area.addLegend()
 
         image_item = ImageItem()
         area.addItem(image_item)
         area.addItem(MaskItem(image_item))
         area.addItem(RectROI(0))
-        bar_graph_item = BarGraphItem()
+        bar_graph_item = BarGraphItem(name="bar")
         area.addItem(bar_graph_item, y2=True)
-        area.addItem(StatisticsBarItem())
-        curve_plot_item = CurvePlotItem()
+        statistics_bar_item = StatisticsBarItem()
+        area.addItem(statistics_bar_item)
+
+        area.addLegend()  # add legend when there are already added PlotItems
+
+        curve_plot_item = CurvePlotItem(name="curve")
         area.addItem(curve_plot_item)
-        scatter_plot_item = ScatterPlotItem()
-        area.addItem(ScatterPlotItem())
+        scatter_plot_item = ScatterPlotItem(name="scatter")
+        area.addItem(scatter_plot_item)
         area.setAnnotationList([0], [0], [1])
 
         self.assertEqual(3, len(area._plot_items))
@@ -115,7 +118,7 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(8, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
         self.assertEqual(1, len(area._vb2.addedItems))
-        self.assertEqual(4, len(area._legend.items))
+        self.assertEqual(3, len(area._legend.items))
         self.assertEqual(1, len(area._annotation_items))
 
         with patch.object(curve_plot_item, "setData") as mocked1:
@@ -131,7 +134,7 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(8, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
         self.assertEqual(1, len(area._vb2.addedItems))
-        self.assertEqual(4, len(area._legend.items))
+        self.assertEqual(3, len(area._legend.items))
 
         # remove an existing item
         area.removeItem(bar_graph_item)
@@ -140,7 +143,7 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(7, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
         self.assertEqual(0, len(area._vb2.addedItems))
-        self.assertEqual(3, len(area._legend.items))
+        self.assertEqual(2, len(area._legend.items))
 
         # remove an existing item which is not a PlotItem
         area.removeItem(image_item)
@@ -149,7 +152,12 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(6, len(area._items))
         self.assertEqual(6, len(area._vb.addedItems))
         self.assertEqual(0, len(area._vb2.addedItems))
-        self.assertEqual(3, len(area._legend.items))
+        self.assertEqual(2, len(area._legend.items))
+
+        # remove a PlotItem which does not has a name and hence was not added
+        # into the legend
+        area.removeItem(statistics_bar_item)
+        self.assertEqual(2, len(area._legend.items))
 
         with self.assertRaisesRegex(RuntimeError, "not allowed to be removed"):
             area.removeItem(area._annotation_items[0])
