@@ -1,6 +1,26 @@
 CHANGELOG
 =========
 
+0.9.1 (15 July 2020)
+------------------------
+
+- **Bug Fix**
+
+  - Fix transform type update in TransformView in ImageTool. #251
+
+- **Improvement**
+
+  - PlotItem will not be shown in legend if its name is empty. #254
+  - Improve y2-axis plot implementation. #253
+  - Improve stack detector modules. #247
+  - Implement ScatterPlotItem to replace the pyqtgraph one. #238
+
+- **New Feature**
+
+  - Implement curve fitting in correlation window. #255
+  - Implement azimuthal integration and concentric ring detection in C++. #252
+
+
 0.9.0 (30 June 2020)
 ------------------------
 
