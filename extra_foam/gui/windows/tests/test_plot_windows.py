@@ -84,6 +84,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertIsInstance(correlation_window, CorrelationWindow)
         self._checkCorrelationWindow(correlation_window)
         self._checkCorrelationCtrlWidget(correlation_window)
+        self._checkCorrelationCurveFitting(correlation_window)
 
         binning_window = self._check_open_window(self.binning_action)
         self.assertIsInstance(binning_window, BinningWindow)
@@ -380,6 +381,42 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual('', widget._table.cellWidget(0, 1).currentText())
         self.assertEqual('', widget._table.cellWidget(1, 1).text())
         self.assertEqual('', widget._table.cellWidget(2, 1).text())
+
+    def _checkCorrelationCurveFitting(self, win):
+        widget = win._ctrl_widget
+        fitting = widget._fitting
+
+        # test correlation1 and correlation2 checkbox
+        fitting.corr2_cb.setChecked(True)
+        self.assertFalse(fitting.corr1_cb.isChecked())
+        fitting.corr1_cb.setChecked(True)
+        self.assertFalse(fitting.corr2_cb.isChecked())
+
+        # test fit
+        x1, y1 = np.random.rand(10), np.random.rand(10)
+        win._corr1._plot.setData(x1, y1)
+        x1_slave, y1_slave = np.random.rand(10), np.random.rand(10)
+        win._corr1._plot_slave.setData(x1_slave, y1_slave)
+        x2, y2 = np.random.rand(10), np.random.rand(10)
+        win._corr2._plot.setData(x2, y2)
+        x2_slave, y2_slave = np.random.rand(10), np.random.rand(10)
+        win._corr2._plot_slave.setData(x2_slave, y2_slave)
+
+        self.assertTrue(fitting.corr1_cb.isChecked())
+        with patch.object(fitting, "fit") as mocked_fit:
+            mocked_fit.return_value = ([], [])
+            QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+            self.assertEqual(2, len(mocked_fit.call_args_list))
+            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x1, y1, True))
+            self.assertTupleEqual(mocked_fit.call_args_list[1][0], (x1_slave, y1_slave, False))
+
+        fitting.corr2_cb.setChecked(True)
+        with patch.object(fitting, "fit") as mocked_fit:
+            mocked_fit.return_value = ([], [])
+            QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+            self.assertEqual(2, len(mocked_fit.call_args_list))
+            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x2, y2, True))
+            self.assertTupleEqual(mocked_fit.call_args_list[1][0], (x2_slave, y2_slave, False))
 
     def _checkBinCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (

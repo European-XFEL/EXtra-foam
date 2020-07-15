@@ -116,19 +116,37 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def _newScatterPlot(self):
         brush_pair = self._brushes[self._idx]
+        pen_pair = self._pens[self._idx]
+
         self._plot = self.plotScatter(brush=brush_pair[0], name="master")
         self._plot_slave = self.plotScatter(brush=brush_pair[1], name="slave")
 
+        self._fitted = self.plotCurve(pen=pen_pair[0])
+        self._fitted_slave = self.plotCurve(pen=pen_pair[1])
+
     def _newStatisticsBarPlot(self, resolution):
         pen_pair = self._pens[self._idx]
+
         self._plot = self.plotStatisticsBar(
             beam=resolution, pen=pen_pair[0], name="master")
         self._plot_slave = self.plotStatisticsBar(
             beam=resolution, pen=pen_pair[1], name="slave")
 
+        self._fitted = self.plotCurve(pen=pen_pair[0])
+        self._fitted_slave = self.plotCurve(pen=pen_pair[1])
+
     def _removeBothPlots(self):
+        self.removeItem(self._fitted)
+        self.removeItem(self._fitted_slave)
         self.removeItem(self._plot)
         self.removeItem(self._plot_slave)
+
+    def data(self):
+        return self._plot.data()[:2], self._plot_slave.data()[:2]
+
+    def setFitted(self, fitted, fitted_slave):
+        self._fitted.setData(*fitted)
+        self._fitted_slave.setData(*fitted_slave)
 
 
 class CorrelationWindow(_AbstractPlotWindow):
@@ -177,7 +195,21 @@ class CorrelationWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.fit_curve_sgn.connect(self._onCurveFit)
+        self._ctrl_widget.clear_fitting_sgn.connect(self._onClearFitting)
+
+    def _onCurveFit(self, is_corr1):
+        corr = self._corr1 if is_corr1 else self._corr2
+
+        data, data_slave = corr.data()
+
+        x, y = self._ctrl_widget.fit_curve(*data, True)
+        x_slave, y_slave = self._ctrl_widget.fit_curve(*data_slave, False)
+        corr.setFitted((x, y), (x_slave, y_slave))
+
+    def _onClearFitting(self, is_corr1):
+        corr = self._corr1 if is_corr1 else self._corr2
+        corr.setFitted(([], []), ([], []))
 
     def closeEvent(self, QCloseEvent):
         self._ctrl_widget.resetAnalysisType()
