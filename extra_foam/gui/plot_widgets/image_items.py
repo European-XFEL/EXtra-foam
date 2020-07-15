@@ -7,12 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
 from collections.abc import Callable
 import weakref
 
 import numpy as np
 
-from PyQt5.QtGui import QColor, QImage, QPainter, QTransform
+from PyQt5.QtGui import QColor, QImage, QPainter, QPicture, QTransform
 from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QPoint, QPointF, QRectF, Qt
 )
@@ -70,6 +71,7 @@ class ImageItem(pg.GraphicsObject):
         return self._image.shape[0]
 
     def boundingRect(self):
+        """Override."""
         if self._image is None:
             return QRectF(0., 0., 0., 0.)
         return QRectF(0., 0., float(self.width()), float(self.height()))
@@ -555,3 +557,86 @@ class RectROI(pg.ROI):
         """An alternative to addHandle in parent class."""
         # position, scaling center
         self.addScaleHandle([1, 1], [0, 0])
+
+
+class GeometryItem(pg.GraphicsObject):
+    def __init__(self, pen=None, brush=None, parent=None):
+        super().__init__(parent=parent)
+
+        if pen is None and brush is None:
+            self._pen = FColor.mkPen('b')
+            self._brush = FColor.mkBrush(None)
+        else:
+            self._pen = FColor.mkPen(None) if pen is None else pen
+            self._brush = FColor.mkBrush(None) if brush is None else brush
+
+        self._picture = None
+
+    @abc.abstractmethod
+    def _drawPicture(self):
+        raise NotImplementedError
+
+    def _updatePicture(self):
+        self._picture = None
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+
+    @abc.abstractmethod
+    def setGeometry(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def clearGeometry(self):
+        raise NotImplementedError
+
+    def boundingRect(self):
+        """Override."""
+        if self._picture is None:
+            self._drawPicture()
+        return QRectF(self._picture.boundingRect())
+
+    def paint(self, p, *args):
+        """Override."""
+        if self._picture is None:
+            self._drawPicture()
+        self._picture.play(p)
+
+
+class RingItem(GeometryItem):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self._cx = None
+        self._cy = None
+        self._radials = None
+
+        self.clearGeometry()
+
+    def _drawPicture(self):
+        """Override."""
+        self._picture = QPicture()
+
+        p = QPainter(self._picture)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(self._pen)
+        p.setBrush(self._brush)
+
+        c = QPointF(self._cx, self._cy)
+        for r in self._radials:
+            p.drawEllipse(c, r, r)
+
+        p.end()
+
+    def setGeometry(self, cx, cy, radials):
+        """Override."""
+        self._cx = cx
+        self._cy = cy
+        self._radials = radials
+        self._updatePicture()
+
+    def clearGeometry(self):
+        """Override."""
+        self._cx = 0
+        self._cy = 0
+        self._radials = []
+        self._updatePicture()

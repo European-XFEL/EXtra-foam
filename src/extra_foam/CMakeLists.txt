@@ -32,6 +32,7 @@ message(STATUS "================================================================
 # ===============
 
 set(_FOAM_MODULE_FILES
+    f_azimuthal_integrator.cpp
     f_canny.cpp
     f_datamodel.cpp
     f_geometry.cpp

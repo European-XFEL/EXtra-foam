@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import warnings
+from itertools import chain
 
 import numpy as np
 
@@ -178,12 +179,6 @@ class PlotArea(pg.GraphicsWidget):
     - Manage a list of GraphicsItems displayed inside the ViewBox;
     - Implement a context menu with display options.
     """
-    # Emitted when the ViewBox range has changed
-    range_changed_sgn = pyqtSignal(object, object)
-    # Emitted when the ViewBox Y range has changed
-    sigYRangeChanged = pyqtSignal(object, object)
-    # Emitted when the ViewBox X range has changed
-    sigXRangeChanged = pyqtSignal(object, object)
 
     cross_toggled_sgn = pyqtSignal(bool)
 
@@ -200,10 +195,12 @@ class PlotArea(pg.GraphicsWidget):
 
         self._items = set()
         self._plot_items = set()
+        self._plot_items2 = set()
         self._annotation_items = []
         self._n_vis_annotation_items = 0
 
         self._vb = pg.ViewBox(parent=self)
+        self._vb2 = None
 
         if name is not None:
             self._vb.register(name)
@@ -274,10 +271,6 @@ class PlotArea(pg.GraphicsWidget):
         self._initContextMenu()
 
     def initConnections(self):
-        self._vb.sigRangeChanged.connect(self.range_changed_sgn)
-        self._vb.sigXRangeChanged.connect(self.sigXRangeChanged)
-        self._vb.sigYRangeChanged.connect(self.sigYRangeChanged)
-
         self._show_cross_cb.toggled.connect(self._onShowCrossChanged)
 
         self._show_x_grid_cb.toggled.connect(self._onShowGridChanged)
@@ -343,8 +336,7 @@ class PlotArea(pg.GraphicsWidget):
 
     def clearAllPlotItems(self):
         """Clear data on all the plot items."""
-        for item in self._plot_items:
-            # TODO: introduce a method which set empty data
+        for item in chain(self._plot_items, self._plot_items2):
             item.setData([], [])
 
     @pyqtSlot(bool)
@@ -362,23 +354,19 @@ class PlotArea(pg.GraphicsWidget):
 
     @pyqtSlot(bool)
     def _onLogXChanged(self, state):
-        self.getAxis("top").setLogMode(state)
-        self.getAxis("bottom").setLogMode(state)
-        self.updateGeometry()
-
-        for item in self._plot_items:
+        for item in chain(self._plot_items, self._plot_items2):
             item.setLogX(state)
+        self.getAxis("bottom").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
     @pyqtSlot(bool)
     def _onLogYChanged(self, state):
-        self.getAxis("left").setLogMode(state)
-        self.getAxis("right").setLogMode(state)
-        self.updateGeometry()
-
         for item in self._plot_items:
             item.setLogY(state)
+        self.getAxis("left").setLogMode(state)
+        self._vb.autoRange(disableAutoRange=False)
 
-    def addItem(self, item, ignore_bounds=False):
+    def addItem(self, item, ignore_bounds=False, y2=False):
         """Add a graphics item to ViewBox."""
         if item in self._items:
             warnings.warn(f'Item {item} already added to PlotItem, ignoring.')
@@ -387,39 +375,84 @@ class PlotArea(pg.GraphicsWidget):
         self._items.add(item)
 
         if isinstance(item, pg.PlotItem):
-            self._plot_items.add(item)
-            if self._legend is not None:
-                self._legend.addItem(item, item.name())
+            if y2:
+                if self._log_x_cb.isChecked():
+                    item.setLogX(True)
 
-        self._vb.addItem(item, ignoreBounds=ignore_bounds)
+                self._plot_items2.add(item)
+            else:
+                if self._log_x_cb.isChecked():
+                    item.setLogX(True)
+
+                if self._log_y_cb.isChecked():
+                    item.setLogY(True)
+
+                self._plot_items.add(item)
+
+            name = item.name()
+            if self._legend is not None and name:
+                self._legend.addItem(item, name)
+
+        if y2:
+            vb = self._vb2
+            if vb is None:
+                vb = pg.ViewBox()
+                self.scene().addItem(vb)
+                right_axis = self.getAxis('right')
+                right_axis.linkToView(vb)
+                right_axis.show()
+                vb.setXLink(self._vb)
+                self._vb2 = vb
+                self._vb.sigResized.connect(self._updateY2View)
+        else:
+            vb = self._vb
+
+        vb.addItem(item, ignoreBounds=ignore_bounds)
+
+    def _updateY2View(self):
+        self._vb2.setGeometry(self._vb.sceneBoundingRect())
+        # not sure this is required
+        # vb.linkedViewChanged(self._plot_area.vb, vb.XAxis)
 
     def removeItem(self, item):
         """Add a graphics item to ViewBox."""
         if item not in self._items:
             return
 
-        if item in self._plot_items:
-            self._plot_items.remove(item)
-            if self._legend is not None:
-                self._legend.removeItem(item)
-
-        elif item in self._annotation_items:
+        if item in self._annotation_items:
             # it is tricky to update n_vis_annotation_items
             raise RuntimeError("Annotation item is not allowed to be removed "
                                "using 'removeItem' method!")
 
         self._items.remove(item)
+
+        if item in self._plot_items2:
+            self._plot_items2.remove(item)
+            if self._legend is not None and item.name():
+                self._legend.removeItem(item)
+            self._vb2.removeItem(item)
+            return
+
+        if item in self._plot_items:
+            self._plot_items.remove(item)
+            if self._legend is not None and item.name():
+                self._legend.removeItem(item)
+
         self._vb.removeItem(item)
 
     def removeAllItems(self):
         """Remove all graphics items from the ViewBox."""
         for item in self._items:
-            self._vb.removeItem(item)
+            if item in self._plot_items2:
+                self._vb2.removeItem(item)
+            else:
+                self._vb.removeItem(item)
 
         if self._legend is not None:
             self._legend.clear()
 
         self._plot_items.clear()
+        self._plot_items2.clear()
         self._annotation_items.clear()
         self._n_vis_annotation_items = 0
         self._items.clear()
@@ -459,8 +492,10 @@ class PlotArea(pg.GraphicsWidget):
             self._legend = pg.LegendItem(offset=offset, pen='k', **kwargs)
             self._legend.setParentItem(self._vb)
 
-            for item in self._plot_items:
-                self._legend.addItem(item)
+            for item in chain(self._plot_items, self._plot_items2):
+                name = item.name()
+                if name:
+                    self._legend.addItem(item, name)
 
         return self._legend
 

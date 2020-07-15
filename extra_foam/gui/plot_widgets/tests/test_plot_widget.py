@@ -3,12 +3,12 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from PyQt5.QtTest import QTest
-from PyQt5.QtCore import QPoint
-
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF, TimedPlotWidgetF
+from extra_foam.gui.plot_widgets.plot_items import StatisticsBarItem
 from extra_foam.logger import logger
+
+from . import _display
 
 
 app = mkQApp()
@@ -17,25 +17,39 @@ logger.setLevel("CRITICAL")
 
 
 class TestPlotWidget(unittest.TestCase):
-    def setUp(self):
-        self._widget = PlotWidgetF()
+    @classmethod
+    def setUpClass(cls):
+        # test addLegend before adding plot items
+        widget = PlotWidgetF()
+        widget.addLegend()
+        cls._curve1 = widget.plotCurve(name="curve1")
+        cls._scatter1 = widget.plotScatter(name="scatter1")
+        cls._bar2 = widget.plotBar(name="bar2", y2=True)
+        cls._statistics2 = widget.plotStatisticsBar(name="statistics2", y2=True)
+        cls._widget1 = widget
+        if _display():
+            cls._widget1.show()
+
+        # test addLegend after adding plot items
+        widget = PlotWidgetF()
+        cls._bar1 = widget.plotBar(name="bar1")
+        cls._statistics1 = widget.plotStatisticsBar(name="statistics1")
+        cls._curve2 = widget.plotCurve(name="curve2", y2=True)
+        cls._scatter2 = widget.plotScatter(name="scatter2", y2=True)
+        widget.addLegend()
+        cls._widget2 = widget
+        if _display():
+            cls._widget2.show()
+
+        cls._plot_items1 = [cls._curve1, cls._scatter1, cls._bar2, cls._statistics2]
+        cls._plot_items2 = [cls._bar1, cls._statistics1, cls._curve2, cls._scatter2]
 
     def testAddPlots(self):
-        widget = self._widget
-
-        self.assertEqual(len(self._widget._plot_area._items), 2)
-
-        # test Legend
-        widget.addLegend()
-        widget.plotCurve(name="curve")
-        widget.plotScatter(name="scatter")
-        widget.plotBar(name="bar")
-        widget.plotStatisticsBar(name="statistics")
-
-        self.assertEqual(len(self._widget._plot_area._items), 6)
+        self.assertEqual(len(self._widget1._plot_area._items), 6)
+        self.assertEqual(len(self._widget2._plot_area._items), 6)
 
     def testForwardMethod(self):
-        widget = self._widget
+        widget = self._widget1
 
         for method in ["removeAllItems", "setAspectLocked", "setLabel", "setTitle",
                        "setAnnotationList", "addLegend", "invertX", "invertY", "autoRange"]:
@@ -44,7 +58,7 @@ class TestPlotWidget(unittest.TestCase):
                 mocked.assert_called_once()
 
     def testShowHideAxisLegend(self):
-        widget = self._widget
+        widget = self._widget1
 
         widget.showAxis()
         self.assertTrue(widget._plot_area.getAxis("left").isVisible())
@@ -60,57 +74,51 @@ class TestPlotWidget(unittest.TestCase):
         widget.showLegend()
         self.assertTrue(widget._plot_area._legend.isVisible())
 
-    def testCurvePlot(self):
-        plot = self._widget.plotCurve(np.arange(3), np.arange(1, 4, 1))
-        app.processEvents()
+    def testPlot1(self):
+        # widget1
 
-        # test set empty data
-        plot.setData([], [])
-        app.processEvents()
+        for i, plot in enumerate(self._plot_items1):
+            x = np.arange(20)
+            y = np.random.rand(20)
+            y[-i-1:-1] = np.nan
+            if isinstance(plot, StatisticsBarItem):
+                plot.setData(x, y, y - 0.1, y + 0.1)
+            else:
+                plot.setData(x, y)
+            _display()
 
-        plot.setData([1], [1])
-        app.processEvents()
+        self._widget1._plot_area._onLogXChanged(True)
+        _display()
+        self._widget1._plot_area._onLogYChanged(True)
+        _display()
 
-        # test if x and y have different lengths
-        with self.assertRaises(Exception):
-            plot.setData([1, 2, 3], [])
+        for plot in self._plot_items1:
+            plot.setData([], [])
+            _display()
 
-    def testBarPlot(self):
-        # set any valid number
-        plot = self._widget.plotBar([1, 2], [3, 4])
-        app.processEvents()
+        # widget2
 
-        # test set empty data
-        plot.setData([], [])
-        app.processEvents()
+        for i, plot in enumerate(self._plot_items2):
+            x = np.arange(20)
+            y = np.random.rand(20)
+            y[-i-1:-1] = np.nan
+            if isinstance(plot, StatisticsBarItem):
+                plot.setData(x, y, y - 0.1, y + 0.1)
+            else:
+                plot.setData(x, y)
+            _display()
 
-        # test if x and y have different lengths
-        with self.assertRaises(ValueError):
-            plot.setData([1, 2, 3], [])
+        self._widget2._plot_area._onLogXChanged(True)
+        _display()
+        self._widget2._plot_area._onLogYChanged(True)
+        _display()
 
-    def testErrorBarPlot(self):
-        # set any valid number
-        plot = self._widget.plotStatisticsBar([1, 2], [3, 4])
-        app.processEvents()
-
-        # set x, y, y_min and y_max together
-        plot.setData([1, 2], [1, 2], y_min=[0, 0], y_max=[2, 2])
-        app.processEvents()
-
-        # test set empty data
-        plot.setData([], [])
-        app.processEvents()
-
-        # test if x and y have different lengths
-        with self.assertRaises(ValueError):
-            plot.setData([1, 2, 3], [], y_min=[0, 0, 0], y_max=[2, 2, 2])
-
-        # test if y_min/ymax have different lengths
-        with self.assertRaises(ValueError):
-            plot.setData([1, 2, 3], [1, 2, 3], y_min=[0, 0, 0], y_max=[2, 2])
+        for plot in self._plot_items2:
+            plot.setData([], [])
+            _display()
 
     def testCrossCursor(self):
-        widget = self._widget
+        widget = self._widget1
         self.assertFalse(widget._v_line.isVisible())
         self.assertFalse(widget._h_line.isVisible())
         widget._plot_area._show_cross_cb.setChecked(True)

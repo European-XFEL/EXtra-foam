@@ -13,9 +13,9 @@ EXtra-foam
 
 ![Overview](docs/images/extra_foam_0.9.0.jpg)
 
-*EXtra-foam* (previously known as *[karaboFAI](https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/)*) is a 
-framework that provides super fast on-line (real-time) and off-line data analysis and visualization for 
-experiments at European XFEL that using 2D detectors (e.g. AGIPD, DSSC, LPD, ePix100, FastCCD, JungFrau, 
-etc.), together with other 1D detectors (e.g. XGM, digitizer, etc.) and various control data.
+*EXtra-foam* is a framework that provides real-time and off-line data analysis (**detector geometry**, 
+**pump-probe**, **azimuthal integration**, **ROI**, **statistics**, etc.) and visualization for experiments 
+that use **2D area detectors** (*AGIPD*, *LPD*, *DSSC*, *FastCCD*, *JungFrau*, *ePix100*, etc.) and 
+**1D detectors** (*Gotthard*, *XGM*, *digitizer*, etc.) at European XFEL.
 
 [Documentation](https://extra-foam.readthedocs.io/en/latest/)

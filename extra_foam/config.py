@@ -90,9 +90,10 @@ class GeomAssembler(IntEnum):
 
 
 class ImageTransformType(IntEnum):
-    UNDEFINED = 0
+    CONCENTRIC_RINGS = 0
     FOURIER_TRANSFORM = 1
     EDGE_DETECTION = 2
+    UNDEFINED = 255
 
 
 class PipelineSlowPolicy(IntEnum):
@@ -295,7 +296,7 @@ class _Config(dict):
         # initial (width, height) of the image tool window
         "GUI_IMAGE_TOOL_SIZE": (1720, 1080),
         # initial (width, height) of a large plot window
-        "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
+        "GUI_PLOT_WINDOW_SIZE": (1520, 1080),
         # color map in contour plots, valid options are: thermal, flame,
         # yellowy, bipolar, spectrum, cyclic, greyclip, grey, viridis,
         # inferno, plasma, magma

@@ -23,7 +23,7 @@ namespace foam
 {
 
 /**
- * Return the Gaussian kernel.
+ * Return the 1D Gaussian kernel.
  *
  * @tparam T: kernel data type.
  * @tparam N: kernel size.
@@ -31,9 +31,10 @@ namespace foam
  * @return
  */
 template<typename T = double>
-xt::xtensor<T, 1> getGaussianKernel(size_t k_size, double sigma = -1.)
+xt::xtensor<T, 1> getGaussianKernel(int k_size, double sigma = -1.)
 {
-  if (k_size % 2 == 0)
+  if (k_size < 0) k_size = 1;
+  else if (k_size % 2 == 0)
     throw std::invalid_argument("k_size must be odd!");
 
   // from OpenCV
@@ -56,19 +57,19 @@ xt::xtensor<T, 1> getGaussianKernel(size_t k_size, double sigma = -1.)
  * @param sigma: Gaussian kernel standard deviation.
  */
 template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-void gaussianBlur(const E& src, E& dst, size_t k_size, double sigma = -1.)
+void gaussianBlur(const E& src, E& dst, int k_size, double sigma = -1.)
 {
   auto shape = src.shape();
   utils::checkShape(shape, dst.shape(), "src and dst have different shapes");
 
-  if (k_size == 0) k_size = 1;
+  if (k_size < 0) k_size = 1;
 
   using value_type = typename std::decay_t<E>::value_type;
   auto kernel = 0.5 * getGaussianKernel<value_type>(k_size, sigma);
 
   size_t h = shape[0];
   size_t w = shape[1];
-  int edge = (static_cast<int>(k_size) - 1) / 2;
+  int edge = (k_size - 1) / 2;
 
   for (size_t i = edge; i < h - edge; ++i)
   {

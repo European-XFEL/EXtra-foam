@@ -299,7 +299,6 @@ class ViewBox(GraphicsWidget):
         GraphicsWidget.update(self, *args, **kwargs)
 
     def prepareForPaint(self):
-        #autoRangeEnabled = (self.state['autoRange'][0] is not False) or (self.state['autoRange'][1] is not False)
         # don't check whether auto range is enabled here--only check when setting dirty flag.
         if self._autoRangeNeedsUpdate: # and autoRangeEnabled:
             self.updateAutoRange()
@@ -517,10 +516,6 @@ class ViewBox(GraphicsWidget):
         ================== =====================================================================
 
         """
-        #print self.name, "ViewBox.setRange", rect, xRange, yRange, padding
-        #import traceback
-        #traceback.print_stack()
-
         changes = {}   # axes
         setRequested = [False, False]
 
@@ -611,7 +606,6 @@ class ViewBox(GraphicsWidget):
                     mx = lmx
                     mn += delta
 
-
             # Set target range
             if self.state['targetRange'][ax] != [mn, mx]:
                 self.state['targetRange'][ax] = [mn, mx]
@@ -656,13 +650,13 @@ class ViewBox(GraphicsWidget):
         """
         self.setRange(xRange=[min, max], update=update, padding=padding)
 
-    def autoRange(self, padding=None, items=None, item=None):
+    def autoRange(self, padding=None, items=None, item=None, disableAutoRange=True):
         """
         Set the range of the view box to make all children visible.
         Note that this is not the same as enableAutoRange, which causes the view to
         automatically auto-range whenever its contents are changed.
 
-        ==============  ============================================================
+        ==============  ====o========================================================
         **Arguments:**
         padding         The fraction of the total data range to add on to the final
                         visible range. By default, this value is set between 0.02
@@ -678,7 +672,7 @@ class ViewBox(GraphicsWidget):
             bounds = self.mapFromItemToView(item, item.boundingRect()).boundingRect()
 
         if bounds is not None:
-            self.setRange(bounds, padding=padding)
+            self.setRange(bounds, padding=padding, disableAutoRange=disableAutoRange)
 
     def suggestPadding(self, axis):
         l = self.width() if axis==0 else self.height()
@@ -1527,7 +1521,6 @@ class ViewBox(GraphicsWidget):
             canidateRange = [rangeX, rangeY]
 
             # Decide which range to try to keep unchanged
-            #print self.name, "aspect:", aspect, "changed:", changed, "auto:", self.state['autoRange']
             if forceX:
                 ax = 0
             elif forceY:
@@ -1556,7 +1549,6 @@ class ViewBox(GraphicsWidget):
                 if dx != 0:
                     changed[0] = True
                 viewRange[0] = rangeX
-
 
         changed = [(viewRange[i][0] != self.state['viewRange'][i][0]) or (viewRange[i][1] != self.state['viewRange'][i][1]) for i in (0,1)]
         self.state['viewRange'] = viewRange
@@ -1614,14 +1606,7 @@ class ViewBox(GraphicsWidget):
         if self.border is not None:
             bounds = self.shape()
             p.setPen(self.border)
-            #p.fillRect(bounds, QtGui.QColor(0, 0, 0))
             p.drawPath(bounds)
-
-        #p.setPen(fn.mkPen('r'))
-        #path = QtGui.QPainterPath()
-        #path.addRect(self.targetRect())
-        #tr = self.mapFromView(path)
-        #p.drawPath(tr)
 
     def updateBackground(self):
         bg = self.state['background']

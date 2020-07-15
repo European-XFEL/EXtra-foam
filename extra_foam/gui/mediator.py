@@ -149,10 +149,10 @@ class Mediator(QObject):
     def onAiPixelSizeYChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_y', value)
 
-    def onAiIntegCenterXChange(self, value: int):
+    def onAiIntegCenterXChange(self, value: float):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
 
-    def onAiIntegCenterYChange(self, value: int):
+    def onAiIntegCenterYChange(self, value: float):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_y', value)
 
     def onAiIntegMethodChange(self, value: str):
@@ -315,8 +315,23 @@ class Mediator(QObject):
     def onItMaWindowChange(self, value: int):
         self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ma_window", value)
 
-    def onItTransformTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "transform_type", int(value))
+    def onItCrCxChange(self, value: float):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:cx", value)
+
+    def onItCrCyChange(self, value: float):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:cy", value)
+
+    def onItCrProminenceChange(self, value: float):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:prominence", value)
+
+    def onItCrDistanceChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:distance", value)
+
+    def onItCrMinCountChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:min_count", value)
+
+    def onItTransformTypeChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "transform_type", value)
 
     def onItFftLogrithmicScaleChange(self, value: bool):
         self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "fft:logrithmic", str(value))

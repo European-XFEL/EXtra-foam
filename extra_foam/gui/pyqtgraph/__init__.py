@@ -199,7 +199,6 @@ if __version__ is None and not hasattr(sys, 'frozen') and sys.version_info[0] ==
           #excludes=['MatplotlibWidget', 'RawImageWidget', 'RemoteGraphicsView'])
 
 from .graphicsItems.GraphicsWidget import *
-from .graphicsItems.PlotDataItem import *
 from .graphicsItems.TextItem import *
 from .graphicsItems.UIGraphicsItem import *
 from .graphicsItems.GraphicsObject import * 
@@ -214,12 +213,10 @@ from .graphicsItems.AxisItem import *
 from .graphicsItems.LabelItem import *
 from .graphicsItems.CurvePoint import * 
 from .graphicsItems.GraphicsWidgetAnchor import * 
-from .graphicsItems.PlotCurveItem import * 
 from .graphicsItems.GradientEditorItem import *
 from .graphicsItems.LinearRegionItem import *
 from .graphicsItems.LegendItem import *
-from .graphicsItems.ScatterPlotItem import * 
-from .graphicsItems.ItemGroup import * 
+from .graphicsItems.ItemGroup import *
 
 from .widgets.SpinBox import *
 from .widgets.GraphicsView import *

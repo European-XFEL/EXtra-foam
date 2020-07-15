@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from PyQt5.QtTest import QTest, QSignalSpy
-from PyQt5.QtCore import Qt
 
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.graphics_widgets import (
@@ -12,7 +11,7 @@ from extra_foam.gui.plot_widgets.image_items import (
     ImageItem, MaskItem, RectROI
 )
 from extra_foam.gui.plot_widgets.plot_items import (
-    CurvePlotItem, BarGraphItem, StatisticsBarItem
+    CurvePlotItem, BarGraphItem, ScatterPlotItem, StatisticsBarItem
 )
 from extra_foam.gui import pyqtgraph as pg
 from extra_foam.logger import logger
@@ -96,24 +95,30 @@ class TestPlotArea(unittest.TestCase):
 
     def testPlotItemManipulation(self):
         area = self._area
-        area.addLegend()
 
         image_item = ImageItem()
         area.addItem(image_item)
         area.addItem(MaskItem(image_item))
         area.addItem(RectROI(0))
-        bar_graph_item = BarGraphItem()
-        area.addItem(bar_graph_item)
-        area.addItem(StatisticsBarItem())
-        curve_plot_item = CurvePlotItem()
+        bar_graph_item = BarGraphItem(name="bar")
+        area.addItem(bar_graph_item, y2=True)
+        statistics_bar_item = StatisticsBarItem()
+        area.addItem(statistics_bar_item)
+
+        area.addLegend()  # add legend when there are already added PlotItems
+
+        curve_plot_item = CurvePlotItem(name="curve")
         area.addItem(curve_plot_item)
-        area.addItem(pg.ScatterPlotItem())
+        scatter_plot_item = ScatterPlotItem(name="scatter")
+        area.addItem(scatter_plot_item)
         area.setAnnotationList([0], [0], [1])
 
-        self.assertEqual(4, len(area._plot_items))
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(1, len(area._plot_items2))
         self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
-        self.assertEqual(4, len(area._legend.items))
+        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(1, len(area._vb2.addedItems))
+        self.assertEqual(3, len(area._legend.items))
         self.assertEqual(1, len(area._annotation_items))
 
         with patch.object(curve_plot_item, "setData") as mocked1:
@@ -124,30 +129,45 @@ class TestPlotArea(unittest.TestCase):
 
         # remove an item which does not exist
         area.removeItem(BarGraphItem())
-        self.assertEqual(4, len(area._plot_items))
+        self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(1, len(area._plot_items2))
         self.assertEqual(8, len(area._items))
-        self.assertEqual(8, len(area._vb.addedItems))
-        self.assertEqual(4, len(area._legend.items))
+        self.assertEqual(7, len(area._vb.addedItems))
+        self.assertEqual(1, len(area._vb2.addedItems))
+        self.assertEqual(3, len(area._legend.items))
 
+        # remove an existing item
         area.removeItem(bar_graph_item)
         self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(7, len(area._items))
         self.assertEqual(7, len(area._vb.addedItems))
-        self.assertEqual(3, len(area._legend.items))
+        self.assertEqual(0, len(area._vb2.addedItems))
+        self.assertEqual(2, len(area._legend.items))
 
+        # remove an existing item which is not a PlotItem
         area.removeItem(image_item)
         self.assertEqual(3, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(6, len(area._items))
         self.assertEqual(6, len(area._vb.addedItems))
-        self.assertEqual(3, len(area._legend.items))
+        self.assertEqual(0, len(area._vb2.addedItems))
+        self.assertEqual(2, len(area._legend.items))
+
+        # remove a PlotItem which does not has a name and hence was not added
+        # into the legend
+        area.removeItem(statistics_bar_item)
+        self.assertEqual(2, len(area._legend.items))
 
         with self.assertRaisesRegex(RuntimeError, "not allowed to be removed"):
             area.removeItem(area._annotation_items[0])
 
         area.removeAllItems()
         self.assertEqual(0, len(area._plot_items))
+        self.assertEqual(0, len(area._plot_items2))
         self.assertEqual(0, len(area._items))
         self.assertEqual(0, len(area._vb.addedItems))
+        self.assertEqual(0, len(area._vb2.addedItems))
         self.assertEqual(0, len(area._legend.items))
 
     def testContextMenu(self):
@@ -184,21 +204,44 @@ class TestPlotArea(unittest.TestCase):
 
         # test "Transform" actions
         plot_item = CurvePlotItem()
+        plot_item2 = ScatterPlotItem()
         area.addItem(plot_item)
+        area.addItem(plot_item2, y2=True)
         transform_actions = menus[2].actions()
-        with patch.object(plot_item, "updateGraph") as mocked:
-            transform_actions[0].defaultWidget().setChecked(True)
-            self.assertTrue(area.getAxis("bottom").logMode)
-            self.assertTrue(area.getAxis("top").logMode)
-            self.assertTrue(plot_item._log_x_mode)
-            mocked.assert_called_once()
 
         with patch.object(plot_item, "updateGraph") as mocked:
-            transform_actions[1].defaultWidget().setChecked(True)
-            self.assertTrue(area.getAxis("left").logMode)
-            self.assertTrue(area.getAxis("right").logMode)
-            self.assertTrue(plot_item._log_y_mode)
-            mocked.assert_called_once()
+            with patch.object(plot_item2, "updateGraph") as mocked2:
+                transform_actions[0].defaultWidget().setChecked(True)
+                self.assertTrue(area.getAxis("bottom").logMode)
+                # self.assertTrue(area.getAxis("top").logMode)
+                self.assertTrue(plot_item._log_x_mode)
+                self.assertTrue(plot_item2._log_x_mode)
+                mocked.assert_called_once()
+                mocked2.assert_called_once()
+
+                plot_item3 = CurvePlotItem()
+                plot_item4 = ScatterPlotItem()
+                area.addItem(plot_item3)
+                area.addItem(plot_item4, y2=True)
+                self.assertTrue(plot_item3._log_x_mode)
+                self.assertTrue(plot_item4._log_x_mode)
+
+        with patch.object(plot_item, "updateGraph") as mocked:
+            with patch.object(plot_item2, "updateGraph") as mocked2:
+                transform_actions[1].defaultWidget().setChecked(True)
+                self.assertTrue(area.getAxis("left").logMode)
+                # self.assertTrue(area.getAxis("right").logMode)
+                self.assertTrue(plot_item._log_y_mode)
+                self.assertFalse(plot_item2._log_y_mode)
+                mocked.assert_called_once()
+                mocked2.assert_not_called()
+
+                plot_item5 = CurvePlotItem()
+                plot_item6 = ScatterPlotItem()
+                area.addItem(plot_item5)
+                area.addItem(plot_item6, y2=True)
+                self.assertTrue(plot_item5._log_y_mode)
+                self.assertFalse(plot_item6._log_y_mode)
 
         area._enable_meter = False
         menus = self._area.getContextMenus(event)

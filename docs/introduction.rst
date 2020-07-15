@@ -4,10 +4,11 @@ INTRODUCTION
 .. image:: images/extra_foam_0.9.0.jpg
 
 
-**EXtra-foam** ( **F**\ ast **O**\ nline **A**\ nalysis **M**\ onitor) is a tool that provides
-real-time and off-line data analysis (**azimuthal integration**, **ROI**, **correlation**,
-**binning**, etc.) and visualization for experiments using **2D area detectors** (*AGIPD*,
-*LPD*, *DSSC* , *FastCCD*, *JungFrau*, *ePix100*, etc.) at European XFEL.
+**EXtra-foam** ( **F**\ ast **O**\ nline **A**\ nalysis **M**\ onitor) is a framework that provides
+real-time and off-line data analysis (**detector geometry**, **pump-probe**, **azimuthal integration**,
+**ROI**, **statistics**, etc.) and visualization for experiments that use **2D area detectors**
+(*AGIPD*, *LPD*, *DSSC*, *FastCCD*, *JungFrau*, *ePix100*, etc.) and
+**1D detectors** (*Gotthard*, *XGM*, *digitizer*, etc.) at European XFEL.
 
 
 +------------+-------------------------+-------------------------+

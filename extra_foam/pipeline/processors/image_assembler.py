@@ -55,7 +55,7 @@ def _stack_detector_modules(data, src, modules, *,
     :param list modules: a list of module indices. The module indices do
         not need to be continuous or be monotonically increasing.
     :param bool pulse_resolved: whether the detector is pulse-resolved.
-    :param bool memory_cell_last: whether memory cell is the last dimention.
+    :param bool memory_cell_last: whether memory cell is the last dimension.
     """
     if isinstance(data, np.ndarray):
         # This happens when the source name if one of the modules. if the
@@ -91,7 +91,10 @@ def _stack_detector_modules(data, src, modules, *,
         modno_arrays[i] = array
 
     if len(dtypes) > 1:
-        raise ValueError("Arrays have mismatched dtypes: {}".format(dtypes))
+        raise ValueError(f"Modules have mismatched dtypes: {dtypes}")
+
+    if len(shapes) > 1:
+        raise ValueError(f"Modules have mismatched shapes: {shapes}")
 
     dtype = dtypes.pop()
     shape = shapes.pop()

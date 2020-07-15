@@ -158,7 +158,7 @@ class XasTimXmcdSpectraPlot(TimedPlotWidgetF):
         self._displayed = 0
 
         self._xas = self.plotCurve(name="XAS", pen=FColor.mkPen('p'))
-        self._xmcd = self.plotCurve(pen=FColor.mkPen('g'), y2=True)
+        self._xmcd = self.plotCurve(name="XMCD", pen=FColor.mkPen('g'), y2=True)
 
     def refresh(self):
         """Override."""
