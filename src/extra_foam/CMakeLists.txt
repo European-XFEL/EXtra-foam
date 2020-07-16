@@ -14,6 +14,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     endif()
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-sign-compare")
+
 message(STATUS "=========================== EXtra-foam Python ============================")
 message(STATUS "")
 message(STATUS "    C++ Compiler:               ${FOAM_COMPILER_STR}")
