@@ -11,23 +11,25 @@ SOURCE:
 
         JungFrau:
             PIPELINE:
+                SPB_IRDA_JF4M/DET/JNGFR0*:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR01:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR02:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR03:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR04:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR05:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR06:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR07:daqOutput:
+                    - data.adc
+                SPB_IRDA_JF4M/DET/JNGFR08:daqOutput:
+                    - data.adc
                 SPB_IRDA_JNGFR/DET/MODULE_*:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_1:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_2:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_3:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_4:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_5:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_6:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_7:daqOutput:
-                    - data.adc
-                SPB_IRDA_JNGFR/DET/MODULE_8:daqOutput:
                     - data.adc
 
 DETECTOR:
