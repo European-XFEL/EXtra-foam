@@ -59,6 +59,7 @@ void declareGeometry(py::module &m, const std::string& detector_name)
     &Geometry::positionAllModules,                                                                               \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_asic_edge") = false);
 
+  FOAM_POSITION_ALL_MODULES(double, float)
   FOAM_POSITION_ALL_MODULES(float, float)
   FOAM_POSITION_ALL_MODULES(uint16_t, float)
   FOAM_POSITION_ALL_MODULES(int16_t, float) // for ePix100
