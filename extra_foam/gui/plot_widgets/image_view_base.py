@@ -97,7 +97,7 @@ class ImageViewF(QWidget):
         for roi in self._rois:
             self._plot_widget.addItem(roi)
 
-        # self.invertY(True)  # y-axis points from top to bottom
+        self.invertY(True)  # y-axis points from top to bottom
         self.setAspectLocked(True)
 
         self._hist_widget = HistogramLUTWidget(self._image_item)
