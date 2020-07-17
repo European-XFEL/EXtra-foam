@@ -13,19 +13,17 @@ SOURCE:
             PIPELINE:
                 FXE_XAD_JF1M/CAL/APPEND:
                     - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-*:display:
+                FXE_XAD_JF1M/DET/JNGFR01:daqOutput:
                     - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-1:display:
+                FXE_XAD_JF1M/DET/JNGFR02:daqOutput:
                     - data.adc
-                FXE_XAD_JF1M/DET/RECEIVER-2:display:
+                FXE_XAD_JF500K/DET/JNGFR03:daqOutput:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-*:daqOutput:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput:
                     - data.adc
                 FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput:
-                    - data.adc
-                FXE_XAD_JF1M1/DET/RECEIVER:daqOutput:
                     - data.adc
 
         XGM:
