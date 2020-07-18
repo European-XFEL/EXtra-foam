@@ -59,23 +59,8 @@ set(_FOAM_UNITTEST_TARGETS_NEED_BLAS
 
 set(CMAKE_BUILD_RPATH "${CMAKE_PREFIX_PATH}/lib")
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-    if(NOT CMAKE_CXX_FLAGS MATCHES "-march")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-    endif()
-endif()
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "7")
-        # solve the linker error with test_tbb.cpp:
-        #     undefined reference to symbol 'clock_gettime@@GLIBC_2.2.5'
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lrt")
-    endif()
-endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
+include(defineFoamCompilerFlags)
+define_foam_compile_flags(foam_test)
 
 foreach(pathname IN LISTS _FOAM_UNITTESTS)
     get_filename_component(filename ${pathname} NAME)

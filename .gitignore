@@ -1,10 +1,7 @@
 .cache
 .coverage
 docs/_build
-cmake-build-debug
-cmake-build-debug*
-cmake-build-release
-cmake-build-release*
+cmake-build*
 build/
 dist/
 
