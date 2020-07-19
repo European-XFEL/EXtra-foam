@@ -302,11 +302,10 @@ class OneWayAccuPairSequence(_AbstractSequence):
     """
 
     def __init__(self, resolution, *,
-                 max_len=3000, dtype=np.float64, min_count=2, epsilon=1.e-9):
+                 max_len=3000, dtype=np.float64, min_count=2):
         super().__init__(max_len=max_len)
 
         self._min_count = min_count
-        self._epsilon = np.abs(epsilon)
 
         if resolution <= 0:
             raise ValueError("resolution must be positive!")
@@ -323,6 +322,8 @@ class OneWayAccuPairSequence(_AbstractSequence):
             self._OVER_CAPACITY * max_len, dtype=dtype)
         self._y_std = np.zeros(
             self._OVER_CAPACITY * max_len, dtype=dtype)
+
+        self._last = 0
 
     def __getitem__(self, index):
         """Override."""
@@ -355,9 +356,9 @@ class OneWayAccuPairSequence(_AbstractSequence):
         x, y = item
 
         new_pt = False
-        if self._len > 0:
-            last = self._i0 + self._len - 1
-            if abs(x - self._x_avg[last]) - self._resolution < self._epsilon:
+        last = self._last
+        if self._len > 0 or self._count[0] > 0:
+            if abs(x - self._x_avg[last]) <= self._resolution:
                 self._count[last] += 1
                 self._x_avg[last] += (x - self._x_avg[last]) / self._count[last]
                 avg_prev = self._y_avg[last]
@@ -373,12 +374,15 @@ class OneWayAccuPairSequence(_AbstractSequence):
                 self._y_max[last] = self._y_avg[last] + 0.5*np.sqrt(
                     self._y_std[last]/self._count[last])
 
+                if self._count[last] == self._min_count:
+                    new_pt = True
+
             else:
                 # If the number of data at a location is less than
                 # min_count, the data at this location will be discarded.
                 if self._count[last] >= self._min_count:
-                    new_pt = True
-                    last += 1
+                    self._last += 1
+                    last = self._last
 
                 self._x_avg[last] = x
                 self._count[last] = 1
@@ -394,7 +398,6 @@ class OneWayAccuPairSequence(_AbstractSequence):
             self._y_min[0] = y
             self._y_max[0] = y
             self._y_std[0] = 0.0
-            new_pt = True
 
         if new_pt:
             max_len = self._max_len
@@ -403,12 +406,16 @@ class OneWayAccuPairSequence(_AbstractSequence):
             else:
                 self._i0 += 1
                 if self._i0 == max_len:
+                    self._i0 = 0
+                    self._last -= max_len
                     self._x_avg[:max_len] = self._x_avg[max_len:]
                     self._count[:max_len] = self._count[max_len:]
                     self._y_avg[:max_len] = self._y_avg[max_len:]
                     self._y_min[:max_len] = self._y_min[max_len:]
                     self._y_max[:max_len] = self._y_max[max_len:]
                     self._y_std[:max_len] = self._y_std[max_len:]
+
+        return new_pt
 
     def extend(self, items):
         """Override."""
@@ -419,6 +426,7 @@ class OneWayAccuPairSequence(_AbstractSequence):
         """Overload."""
         self._i0 = 0
         self._len = 0
+        self._last = 0
         self._x_avg.fill(0)
         self._count.fill(0)
         self._y_avg.fill(0)

@@ -116,6 +116,16 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(MAX_LENGTH + overflow - 1, ax[-1])
 
         # ----------------------------
+        # test when capacity reached
+        # ----------------------------
+        for i in range(MAX_LENGTH):
+            hist.append(i)
+        ax = hist.data()
+        self.assertEqual(MAX_LENGTH, len(ax))
+        self.assertEqual(0, ax[0])
+        self.assertEqual(MAX_LENGTH - 1, ax[-1])
+
+        # ----------------------------
         # test constructing from array
         # ----------------------------
         hist = SimpleSequence.from_array([1, 2, 3])
@@ -169,6 +179,16 @@ class TestSequenceData(unittest.TestCase):
                                               MAX_LENGTH + overflow - 1], ax[-1])
 
         # ----------------------------
+        # test when capacity reached
+        # ----------------------------
+        for i in range(MAX_LENGTH):
+            hist.append([i, i])
+        ax = hist.data()
+        self.assertEqual(MAX_LENGTH, len(ax))
+        np.testing.assert_array_almost_equal([0, 0], ax[0])
+        np.testing.assert_array_almost_equal([MAX_LENGTH - 1, MAX_LENGTH - 1], ax[-1])
+
+        # ----------------------------
         # test constructing from array
         # ----------------------------
         with self.assertRaises(ValueError):
@@ -218,6 +238,19 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(MAX_LENGTH + overflow - 1, ay[-1])
 
         # ----------------------------
+        # test when capacity reached
+        # ----------------------------
+        for i in range(MAX_LENGTH):
+            hist.append((i, i))
+        ax, ay = hist.data()
+        self.assertEqual(MAX_LENGTH, len(ax))
+        self.assertEqual(MAX_LENGTH, len(ay))
+        self.assertEqual(0, ax[0])
+        self.assertEqual(0, ay[0])
+        self.assertEqual(MAX_LENGTH - 1, ax[-1])
+        self.assertEqual(MAX_LENGTH - 1, ay[-1])
+
+        # ----------------------------
         # test constructing from array
         # ----------------------------
 
@@ -243,76 +276,95 @@ class TestSequenceData(unittest.TestCase):
         hist = OneWayAccuPairSequence(0.1, max_len=MAX_LENGTH, min_count=2)
         self.assertEqual(0, len(hist))
 
-        # distance between two adjacent data > resolution
-        hist.append((1, 0.3))
-        hist.append((2, 0.4))
-        ax, ay = hist.data()
-        np.testing.assert_array_equal([], ax)
-        np.testing.assert_array_equal([], ay.avg)
-        np.testing.assert_array_equal([], ay.min)
-        np.testing.assert_array_equal([], ay.max)
-        np.testing.assert_array_equal([], ay.count)
+        for _ in range(2):
+            # test reset
+            hist.reset()
 
-        hist.append((2.02, 0.5))
-        ax, ay = hist.data()
-        np.testing.assert_array_equal([2.01], ax)
-        np.testing.assert_array_equal([0.45], ay.avg)
-        np.testing.assert_array_almost_equal([0.425], ay.min)
-        np.testing.assert_array_almost_equal([0.475], ay.max)
-        np.testing.assert_array_equal([2], ay.count)
+            # first data
+            hist.append((1, 0.3))
+            self.assertEqual(0, len(hist))
 
-        hist.append((2.10, 0.6))
-        ax, ay = hist.data()
-        np.testing.assert_array_equal([2.04], ax)
-        np.testing.assert_array_equal([0.5], ay.avg)
-        np.testing.assert_array_almost_equal([0.4591751709536137], ay.min)
-        np.testing.assert_array_almost_equal([0.5408248290463863], ay.max)
-        np.testing.assert_array_equal([3], ay.count)
+            # distance between two adjacent data > resolution
+            hist.append((2, 0.4))
+            self.assertEqual(0, len(hist))
+            ax, ay = hist.data()
+            np.testing.assert_array_equal([], ax)
+            np.testing.assert_array_equal([], ay.avg)
+            np.testing.assert_array_equal([], ay.min)
+            np.testing.assert_array_equal([], ay.max)
+            np.testing.assert_array_equal([], ay.count)
 
-        # new point
-        hist.append((2.31, 1))
-        hist.append((2.41, 2))
-        ax, ay = hist.data()
-        np.testing.assert_array_equal([0.5, 1.5], ay.avg)
-        np.testing.assert_array_almost_equal([0.4591751709536137, 1.25], ay.min)
-        np.testing.assert_array_almost_equal([0.5408248290463863, 1.75], ay.max)
-        np.testing.assert_array_equal([3, 2], ay.count)
+            # new data within resolution
+            hist.append((2.02, 0.5))
+            self.assertEqual(1, len(hist))
+            ax, ay = hist.data()
+            np.testing.assert_array_equal([2.01], ax)
+            np.testing.assert_array_equal([0.45], ay.avg)
+            np.testing.assert_array_almost_equal([0.425], ay.min)
+            np.testing.assert_array_almost_equal([0.475], ay.max)
+            np.testing.assert_array_equal([2], ay.count)
 
-        # test Sequence protocol
-        x, y = hist[0]
-        self.assertAlmostEqual(2.04, x)
-        self.assertEqual(_StatDataItem(0.5, 0.4591751709536137, 0.5408248290463863, 3), y)
-        x, y = hist[-1]
-        self.assertAlmostEqual(2.36, x)
-        self.assertEqual(_StatDataItem(1.5, 1.25, 1.75, 2), y)
-        with self.assertRaises(IndexError):
-            hist[2]
+            # new data outside resolution
+            hist.append((2.10, 0.6))
+            self.assertEqual(1, len(hist))
+            ax, ay = hist.data()
+            np.testing.assert_array_equal([2.04], ax)
+            np.testing.assert_array_equal([0.5], ay.avg)
+            np.testing.assert_array_almost_equal([0.4591751709536137], ay.min)
+            np.testing.assert_array_almost_equal([0.5408248290463863], ay.max)
+            np.testing.assert_array_equal([3], ay.count)
 
-        # test reset
-        hist.reset()
-        ax, ay = hist.data()
-        np.testing.assert_array_equal([], ax)
-        np.testing.assert_array_equal([], ay.avg)
-        np.testing.assert_array_equal([], ay.min)
-        np.testing.assert_array_equal([], ay.max)
-        np.testing.assert_array_equal([], ay.count)
+            # new point outside resolution
+            hist.append((2.31, 1))
+            hist.append((2.40, 2))
+            self.assertEqual(2, len(hist))
+            ax, ay = hist.data()
+            np.testing.assert_array_equal([0.5, 1.5], ay.avg)
+            np.testing.assert_array_almost_equal([0.4591751709536137, 1.25], ay.min)
+            np.testing.assert_array_almost_equal([0.5408248290463863, 1.75], ay.max)
+            np.testing.assert_array_equal([3, 2], ay.count)
+
+            # test Sequence protocol
+            x, y = hist[0]
+            self.assertAlmostEqual(2.04, x)
+            self.assertEqual(_StatDataItem(0.5, 0.4591751709536137, 0.5408248290463863, 3), y)
+            x, y = hist[-1]
+            self.assertAlmostEqual(2.355, x)
+            self.assertEqual(_StatDataItem(1.5, 1.25, 1.75, 2), y)
+            with self.assertRaises(IndexError):
+                hist[2]
 
         # ----------------------------
         # test when max length reached
         # ----------------------------
-
-        overflow = 10
+        hist.reset()
+        overflow = 5
         for i in range(2 * MAX_LENGTH + 2 * overflow):
             # two adjacent data point will be grouped together since resolution is 0.1
-            hist.append((0.1 * i, i))
+            hist.append((0.09 * i, i))
         ax, ay = hist.data()
         self.assertEqual(MAX_LENGTH, len(ax))
         self.assertEqual(MAX_LENGTH, len(ay.count))
         self.assertEqual(MAX_LENGTH, len(ay.avg))
-        self.assertEqual(0.2 * overflow + 0.1 * 0.5, ax[0])
-        self.assertEqual(2 * overflow + 0.5, ay.avg[0])
-        self.assertEqual(0.2 * (MAX_LENGTH + overflow - 1) + 0.1 * 0.5, ax[-1])
-        self.assertEqual(2 * (MAX_LENGTH + overflow - 1) + 0.5, ay.avg[-1])
+        self.assertAlmostEqual(0.18 * overflow + 0.09 * 0.5, ax[0])
+        self.assertAlmostEqual(2 * overflow + 0.5, ay.avg[0])
+        self.assertAlmostEqual(0.18 * (MAX_LENGTH + overflow - 1) + 0.09 * 0.5, ax[-1])
+        self.assertAlmostEqual(2 * (MAX_LENGTH + overflow - 1) + 0.5, ay.avg[-1])
+
+        # ----------------------------
+        # test when capacity reached
+        # ----------------------------
+        for i in range(2 * MAX_LENGTH):
+            # two adjacent data point will be grouped together since resolution is 0.1
+            hist.append((0.09 * i, i))
+        ax, ay = hist.data()
+        self.assertEqual(MAX_LENGTH, len(ax))
+        self.assertEqual(MAX_LENGTH, len(ay.count))
+        self.assertEqual(MAX_LENGTH, len(ay.avg))
+        self.assertAlmostEqual(0.09 * 0.5, ax[0])
+        self.assertAlmostEqual(0.5, ay.avg[0])
+        self.assertAlmostEqual(0.18 * (MAX_LENGTH - 1) + 0.09 * 0.5, ax[-1])
+        self.assertAlmostEqual(2 * (MAX_LENGTH - 1) + 0.5, ay.avg[-1])
 
         # ----------------------------
         # test constructing from array
@@ -321,5 +373,29 @@ class TestSequenceData(unittest.TestCase):
         with self.assertRaises(ValueError):
             OneWayAccuPairSequence.from_array([], [1, 2])
 
-        hist = OneWayAccuPairSequence.from_array([0, 1, 2], [1, 2, 3], resolution=1)
-        self.assertEqual(2, len(hist))
+        hist = OneWayAccuPairSequence.from_array([0, 0.9, 1.8], [1, 2, 3], resolution=1)
+        self.assertEqual(1, len(hist))
+
+    def testOneWayAccuPairSequence2(self):
+        MAX_LENGTH = 100
+        min_count = 20
+
+        hist = OneWayAccuPairSequence(0.1, max_len=MAX_LENGTH, min_count=min_count)
+
+        for i in range(min_count):
+            hist.append((0.001 * i, i))
+            if i == min_count - 1:
+                self.assertEqual(1, len(hist))
+            else:
+                self.assertEqual(0, len(hist))
+
+        for i in range(min_count - 1):
+            hist.append((1 + 0.001 * i, i))
+            self.assertEqual(1, len(hist))
+
+        for i in range(min_count):
+            hist.append((2 + 0.001 * i, i))
+            if i == min_count - 1:
+                self.assertEqual(2, len(hist))
+            else:
+                self.assertEqual(1, len(hist))
