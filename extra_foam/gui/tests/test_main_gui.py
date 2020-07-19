@@ -74,18 +74,15 @@ class TestMainGuiCtrl(unittest.TestCase):
         meta = xgm_proc._meta  # any meta is OK
         # test "Reset moving average" button
         widget._reset_ma_btn.clicked.emit()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_digitizer'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
         roi_proc.update()
-        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
         ai_proc.update()
-        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
         xgm_proc.update()
-        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
         digitizer_proc.update()
-        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_digitizer'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
 
         # ----------------
         # Test POI indices

@@ -397,9 +397,8 @@ class ImageRoiTrain(_RoiProcessorBase):
 
     def _update_moving_average(self, cfg):
         """Overload."""
-        if 'reset_ma_roi' in cfg:
+        if 'reset_ma' in cfg:
             self._reset_ma()
-            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_roi')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
