@@ -713,12 +713,12 @@ class TestPlotWindows(unittest.TestCase):
 
         # test loading meta data
         mediator = widget._mediator
-        mediator.onHistAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onHistAnalysisTypeChange(AnalysisType.PUMP_PROBE)
         mediator.onHistBinRangeChange((-10, 10))
         mediator.onHistNumBinsChange(55)
         mediator.onHistPulseResolvedChange(True)
         widget.loadMetaData()
-        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("pump-probe", widget._analysis_type_cb.currentText())
         self.assertEqual("-10, 10", widget._bin_range_le.text())
         self.assertEqual("55", widget._n_bins_le.text())
         self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
