@@ -128,80 +128,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual("22", widget._poi_index_les[0].text())
         self.assertEqual("33", widget._poi_index_les[1].text())
 
-    def testPumpProbeCtrlWidget(self):
-        widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.pulse_worker._pp_proc
-
-        all_modes = {value: key for key, value in
-                     widget._available_modes.items()}
-
-        # check default reconfigurable params
-        pp_proc.update()
-        self.assertTrue(pp_proc._abs_difference)
-        self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
-
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertEqual(slice(None, None), pp_proc._indices_on)
-        self.assertEqual(slice(None, None), pp_proc._indices_off)
-
-        # change analysis type
-        pp_proc._reset = False
-        widget._analysis_type_cb.setCurrentText('ROI proj')
-        pp_proc.update()
-        self.assertEqual(AnalysisType.ROI_PROJ, pp_proc.analysis_type)
-        self.assertTrue(pp_proc._reset)
-
-        # change pump-probe mode
-        pp_proc._reset = False
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        pp_proc.update()
-        self.assertTrue(pp_proc._reset)
-
-        # off_pulse_le will be disabled when the mode is REFERENCE_AS_OFF
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
-        self.assertTrue(widget._on_pulse_le.isEnabled())
-        self.assertFalse(widget._off_pulse_le.isEnabled())
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        self.assertTrue(widget._on_pulse_le.isEnabled())
-        self.assertTrue(widget._off_pulse_le.isEnabled())
-
-        # change abs_difference
-        pp_proc._reset = False
-        QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
-                         pos=QPoint(2, widget._abs_difference_cb.height()/2))
-        pp_proc.update()
-        self.assertFalse(pp_proc._abs_difference)
-        self.assertTrue(pp_proc._reset)
-
-        # change on/off pulse indices
-        widget._on_pulse_le.setText('0:10:2')
-        widget._off_pulse_le.setText('1:10:2')
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
-        self.assertEqual(slice(0, 10, 2), pp_proc._indices_on)
-        self.assertEqual(slice(1, 10, 2), pp_proc._indices_off)
-
-        # test reset button
-        pp_proc._reset = False
-        widget._reset_btn.clicked.emit()
-        pp_proc.update()
-        self.assertTrue(pp_proc._reset)
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
-        mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
-        mediator.onPpOnPulseSlicerChange([0, None, 2])
-        mediator.onPpOffPulseSlicerChange([1, None, 2])
-        mediator.onPpAbsDifferenceChange(True)
-        widget.loadMetaData()
-        self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
-        self.assertEqual("odd/even train", widget._mode_cb.currentText())
-        self.assertEqual(True, widget._abs_difference_cb.isChecked())
-        self.assertEqual("0::2", widget._on_pulse_le.text())
-        self.assertEqual("1::2", widget._off_pulse_le.text())
-
     def testDataSourceWidget(self):
         from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
 
@@ -288,12 +214,17 @@ class TestMainGuiCtrl(unittest.TestCase):
         histogram_ctrl_widget = list(self.gui._plot_windows.keys())[-1]._ctrl_widgets[0]
         histogram_ctrl_widget.updateMetaData.reset_mock()
 
+        pump_probe_action = actions[5]
+        self.assertEqual("Pump-probe", pump_probe_action.text())
+        pump_probe_action.trigger()
+        pump_probe_ctrl_widget = list(self.gui._plot_windows.keys())[-1]._ctrl_widgets[0]
+        pump_probe_ctrl_widget.updateMetaData.reset_mock()
+
         start_action.trigger()
 
         # test a ctrl widget own by the ImageToolWindow
         azimuthal_integ_ctrl_widget = self.gui._image_tool._azimuthal_integ_1d_view._ctrl_widget
         geometry_ctrl_widget = self.gui._image_tool._geometry_view._ctrl_widget
-        pump_probe_ctrl_widget = self.gui.pump_probe_ctrl_widget
         source_ctrl_widget = self.gui._source_cw
 
         azimuthal_integ_ctrl_widget.updateMetaData.assert_called_once()
@@ -376,54 +307,6 @@ class TestEpix100MainGuiCtrl(unittest.TestCase):
         widget.loadMetaData()
         self.assertEqual("0", widget._poi_index_les[0].text())
         self.assertEqual("0", widget._poi_index_les[1].text())
-
-    def testPumpProbeCtrlWidget(self):
-        widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.pulse_worker._pp_proc
-
-        self.assertFalse(widget._on_pulse_le.isEnabled())
-        self.assertFalse(widget._off_pulse_le.isEnabled())
-
-        all_modes = widget._available_modes_inv
-
-        # we only test train-resolved detector specific configuration
-
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertEqual(slice(None, None), pp_proc._indices_on)
-        self.assertEqual(slice(None, None), pp_proc._indices_off)
-
-        spy = QSignalSpy(widget._mode_cb.currentTextChanged)
-
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        self.assertEqual(1, len(spy))
-
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
-        self.assertEqual(slice(None, None), pp_proc._indices_on)
-        self.assertEqual(slice(None, None), pp_proc._indices_off)
-
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
-        self.assertEqual(2, len(spy))
-        # test on_pulse_le is still disabled, which will become enabled if the
-        # detector is pulse-resolved
-        self.assertFalse(widget._on_pulse_le.isEnabled())
-
-        # PumpProbeMode.SAME_TRAIN is not available
-        self.assertNotIn(PumpProbeMode.SAME_TRAIN, all_modes)
-
-        # test loading meta data
-        # test if the meta data is invalid
-        mediator = widget._mediator
-        mediator.onPpOnPulseSlicerChange([0, None, 2])
-        mediator.onPpOffPulseSlicerChange([0, None, 2])
-        widget.loadMetaData()
-        self.assertEqual(":", widget._on_pulse_le.text())
-        self.assertEqual(":", widget._off_pulse_le.text())
-
-        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
-        with self.assertRaises(KeyError):
-            widget.loadMetaData()
 
     def testFomFilterCtrlWidget(self):
         widget = self.gui.fom_filter_ctrl_widget
