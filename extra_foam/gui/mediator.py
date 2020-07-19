@@ -261,8 +261,13 @@ class Mediator(QObject):
         pipe.execute()
 
     def onCorrelationReset(self):
-        self._meta.hset(mt.CORRELATION_PROC, "reset1", 1)
-        self._meta.hset(mt.CORRELATION_PROC, "reset2", 1)
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.CORRELATION_PROC, "reset1", 1)
+        pipe.hset(mt.CORRELATION_PROC, "reset2", 1)
+        pipe.execute()
+
+    def onCorrelationAutoResetMaChange(self, value: bool):
+        self._meta.hset(mt.CORRELATION_PROC, 'auto_reset_ma', str(value))
 
     def onBinParamChange(self, value: tuple):
         # index, source, bin_range, number of bins,

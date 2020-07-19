@@ -34,6 +34,8 @@ class CorrelationProcessor(_BaseProcessor):
         _source: source of slow data.
         _resolution: resolution of correlation.
         _reset: reset flag for correlation data.
+        _auto_reset_ma: automatically reset moving average when the scan jumps to
+            the next point in the scan mode. Only apply to correlation 1.
         _corr_pp (SimplePairSequence): sequence which stores the history of
             (slow, pump-probe FOM).
         _pp_fail_flag (int): a flag used to check whether pump-probe FOM is
@@ -59,12 +61,17 @@ class CorrelationProcessor(_BaseProcessor):
         self._resolution = 0.0
         self._reset = False
 
+        self._auto_reset_ma = False
+
+        self._prepare_reset_ma = False
+
         self._corr_pp = SimplePairSequence(max_len=self._MAX_POINTS)
         self._pp_fail_flag = 0
 
     def update(self):
         """Override."""
-        cfg = self._meta.hget_all(mt.CORRELATION_PROC)
+        g_cfg, cfg = self._meta.hget_all_multi(
+            [mt.GLOBAL_PROC, mt.CORRELATION_PROC])
         if not cfg:
             # CorrelationWindow not initialized
             return
@@ -98,6 +105,11 @@ class CorrelationProcessor(_BaseProcessor):
             self._meta.hdel(mt.CORRELATION_PROC, reset_key)
             self._reset = True
 
+        if self._idx == 1 and int(g_cfg['ma_window']) > 1:
+            self._auto_reset_ma = cfg["auto_reset_ma"] == 'True'
+        else:
+            self._auto_reset_ma = False
+
     @profiler("Correlation Processor")
     def process(self, data):
         """Override."""
@@ -124,10 +136,14 @@ class CorrelationProcessor(_BaseProcessor):
             self._raw_slave.reset()
             self._corr.reset()
             self._corr_slave.reset()
+            self._prepare_reset_ma = False
             self._reset = False
 
         try:
-            self._update_data_point(processed, raw)
+            reset_ma = self._update_data_point(processed, raw)
+            if self._auto_reset_ma:
+                data['reset_ma'] = reset_ma
+
         except ProcessingError as e:
             logger.error(f"[Correlation] {str(e)}!")
 
@@ -195,11 +211,30 @@ class CorrelationProcessor(_BaseProcessor):
         if err:
             logger.error(err)
 
+        reset_ma = False
         if v is not None:
             self._raw.append((v, fom))
-            if self._resolution > 0:
-                self._corr.append((v, fom))
+
+            resolution = self._resolution
+            if resolution > 0:
+                if self._auto_reset_ma:
+                    next_pos = self._corr.append_dry(v)
+                    if next_pos and not self._prepare_reset_ma:
+                        self._prepare_reset_ma = True
+                        reset_ma = True
+                    else:
+                        self._prepare_reset_ma = False
+                        self._corr.append((v, fom))
+                else:
+                    self._corr.append((v, fom))
+                    self._prepare_reset_ma = False
+
             if fom_slave is not None:
                 self._raw_slave.append((v, fom_slave))
-                if self._resolution > 0:
+                if resolution > 0 and not reset_ma:
                     self._corr_slave.append((v, fom_slave))
+
+            # previous code block should not raise
+            self._last_v = v
+
+        return reset_ma

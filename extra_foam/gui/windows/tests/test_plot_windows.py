@@ -405,6 +405,7 @@ class TestPlotWindows(unittest.TestCase):
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = win._ctrl_widget
+        analysis_ctrl_widget = self.gui.analysis_ctrl_widget
         analysis_types = {value: key for key, value in widget._analysis_types.items()}
 
         for i in range(_N_PARAMS):
@@ -420,19 +421,30 @@ class TestPlotWindows(unittest.TestCase):
         processors = [train_worker._correlation1_proc, train_worker._correlation2_proc]
 
         # test default
-        for proc in processors:
+        for i, proc in enumerate(processors):
             proc.update()
             self.assertEqual(AnalysisType(0), proc.analysis_type)
             self.assertEqual("", proc._source)
             self.assertEqual(_DEFAULT_RESOLUTION, proc._resolution)
+            self.assertFalse(proc._auto_reset_ma)
 
-        # set new FOM
+        for i, proc in enumerate(processors):
+            analysis_ctrl_widget._ma_window_le.setText("2")
+            proc.update()
+            if i == 0:
+                self.assertTrue(proc._auto_reset_ma)
+            else:
+                self.assertFalse(proc._auto_reset_ma)
+
+        # set new values
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
-        for proc in processors:
+        widget._auto_reset_ma_cb.setChecked(False)
+        for i, proc in enumerate(processors):
             proc._reset = False
             proc.update()
             self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
             self.assertTrue(proc._reset)
+            self.assertFalse(proc._auto_reset_ma)
 
         for idx, proc in enumerate(processors):
             # change source
@@ -481,6 +493,7 @@ class TestPlotWindows(unittest.TestCase):
         # test loading meta data
         mediator = widget._mediator
         mediator.onCorrelationAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onCorrelationAutoResetMaChange('True')
         if config["TOPIC"] == "FXE":
             motor_id = 'FXE_SMS_USR/MOTOR/UM01'
         else:
@@ -489,6 +502,7 @@ class TestPlotWindows(unittest.TestCase):
         mediator.onCorrelationParamChange((2, 'ABC abc', 2.0))
         widget.loadMetaData()
         self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertTrue(widget._auto_reset_ma_cb.isChecked())
         self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
         self.assertEqual(motor_id, widget._table.cellWidget(1, 0).currentText())
         self.assertEqual('actualPosition', widget._table.cellWidget(2, 0).currentText())

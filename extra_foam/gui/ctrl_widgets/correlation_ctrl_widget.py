@@ -149,6 +149,9 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
 
         self._reset_btn = QPushButton("Reset")
 
+        self._auto_reset_ma_cb = QCheckBox("Auto reset moving average")
+        self._auto_reset_ma_cb.setChecked(True)
+
         self._table = QTableWidget()
 
         self._src_instrument = config.control_sources
@@ -176,6 +179,7 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
         llayout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         llayout.addWidget(self._analysis_type_cb, 0, 1)
         llayout.addWidget(self._reset_btn, 1, 1)
+        llayout.addWidget(self._auto_reset_ma_cb, 2, 0, 1, 2, AR)
         ctrl_widget.setLayout(llayout)
         ctrl_widget.setFixedWidth(ctrl_widget.minimumSizeHint().width())
 
@@ -194,6 +198,8 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
                 self._analysis_types[x]))
 
         self._reset_btn.clicked.connect(mediator.onCorrelationReset)
+        self._auto_reset_ma_cb.toggled.connect(
+            mediator.onCorrelationAutoResetMaChange)
 
         self._fitting.fit_btn.clicked.connect(
             lambda: self.fit_curve_sgn.emit(
@@ -327,6 +333,9 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
 
+        self._auto_reset_ma_cb.toggled.emit(
+            self._auto_reset_ma_cb.isChecked())
+
         for i_col in range(_N_PARAMS):
             category = self._table.cellWidget(0, i_col).currentText()
             if not category or category == self._user_defined_key:
@@ -344,6 +353,8 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
 
         self._analysis_type_cb.setCurrentText(
             self._analysis_types_inv[int(cfg["analysis_type"])])
+
+        self._updateWidgetValue(self._auto_reset_ma_cb, cfg, "auto_reset_ma")
 
         for i in range(_N_PARAMS):
             src = cfg[f'source{i+1}']

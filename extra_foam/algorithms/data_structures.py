@@ -415,7 +415,16 @@ class OneWayAccuPairSequence(_AbstractSequence):
                     self._y_max[:max_len] = self._y_max[max_len:]
                     self._y_std[:max_len] = self._y_std[max_len:]
 
-        return new_pt
+    def append_dry(self, x):
+        """Return whether append the given item will start a new position."""
+        next_pos = False
+        if self._len > 0 or self._count[0] > 0:
+            if abs(x - self._x_avg[self._last]) > self._resolution:
+                next_pos = True
+        else:
+            next_pos = True
+
+        return next_pos
 
     def extend(self, items):
         """Override."""

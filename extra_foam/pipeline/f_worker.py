@@ -34,7 +34,8 @@ from ..config import config, PipelineSlowPolicy
 from ..ipc import RedisConnection
 from ..ipc import process_logger as logger
 from ..processes import register_foam_process
-from ..database import MonProxy
+from ..database import Metadata as mt
+from ..database import MetaProxy, MonProxy
 
 
 class ProcessWorker(mp.Process):
@@ -67,6 +68,7 @@ class ProcessWorker(mp.Process):
         # the time when the previous data processing was finished
         self._prev_processed_time = None
 
+        self._meta = MetaProxy()
         self._mon = MonProxy()
 
     def _set_processors(self, opts):
@@ -121,6 +123,10 @@ class ProcessWorker(mp.Process):
                         self._mon.add_tid_with_timestamp(
                             tid, n_pulses=0, dropped=True)
                         logger.info(f"Train {tid} dropped!")
+
+                        if data_out.get("reset_ma", False):
+                            self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
+
                         data_out = None
 
                 except Empty:

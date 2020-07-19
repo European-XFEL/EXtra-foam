@@ -281,10 +281,12 @@ class TestSequenceData(unittest.TestCase):
             hist.reset()
 
             # first data
+            self.assertTrue(hist.append_dry(1))
             hist.append((1, 0.3))
             self.assertEqual(0, len(hist))
 
             # distance between two adjacent data > resolution
+            self.assertTrue(hist.append_dry(2))
             hist.append((2, 0.4))
             self.assertEqual(0, len(hist))
             ax, ay = hist.data()
@@ -295,6 +297,7 @@ class TestSequenceData(unittest.TestCase):
             np.testing.assert_array_equal([], ay.count)
 
             # new data within resolution
+            self.assertFalse(hist.append_dry(2.02))
             hist.append((2.02, 0.5))
             self.assertEqual(1, len(hist))
             ax, ay = hist.data()
@@ -304,7 +307,8 @@ class TestSequenceData(unittest.TestCase):
             np.testing.assert_array_almost_equal([0.475], ay.max)
             np.testing.assert_array_equal([2], ay.count)
 
-            # new data outside resolution
+            # new data within resolution
+            self.assertFalse(hist.append_dry(2.10))
             hist.append((2.10, 0.6))
             self.assertEqual(1, len(hist))
             ax, ay = hist.data()
@@ -315,7 +319,9 @@ class TestSequenceData(unittest.TestCase):
             np.testing.assert_array_equal([3], ay.count)
 
             # new point outside resolution
+            self.assertTrue(hist.append_dry(2.31))
             hist.append((2.31, 1))
+            self.assertFalse(hist.append_dry(2.40))
             hist.append((2.40, 2))
             self.assertEqual(2, len(hist))
             ax, ay = hist.data()
