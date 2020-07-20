@@ -89,12 +89,13 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
 
     def update(self):
         """Override."""
-        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        g_cfg, cfg = self._meta.hget_all_multi(
+            [mt.GLOBAL_PROC, mt.AZIMUTHAL_INTEG_PROC])
+
         self._sample_dist = float(g_cfg['sample_distance'])
         self._wavelength = energy2wavelength(1e3 * float(g_cfg['photon_energy']))
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
         self._pixel1 = float(cfg['pixel_size_y'])
         self._pixel2 = float(cfg['pixel_size_x'])
         self._poni1 = float(cfg['integ_center_y']) * self._pixel1
@@ -238,6 +239,7 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         del self._intensity_off_ma
 
     def _update_moving_average(self, cfg):
+        """Override."""
         if 'reset_ma' in cfg:
             self._reset_ma()
 
