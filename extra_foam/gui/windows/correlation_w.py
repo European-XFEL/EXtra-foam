@@ -7,7 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow

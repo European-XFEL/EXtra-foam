@@ -137,11 +137,7 @@ class Mediator(QObject):
         self._meta.hset(mt.GLOBAL_PROC, "ma_window", value)
 
     def onResetMa(self):
-        self._meta.hmset(mt.GLOBAL_PROC, {
-            "reset_ma_ai": 1,
-            "reset_ma_roi": 1,
-            "reset_ma_xgm": 1,
-            "reset_ma_digitizer": 1})
+        self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
 
     def onAiPixelSizeXChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_x', value)
@@ -200,7 +196,7 @@ class Mediator(QObject):
     def onPpReset(self):
         self._meta.hset(mt.PUMP_PROBE_PROC, "reset", 1)
         # reset moving average at the same time
-        self.onResetMa()
+        self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
 
     def onRoiGeometryChange(self, value: tuple):
         idx, activated, locked, x, y, w, h = value
@@ -265,8 +261,13 @@ class Mediator(QObject):
         pipe.execute()
 
     def onCorrelationReset(self):
-        self._meta.hset(mt.CORRELATION_PROC, "reset1", 1)
-        self._meta.hset(mt.CORRELATION_PROC, "reset2", 1)
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.CORRELATION_PROC, "reset1", 1)
+        pipe.hset(mt.CORRELATION_PROC, "reset2", 1)
+        pipe.execute()
+
+    def onCorrelationAutoResetMaChange(self, value: bool):
+        self._meta.hset(mt.CORRELATION_PROC, 'auto_reset_ma', str(value))
 
     def onBinParamChange(self, value: tuple):
         # index, source, bin_range, number of bins,

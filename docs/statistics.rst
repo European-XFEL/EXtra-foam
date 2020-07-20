@@ -137,21 +137,25 @@ various control data. Two plot types are supported in the correlation analysis:
     One can change the value of resolution on-the-fly without resetting the whole data history.
 
 
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| ``Analysis type``          | See :ref:`Analysis type`.                                          |
-+----------------------------+--------------------------------------------------------------------+
-| ``Category``               | Category of the slow data.                                         |
-+----------------------------+--------------------------------------------------------------------+
-| ``Karabo device ID``       | ID of the Karabo device which produces the slow data.              |
-+----------------------------+--------------------------------------------------------------------+
-| ``Property name``          | Property name in the Karabo device.                                |
-+----------------------------+--------------------------------------------------------------------+
-| ``Resolution``             | 0 for scatter plot and any positive value for statistics bar plot. |
-+----------------------------+--------------------------------------------------------------------+
-| ``Reset``                  | Reset the correlation history.                                     |
-+----------------------------+--------------------------------------------------------------------+
++-------------------------------+--------------------------------------------------------------------+
+| Input                         | Description                                                        |
++===============================+====================================================================+
+| ``Analysis type``             | See :ref:`Analysis type`.                                          |
++-------------------------------+--------------------------------------------------------------------+
+| ``Category``                  | Category of the slow data.                                         |
++-------------------------------+--------------------------------------------------------------------+
+| ``Karabo device ID``          | ID of the Karabo device which produces the slow data.              |
++-------------------------------+--------------------------------------------------------------------+
+| ``Property name``             | Property name in the Karabo device.                                |
++-------------------------------+--------------------------------------------------------------------+
+| ``Resolution``                | 0 for scatter plot and any positive value for statistics bar plot. |
++-------------------------------+--------------------------------------------------------------------+
+| ``Reset``                     | Reset the correlation history.                                     |
++-------------------------------+--------------------------------------------------------------------+
+| ``Auto reset moving average`` | Check to automatically reset moving average in the                 |
+|                               | "stop-and-scan" analysis when a new point starts. *Only apply to   |
+|                               | correlation 1.*                                                    |
++-------------------------------+--------------------------------------------------------------------+
 
 One can also plot FOMs of ROI1 and ROI2 together when the *master-slave* mode is activated in
 :ref:`ROI FOM setup`.

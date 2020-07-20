@@ -31,6 +31,8 @@ class HistogramProcessor(_BaseProcessor):
         _bin_range (tuple): range of bins for calculating histogram.
         _pulse_resolved (bool): True for calculating pulse-resolved FOMs,
             otherwise train-resolved.
+        _pp_fail_flag (int): a flag used to check whether pump-probe FOM is
+            available
     """
     # 128 pulses/s * 10 trains/s * 60 seconds * 30 minutes = 2304000
     _MAX_POINTS = 128 * 10 * 60 * 30
@@ -44,6 +46,8 @@ class HistogramProcessor(_BaseProcessor):
         self._bin_range = (-math.inf, math.inf)
         self._pulse_resolved = False
         self._reset = False
+
+        self._pp_fail_flag = 0
 
     def update(self):
         """Override."""
@@ -71,8 +75,10 @@ class HistogramProcessor(_BaseProcessor):
     @profiler("Histogram processor")
     def process(self, data):
         """Override."""
-        if self.analysis_type == AnalysisType.UNDEFINED:
+        analysis_type = self.analysis_type
+        if analysis_type == AnalysisType.UNDEFINED:
             return
+
         processed = data['processed']
 
         if self._reset:
@@ -80,27 +86,42 @@ class HistogramProcessor(_BaseProcessor):
             self._reset = False
 
         if self._pulse_resolved:
-            if self.analysis_type == AnalysisType.ROI_FOM_PULSE:
+            if analysis_type == AnalysisType.ROI_FOM_PULSE:
                 fom = processed.pulse.roi.fom
                 if fom is None:
                     logger.error(
-                        "[Histogram] Pulse resolved ROI FOM is not available")
+                        "[Histogram] Pulse-resolved ROI FOM is not available")
                 else:
                     processed.pulse.hist.pulse_foms = \
                         fom if self._pulse_resolved else None
                     self._fom.extend(fom)
+            elif analysis_type == AnalysisType.PUMP_PROBE_PULSE:
+                raise ProcessingError(f"[Histogram] Pulse-resolved pump-probe "
+                                      f"FOM is not supported!")
             else:
                 raise UnknownParameterError(
-                    f"[Histogram] Unknown analysis type: {self.analysis_type}")
+                    f"[Histogram] Unknown analysis type: {analysis_type}")
 
             self._process_poi(processed)
 
         else:
-            if self.analysis_type == AnalysisType.ROI_FOM:
+            if analysis_type == AnalysisType.ROI_FOM:
                 fom = processed.roi.fom
                 if fom is None:
                     logger.error("[Histogram] ROI FOM is not available")
                 else:
+                    self._fom.append(fom)
+            elif analysis_type == AnalysisType.PUMP_PROBE:
+                fom = processed.pp.fom
+                if fom is None:
+                    self._pp_fail_flag += 1
+                    # if on/off pulses are in different trains, pump-probe FOM is
+                    # only calculated every other train.
+                    if self._pp_fail_flag == 2:
+                        self._pp_fail_flag = 0
+                        logger.error("[Histogram] Pump-probe FOM is not available")
+                else:
+                    self._pp_fail_flag = 0
                     self._fom.append(fom)
             else:
                 raise UnknownParameterError(

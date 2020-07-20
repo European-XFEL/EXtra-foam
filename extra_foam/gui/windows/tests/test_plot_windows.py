@@ -7,10 +7,10 @@ import tempfile
 
 import numpy as np
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtTest import QTest, QSignalSpy
 
-from extra_foam.config import AnalysisType, BinMode, config
+from extra_foam.config import AnalysisType, BinMode, config, PumpProbeMode
 from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp
@@ -50,6 +50,7 @@ class TestPlotWindows(unittest.TestCase):
 
         cls.gui = cls.foam._gui
         cls.train_worker = cls.foam.train_worker
+        cls.pulse_worker = cls.foam.pulse_worker
 
         actions = cls.gui._tool_bar.actions()
 
@@ -75,10 +76,14 @@ class TestPlotWindows(unittest.TestCase):
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
 
+    def tearDown(self):
+        self.gui._analysis_setup_manager._resetToDefault()
+
     def testOpenCloseWindows(self):
         pp_window = self._check_open_window(self.pp_action)
         self.assertIsInstance(pp_window, PumpProbeWindow)
         self._checkPumpProbeWindow(pp_window)
+        self._checkPumpProbeCtrlWidget(pp_window)
 
         correlation_window = self._check_open_window(self.correlation_action)
         self.assertIsInstance(correlation_window, CorrelationWindow)
@@ -122,13 +127,18 @@ class TestPlotWindows(unittest.TestCase):
         pp_window_new = self._check_open_window(self.pp_action)
         self.assertIsInstance(pp_window_new, PumpProbeWindow)
         self.assertIsNot(pp_window_new, pp_window)
+        self._check_close_window(pp_window_new)
 
     def testOpenCloseWindowTs(self):
         with patch("extra_foam.gui.MainGUI._pulse_resolved",
                    new_callable=PropertyMock, create=True, return_value=False):
             histogram_window = self._check_open_window(self.histogram_action)
-            self._checkHistogramCtrlWidgetTs(histogram_window._ctrl_widget)
+            self._checkHistogramCtrlWidgetTs(histogram_window)
             self._check_close_window(histogram_window)
+
+            pp_window = self._check_open_window(self.pp_action)
+            self._checkPumpProbeCtrlWidgetTs(pp_window)
+            self._check_close_window(pp_window)
 
     def testOpenCloseSatelliteWindows(self):
         actions = self.gui._tool_bar.actions()
@@ -203,15 +213,14 @@ class TestPlotWindows(unittest.TestCase):
 
     def _checkPumpProbeWindow(self, win):
         from extra_foam.gui.windows.pump_probe_w import (
-            PumpProbeImageView, PumpProbeVFomPlot, PumpProbeFomPlot
+            PumpProbeVFomPlot, PumpProbeFomPlot
         )
 
-        self.assertEqual(5, len(win._plot_widgets))
+        self.assertEqual(3, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(2, counter[PumpProbeImageView])
         self.assertEqual(2, counter[PumpProbeVFomPlot])
         self.assertEqual(1, counter[PumpProbeFomPlot])
 
@@ -257,9 +266,7 @@ class TestPlotWindows(unittest.TestCase):
         win.updateWidgetsF()
 
     def _checkPulseOfInterestWindow(self, win):
-        from extra_foam.gui.windows.pulse_of_interest_w import (
-            PulseOfInterestWindow, PoiImageView, PoiFomHist, PoiRoiHist
-        )
+        from extra_foam.gui.windows.pulse_of_interest_w import PoiImageView, PoiFomHist, PoiRoiHist
 
         self.assertEqual(6, len(win._plot_widgets))
         counter = Counter()
@@ -272,6 +279,125 @@ class TestPlotWindows(unittest.TestCase):
 
         win.updateWidgetsF()
 
+    def _checkPumpProbeCtrlWidget(self, win):
+        widget = win._ctrl_widget
+        pp_proc = self.pulse_worker._pp_proc
+
+        all_modes = {value: key for key, value in widget._available_modes.items()}
+
+        # check default reconfigurable params
+        pp_proc.update()
+        self.assertTrue(pp_proc._abs_difference)
+        self.assertEqual(AnalysisType.UNDEFINED, pp_proc.analysis_type)
+        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
+
+        # change analysis type
+        pp_proc._reset = False
+        widget._analysis_type_cb.setCurrentText('ROI proj')
+        pp_proc.update()
+        self.assertEqual(AnalysisType.ROI_PROJ, pp_proc.analysis_type)
+        self.assertTrue(pp_proc._reset)
+
+        # change pump-probe mode
+        pp_proc._reset = False
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
+
+        # off_pulse_le will be disabled when the mode is REFERENCE_AS_OFF
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
+        self.assertTrue(widget._on_pulse_le.isEnabled())
+        self.assertFalse(widget._off_pulse_le.isEnabled())
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        self.assertTrue(widget._on_pulse_le.isEnabled())
+        self.assertTrue(widget._off_pulse_le.isEnabled())
+
+        # change abs_difference
+        pp_proc._reset = False
+        QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
+                         pos=QPoint(2, widget._abs_difference_cb.height()/2))
+        pp_proc.update()
+        self.assertFalse(pp_proc._abs_difference)
+        self.assertTrue(pp_proc._reset)
+
+        # change on/off pulse indices
+        widget._on_pulse_le.setText('0:10:2')
+        widget._off_pulse_le.setText('1:10:2')
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
+        self.assertEqual(slice(0, 10, 2), pp_proc._indices_on)
+        self.assertEqual(slice(1, 10, 2), pp_proc._indices_off)
+
+        # test reset button
+        pp_proc._reset = False
+        widget._reset_btn.clicked.emit()
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
+        mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([1, None, 2])
+        mediator.onPpAbsDifferenceChange(True)
+        widget.loadMetaData()
+        self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
+        self.assertEqual("odd/even train", widget._mode_cb.currentText())
+        self.assertEqual(True, widget._abs_difference_cb.isChecked())
+        self.assertEqual("0::2", widget._on_pulse_le.text())
+        self.assertEqual("1::2", widget._off_pulse_le.text())
+
+    def _checkPumpProbeCtrlWidgetTs(self, win):
+        widget = win._ctrl_widget
+        pp_proc = self.pulse_worker._pp_proc
+
+        self.assertFalse(widget._on_pulse_le.isEnabled())
+        self.assertFalse(widget._off_pulse_le.isEnabled())
+
+        all_modes = widget._available_modes_inv
+
+        # we only test train-resolved detector specific configuration
+
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
+
+        spy = QSignalSpy(widget._mode_cb.currentTextChanged)
+
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        self.assertEqual(1, len(spy))
+
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
+
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
+        self.assertEqual(2, len(spy))
+        # test on_pulse_le is still disabled, which will become enabled if the
+        # detector is pulse-resolved
+        self.assertFalse(widget._on_pulse_le.isEnabled())
+
+        # PumpProbeMode.SAME_TRAIN is not available
+        self.assertNotIn(PumpProbeMode.SAME_TRAIN, all_modes)
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([0, None, 2])
+        widget.loadMetaData()
+        self.assertEqual(":", widget._on_pulse_le.text())
+        self.assertEqual(":", widget._off_pulse_le.text())
+
+        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
+        with self.assertRaises(KeyError):
+            widget.loadMetaData()
+
     def _checkCorrelationCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
             _N_PARAMS, _DEFAULT_RESOLUTION)
@@ -279,6 +405,7 @@ class TestPlotWindows(unittest.TestCase):
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = win._ctrl_widget
+        analysis_ctrl_widget = self.gui.analysis_ctrl_widget
         analysis_types = {value: key for key, value in widget._analysis_types.items()}
 
         for i in range(_N_PARAMS):
@@ -294,19 +421,30 @@ class TestPlotWindows(unittest.TestCase):
         processors = [train_worker._correlation1_proc, train_worker._correlation2_proc]
 
         # test default
-        for proc in processors:
+        for i, proc in enumerate(processors):
             proc.update()
             self.assertEqual(AnalysisType(0), proc.analysis_type)
             self.assertEqual("", proc._source)
             self.assertEqual(_DEFAULT_RESOLUTION, proc._resolution)
+            self.assertFalse(proc._auto_reset_ma)
 
-        # set new FOM
+        for i, proc in enumerate(processors):
+            analysis_ctrl_widget._ma_window_le.setText("2")
+            proc.update()
+            if i == 0:
+                self.assertTrue(proc._auto_reset_ma)
+            else:
+                self.assertFalse(proc._auto_reset_ma)
+
+        # set new values
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
-        for proc in processors:
+        widget._auto_reset_ma_cb.setChecked(False)
+        for i, proc in enumerate(processors):
             proc._reset = False
             proc.update()
             self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
             self.assertTrue(proc._reset)
+            self.assertFalse(proc._auto_reset_ma)
 
         for idx, proc in enumerate(processors):
             # change source
@@ -355,6 +493,7 @@ class TestPlotWindows(unittest.TestCase):
         # test loading meta data
         mediator = widget._mediator
         mediator.onCorrelationAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onCorrelationAutoResetMaChange('True')
         if config["TOPIC"] == "FXE":
             motor_id = 'FXE_SMS_USR/MOTOR/UM01'
         else:
@@ -363,6 +502,7 @@ class TestPlotWindows(unittest.TestCase):
         mediator.onCorrelationParamChange((2, 'ABC abc', 2.0))
         widget.loadMetaData()
         self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertTrue(widget._auto_reset_ma_cb.isChecked())
         self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
         self.assertEqual(motor_id, widget._table.cellWidget(1, 0).currentText())
         self.assertEqual('actualPosition', widget._table.cellWidget(2, 0).currentText())
@@ -587,17 +727,19 @@ class TestPlotWindows(unittest.TestCase):
 
         # test loading meta data
         mediator = widget._mediator
-        mediator.onHistAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onHistAnalysisTypeChange(AnalysisType.PUMP_PROBE)
         mediator.onHistBinRangeChange((-10, 10))
         mediator.onHistNumBinsChange(55)
         mediator.onHistPulseResolvedChange(True)
         widget.loadMetaData()
-        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("pump-probe", widget._analysis_type_cb.currentText())
         self.assertEqual("-10, 10", widget._bin_range_le.text())
         self.assertEqual("55", widget._n_bins_le.text())
         self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
-    def _checkHistogramCtrlWidgetTs(self, widget):
+    def _checkHistogramCtrlWidgetTs(self, win):
+        widget = win._ctrl_widget
+
         # test default
         self.assertFalse(widget._pulse_resolved_cb.isChecked())
         self.assertFalse(widget._pulse_resolved_cb.isEnabled())
@@ -608,3 +750,4 @@ class TestPlotWindows(unittest.TestCase):
         mediator.onHistPulseResolvedChange(True)
         widget.loadMetaData()
         self.assertEqual(False, widget._pulse_resolved_cb.isChecked())
+

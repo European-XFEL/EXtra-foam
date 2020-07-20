@@ -235,12 +235,11 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         self.__class__._intensity_off_ma.window = v
 
     def _update_moving_average(self, cfg):
-        if 'reset_ma_ai' in cfg:
+        if 'reset_ma' in cfg:
             # reset moving average
             del self._intensity_ma
             del self._intensity_on_ma
             del self._intensity_off_ma
-            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_ai')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

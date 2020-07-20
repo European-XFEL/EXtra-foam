@@ -87,12 +87,10 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
             # test moving average
 
             # first reset
-            with patch.object(proc._meta, "hdel") as patched:
-                proc._update_moving_average({
-                    'reset_ma_digitizer': 1,
-                    'ma_window': 5
-                })
-                patched.assert_called_once()
+            proc._update_moving_average({
+                'reset_ma': 1,
+                'ma_window': 5
+            })
 
             # 1st train
             raw[src] = [10, 20, 30]

@@ -18,13 +18,6 @@ logger.setLevel('CRITICAL')
 
 
 class testPumpProbeWidgets(unittest.TestCase):
-    def testPumpProbeImageView(self):
-        from extra_foam.gui.windows.pump_probe_w import PumpProbeImageView
-
-        widget = PumpProbeImageView()
-        data = ProcessedData(1)
-        widget.updateF(data)
-
     def testPumpProbeVFomPlot(self):
         from extra_foam.gui.windows.pump_probe_w import PumpProbeVFomPlot
 

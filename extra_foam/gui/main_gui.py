@@ -23,14 +23,14 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QAction, QFrame, QHBoxLayout, QMainWindow, QScrollArea, QSplitter,
+    QAction, QFrame, QMainWindow, QScrollArea, QSplitter,
     QTabWidget, QVBoxLayout, QWidget
 )
 from redis import ConnectionError
 
 from .ctrl_widgets import (
     AnalysisCtrlWidget, ExtensionCtrlWidget, FomFilterCtrlWidget,
-    DataSourceWidget, PumpProbeCtrlWidget
+    DataSourceWidget
 )
 from .misc_widgets import AnalysisSetupManager, GuiLogger
 from .image_tool import ImageToolWindow
@@ -236,7 +236,6 @@ class MainGUI(QMainWindow):
 
         # analysis control widgets
         self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
-        self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
         self.fom_filter_ctrl_widget = self.createCtrlWidget(FomFilterCtrlWidget)
 
         # *************************************************************
@@ -307,7 +306,6 @@ class MainGUI(QMainWindow):
     def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()
         layout.addWidget(self.analysis_ctrl_widget)
-        layout.addWidget(self.pump_probe_ctrl_widget)
         layout.addWidget(self.fom_filter_ctrl_widget)
         self._analysis_cw.setLayout(layout)
 
