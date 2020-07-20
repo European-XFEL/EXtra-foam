@@ -275,8 +275,8 @@ class BinCtrlWidget(_AbstractCtrlWidget):
 
     def loadMetaData(self):
         """Override."""
-        cfg = self._meta.hget_all(mt.BIN_PROC)
-        if not cfg:
+        cfg = self._meta.hget_all(mt.BINNING_PROC)
+        if "analysis_type" not in cfg:
             # not initialized
             return
 

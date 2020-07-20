@@ -71,18 +71,36 @@ class TestMainGuiCtrl(unittest.TestCase):
         roi_proc = train_worker._image_roi
         ai_proc = train_worker._ai_proc
 
+        # test various reset_ma buttons
+
+        # tests of other reset buttons go to the respective unittest
+
         meta = xgm_proc._meta  # any meta is OK
-        # test "Reset moving average" button
-        widget._reset_ma_btn.clicked.emit()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        roi_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        ai_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        xgm_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        digitizer_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
+
+        with patch.object(roi_proc, "_reset_ma") as patched_reset_roi:
+            with patch.object(ai_proc, "_reset_ma") as patched_reset_ai:
+                with patch.object(xgm_proc, "_reset_ma") as patched_reset_xgm:
+                    with patch.object(digitizer_proc, "_reset_ma") as patched_reset_digitizer:
+
+                        def _check_reset_ma():
+                            roi_proc.update()
+                            patched_reset_roi.assert_called_once()
+                            patched_reset_roi.reset_mock()
+                            ai_proc.update()
+                            patched_reset_ai.assert_called_once()
+                            patched_reset_ai.reset_mock()
+                            xgm_proc.update()
+                            patched_reset_xgm.assert_called_once()
+                            patched_reset_xgm.reset_mock()
+                            digitizer_proc.update()
+                            patched_reset_digitizer.assert_called_once()
+                            patched_reset_digitizer.reset_mock()
+
+                        widget._reset_ma_btn.clicked.emit()
+                        _check_reset_ma()
+
+                        widget._reset_all_btn.clicked.emit()
+                        _check_reset_ma()
 
         # ----------------
         # Test POI indices

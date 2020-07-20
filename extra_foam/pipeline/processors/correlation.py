@@ -72,7 +72,7 @@ class CorrelationProcessor(_BaseProcessor):
         """Override."""
         g_cfg, cfg = self._meta.hget_all_multi(
             [mt.GLOBAL_PROC, mt.CORRELATION_PROC])
-        if not cfg:
+        if 'analysis_type' not in cfg:
             # CorrelationWindow not initialized
             return
 

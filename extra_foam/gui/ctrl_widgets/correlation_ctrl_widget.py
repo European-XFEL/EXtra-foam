@@ -178,8 +178,8 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
         llayout = QGridLayout()
         llayout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         llayout.addWidget(self._analysis_type_cb, 0, 1)
-        llayout.addWidget(self._reset_btn, 1, 1)
-        llayout.addWidget(self._auto_reset_ma_cb, 2, 0, 1, 2, AR)
+        llayout.addWidget(self._auto_reset_ma_cb, 1, 0, 1, 2, AR)
+        llayout.addWidget(self._reset_btn, 2, 0, 1, 2)
         ctrl_widget.setLayout(llayout)
         ctrl_widget.setFixedWidth(ctrl_widget.minimumSizeHint().width())
 
@@ -347,7 +347,7 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.CORRELATION_PROC)
-        if not cfg:
+        if "analysis_type" not in cfg:
             # not initialized
             return
 

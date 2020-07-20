@@ -136,6 +136,16 @@ class Mediator(QObject):
     def onMaWindowChange(self, value: int):
         self._meta.hset(mt.GLOBAL_PROC, "ma_window", value)
 
+    def onResetAll(self):
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.GLOBAL_PROC, "reset_ma", 1)
+        pipe.hset(mt.PUMP_PROBE_PROC, "reset", 1)
+        pipe.hset(mt.CORRELATION_PROC, "reset1", 1)
+        pipe.hset(mt.CORRELATION_PROC, "reset2", 1)
+        pipe.hset(mt.HISTOGRAM_PROC, "reset", 1)
+        pipe.hset(mt.BINNING_PROC, "reset", 1)
+        pipe.execute()
+
     def onResetMa(self):
         self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
 
@@ -195,8 +205,6 @@ class Mediator(QObject):
 
     def onPpReset(self):
         self._meta.hset(mt.PUMP_PROBE_PROC, "reset", 1)
-        # reset moving average at the same time
-        self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
 
     def onRoiGeometryChange(self, value: tuple):
         idx, activated, locked, x, y, w, h = value
@@ -275,19 +283,19 @@ class Mediator(QObject):
         index, src, bin_range, n_bins = value
 
         pipe = self._meta.pipeline()
-        pipe.hset(mt.BIN_PROC, f'source{index}', src)
-        pipe.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
-        pipe.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
+        pipe.hset(mt.BINNING_PROC, f'source{index}', src)
+        pipe.hset(mt.BINNING_PROC, f'bin_range{index}', str(bin_range))
+        pipe.hset(mt.BINNING_PROC, f'n_bins{index}', n_bins)
         pipe.execute()
 
     def onBinAnalysisTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.BIN_PROC, "analysis_type", int(value))
+        self._meta.hset(mt.BINNING_PROC, "analysis_type", int(value))
 
     def onBinModeChange(self, value: IntEnum):
-        self._meta.hset(mt.BIN_PROC, "mode", int(value))
+        self._meta.hset(mt.BINNING_PROC, "mode", int(value))
 
     def onBinReset(self):
-        self._meta.hset(mt.BIN_PROC, "reset", 1)
+        self._meta.hset(mt.BINNING_PROC, "reset", 1)
 
     def onHistAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.HISTOGRAM_PROC, "analysis_type", int(value))
