@@ -68,7 +68,7 @@ class HistogramCtrlWidget(_AbstractCtrlWidget):
         llayout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         llayout.addWidget(self._analysis_type_cb, 0, 1)
         llayout.addWidget(self._pulse_resolved_cb, 1, 1)
-        llayout.addWidget(self._reset_btn, 2, 1)
+        llayout.addWidget(self._reset_btn, 2, 0, 1, 2)
         lwidget.setLayout(llayout)
 
         rwidget = QFrame()

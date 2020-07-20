@@ -189,7 +189,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
 
     def update(self):
         """Override."""
-        cfg = self._meta.hget_all(mt.BIN_PROC)
+        cfg = self._meta.hget_all(mt.BINNING_PROC)
         if not cfg:
             # BinningWindow not initialized
             return
@@ -247,7 +247,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
             self._auto_range2[:] = [math.isinf(v) for v in bin_range2]
 
         if 'reset' in cfg:
-            self._meta.hdel(mt.BIN_PROC, 'reset')
+            self._meta.hdel(mt.BINNING_PROC, 'reset')
             # reset when commanded by the GUI
             self._reset = True
 

@@ -87,8 +87,6 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._peak_prominence = None
         self._peak_slicer = slice(None, None)
 
-        self._reset_ma = False
-
     def update(self):
         """Override."""
         g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
@@ -234,12 +232,14 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         self.__class__._intensity_on_ma.window = v
         self.__class__._intensity_off_ma.window = v
 
+    def _reset_ma(self):
+        del self._intensity_ma
+        del self._intensity_on_ma
+        del self._intensity_off_ma
+
     def _update_moving_average(self, cfg):
         if 'reset_ma' in cfg:
-            # reset moving average
-            del self._intensity_ma
-            del self._intensity_on_ma
-            del self._intensity_off_ma
+            self._reset_ma()
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

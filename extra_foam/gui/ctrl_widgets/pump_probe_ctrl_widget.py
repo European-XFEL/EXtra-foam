@@ -80,7 +80,7 @@ class PumpProbeCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._analysis_type_cb, 0, 1)
         layout.addWidget(QLabel("Mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
-        layout.addWidget(self._reset_btn, 2, 1, AR)
+        layout.addWidget(self._reset_btn, 2, 0, 1, 2)
 
         layout.addWidget(QLabel("On-pulse indices: "), 0, 2, AR)
         layout.addWidget(self._on_pulse_le, 0, 3)

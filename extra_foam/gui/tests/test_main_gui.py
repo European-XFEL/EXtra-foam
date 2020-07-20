@@ -71,18 +71,41 @@ class TestMainGuiCtrl(unittest.TestCase):
         roi_proc = train_worker._image_roi
         ai_proc = train_worker._ai_proc
 
+        # test various reset buttons
+
         meta = xgm_proc._meta  # any meta is OK
-        # test "Reset moving average" button
-        widget._reset_ma_btn.clicked.emit()
+
+        with patch.object(roi_proc, "_reset_ma") as patched_reset_roi:
+            with patch.object(ai_proc, "_reset_ma") as patched_reset_ai:
+                with patch.object(xgm_proc, "_reset_ma") as patched_reset_xgm:
+                    with patch.object(digitizer_proc, "_reset_ma") as patched_reset_digitizer:
+                        widget._reset_ma_btn.clicked.emit()
+                        roi_proc.update()
+                        patched_reset_roi.assert_called_once()
+                        ai_proc.update()
+                        patched_reset_ai.assert_called_once()
+                        xgm_proc.update()
+                        patched_reset_xgm.assert_called_once()
+                        digitizer_proc.update()
+                        patched_reset_digitizer.assert_called_once()
+
+        # tests of reset button of pump-probe, correlation, binning and histogram
+        # go to the respective unittest
+
+        meta.hdel(mt.GLOBAL_PROC, 'reset_ma')
+        widget._reset_all_btn.clicked.emit()
         self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        roi_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        ai_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        xgm_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
-        digitizer_proc.update()
-        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma'))
+        self.assertEqual('1', meta.hget(mt.PUMP_PROBE_PROC, 'reset'))
+        self.assertEqual('1', meta.hget(mt.CORRELATION_PROC, 'reset1'))
+        self.assertEqual('1', meta.hget(mt.CORRELATION_PROC, 'reset2'))
+        self.assertEqual('1', meta.hget(mt.HISTOGRAM_PROC, 'reset'))
+        self.assertEqual('1', meta.hget(mt.BINNING_PROC, 'reset'))
+        meta.pipeline().execute_command(
+            'HDEL', mt.GLOBAL_PROC, 'reset_ma').execute_command(
+            'DEL', mt.PUMP_PROBE_PROC).execute_command(
+            'DEL', mt.CORRELATION_PROC).execute_command(
+            'DEL', mt.HISTOGRAM_PROC).execute_command(
+            'DEL', mt.BINNING_PROC).execute()
 
         # ----------------
         # Test POI indices

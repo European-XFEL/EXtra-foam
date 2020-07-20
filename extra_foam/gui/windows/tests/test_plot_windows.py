@@ -207,7 +207,7 @@ class TestPlotWindows(unittest.TestCase):
 
     def _checkAnalysisTypeRegistration(self, registered):
         meta = self.train_worker._binning_proc._meta
-        for key in [mt.BIN_PROC, mt.CORRELATION_PROC, mt.HISTOGRAM_PROC]:
+        for key in [mt.BINNING_PROC, mt.CORRELATION_PROC, mt.HISTOGRAM_PROC]:
             cfg = meta.hget_all(key)
             self.assertEqual(registered, bool(int(cfg["analysis_type"])))
 
@@ -335,6 +335,11 @@ class TestPlotWindows(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
+        pp_proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_pp_btn.clicked.emit()
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
+        pp_proc._reset = False
 
         # test loading meta data
         mediator = widget._mediator
@@ -487,6 +492,10 @@ class TestPlotWindows(unittest.TestCase):
             # test reset button
             proc._reset = False
             widget._reset_btn.clicked.emit()
+            proc.update()
+            self.assertTrue(proc._reset)
+            proc._reset = False
+            self.gui.analysis_ctrl_widget._reset_correlation_btn.clicked.emit()
             proc.update()
             self.assertTrue(proc._reset)
 
@@ -643,6 +652,10 @@ class TestPlotWindows(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
+        proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_binning_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
 
         # test "Auto level" button
         win._bin1d_vfom._auto_level = False
@@ -722,6 +735,10 @@ class TestPlotWindows(unittest.TestCase):
 
         proc._reset = False
         widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
+        proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_histogram_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
 

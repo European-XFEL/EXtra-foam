@@ -36,7 +36,12 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         validator.setBottom(1)
         self._ma_window_le.setValidator(validator)
 
-        self._reset_ma_btn = QPushButton("Reset")
+        self._reset_all_btn = QPushButton("Reset all")
+        self._reset_ma_btn = QPushButton("Reset moving average")
+        self._reset_pp_btn = QPushButton("Reset pump-probe")
+        self._reset_correlation_btn = QPushButton("Reset correlation")
+        self._reset_binning_btn = QPushButton("Reset binning")
+        self._reset_histogram_btn = QPushButton("Reset histogram")
 
         self.initUI()
         self.initConnections()
@@ -52,12 +57,18 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(QLabel("POI indices: "), row, 0, 1, 1, AR)
         layout.addWidget(self._poi_index_les[0], row, 1, 1, 1)
         layout.addWidget(self._poi_index_les[1], row, 2, 1, 1)
-        layout.addWidget(QWidget(), 3, 1, 1, 1)
 
         row += 1
         layout.addWidget(QLabel("Moving average window: "), row, 0, AR)
         layout.addWidget(self._ma_window_le, row, 1)
-        layout.addWidget(self._reset_ma_btn, row, 2, AR)
+
+        row += 1
+        layout.addWidget(self._reset_all_btn, row, 0,)
+        layout.addWidget(self._reset_ma_btn, row, 1)
+        layout.addWidget(self._reset_pp_btn, row + 1, 1)
+        layout.addWidget(self._reset_correlation_btn, row, 2)
+        layout.addWidget(self._reset_histogram_btn, row + 1, 2)
+        layout.addWidget(self._reset_binning_btn, row + 2, 2)
 
         self.setLayout(layout)
 
@@ -75,7 +86,14 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._ma_window_le.value_changed_sgn.connect(
             lambda x: mediator.onMaWindowChange(int(x)))
 
+        self._reset_all_btn.clicked.connect(mediator.onResetAll)
+
         self._reset_ma_btn.clicked.connect(mediator.onResetMa)
+        self._reset_pp_btn.clicked.connect(mediator.onPpReset)
+
+        self._reset_correlation_btn.clicked.connect(mediator.onCorrelationReset)
+        self._reset_binning_btn.clicked.connect(mediator.onBinReset)
+        self._reset_histogram_btn.clicked.connect(mediator.onHistReset)
 
     def updateMetaData(self):
         """Override"""

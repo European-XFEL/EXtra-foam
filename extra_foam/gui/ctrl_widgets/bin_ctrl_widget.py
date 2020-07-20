@@ -275,7 +275,7 @@ class BinCtrlWidget(_AbstractCtrlWidget):
 
     def loadMetaData(self):
         """Override."""
-        cfg = self._meta.hget_all(mt.BIN_PROC)
+        cfg = self._meta.hget_all(mt.BINNING_PROC)
         if not cfg:
             # not initialized
             return

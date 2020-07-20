@@ -68,14 +68,16 @@ class DigitizerProcessor(_BaseProcessor):
         self.__class__._pulse_integral_d_ma.window = v
         self.__class__._fast_adc_peaks_ma.window = v
 
+    def _reset_ma(self):
+        del self._pulse_integral_a_ma
+        del self._pulse_integral_b_ma
+        del self._pulse_integral_c_ma
+        del self._pulse_integral_d_ma
+        del self._fast_adc_peaks_ma
+
     def _update_moving_average(self, cfg):
         if 'reset_ma' in cfg:
-            # reset moving average
-            del self._pulse_integral_a_ma
-            del self._pulse_integral_b_ma
-            del self._pulse_integral_c_ma
-            del self._pulse_integral_d_ma
-            del self._fast_adc_peaks_ma
+            self._reset_ma()
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
