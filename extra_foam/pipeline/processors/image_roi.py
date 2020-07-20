@@ -67,8 +67,21 @@ class _RoiProcessorBase(_BaseProcessor):
         self._norm_combo = RoiCombo.ROI3
         self._norm_type = RoiFom.SUM
 
+        self._roi_fom_master_slave = False
+
+        self._proj_combo = RoiCombo.ROI1
+        self._proj_type = RoiProjType.SUM
+        self._proj_direct = 'x'
+        self._proj_norm = Normalizer.UNDEFINED
+        self._proj_auc_range = (0, math.inf)
+        self._proj_fom_integ_range = (0, math.inf)
+
     def update(self):
-        cfg = self._meta.hget_all(mt.ROI_PROC)
+        """Override."""
+        g_cfg, cfg = self._meta.hget_all_multi([
+            mt.GLOBAL_PROC, mt.ROI_PROC])
+
+        self._update_moving_average(g_cfg)
 
         self._fom_combo = RoiCombo(int(cfg['fom:combo']))
         self._fom_type = RoiFom(int(cfg['fom:type']))
@@ -80,6 +93,15 @@ class _RoiProcessorBase(_BaseProcessor):
 
         self._norm_combo = RoiCombo(int(cfg['norm:combo']))
         self._norm_type = RoiFom(int(cfg['norm:type']))
+
+        self._roi_fom_master_slave = cfg['fom:master_slave'] == 'True'
+
+        self._proj_combo = RoiCombo(int(cfg['proj:combo']))
+        self._proj_type = RoiProjType(int(cfg['proj:type']))
+        self._proj_direct = cfg['proj:direct']
+        self._proj_norm = Normalizer(int(cfg['proj:norm']))
+        self._proj_auc_range = self.str2tuple((cfg['proj:auc_range']))
+        self._proj_fom_integ_range = self.str2tuple((cfg['proj:fom_integ_range']))
 
         return cfg
 
@@ -111,6 +133,9 @@ class _RoiProcessorBase(_BaseProcessor):
                     f"{combo}")
 
         return roi_combo
+
+    def _update_moving_average(self, cfg):
+        pass
 
 
 class ImageRoiPulse(_RoiProcessorBase):
@@ -334,32 +359,7 @@ class ImageRoiTrain(_RoiProcessorBase):
     def __init__(self):
         super().__init__()
 
-        self._roi_fom_master_slave = False
-
-        self._proj_combo = RoiCombo.ROI1
-        self._proj_type = RoiProjType.SUM
-        self._proj_direct = 'x'
-        self._proj_norm = Normalizer.UNDEFINED
-        self._proj_auc_range = (0, math.inf)
-        self._proj_fom_integ_range = (0, math.inf)
-
         self._set_ma_window(1)
-
-    def update(self):
-        """Override."""
-        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
-        self._update_moving_average(g_cfg)
-
-        cfg = super().update()
-
-        self._roi_fom_master_slave = cfg['fom:master_slave'] == 'True'
-
-        self._proj_combo = RoiCombo(int(cfg['proj:combo']))
-        self._proj_type = RoiProjType(int(cfg['proj:type']))
-        self._proj_direct = cfg['proj:direct']
-        self._proj_norm = Normalizer(int(cfg['proj:norm']))
-        self._proj_auc_range = self.str2tuple((cfg['proj:auc_range']))
-        self._proj_fom_integ_range = self.str2tuple((cfg['proj:fom_integ_range']))
 
     def _reset_ma(self):
         del self._roi1
@@ -396,7 +396,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         self.__class__._roi4_off.window = v
 
     def _update_moving_average(self, cfg):
-        """Overload."""
+        """Override.."""
         if 'reset_ma' in cfg:
             self._reset_ma()
 
