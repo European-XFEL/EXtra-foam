@@ -52,7 +52,7 @@ class HistogramProcessor(_BaseProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.HISTOGRAM_PROC)
-        if not cfg:
+        if 'analysis_type' not in cfg:
             # HistogramWindow not initialized
             return
 

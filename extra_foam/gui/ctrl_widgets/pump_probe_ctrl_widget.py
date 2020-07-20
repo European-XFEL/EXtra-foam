@@ -132,7 +132,7 @@ class PumpProbeCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
-        if not cfg:
+        if "analysis_type" not in cfg:
             # not initialized
             return
 

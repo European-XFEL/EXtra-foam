@@ -52,7 +52,7 @@ class PumpProbeProcessor(_BaseProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
-        if not cfg:
+        if 'analysis_type' not in cfg:
             # PumpProbeWindow not initialized
             return
 

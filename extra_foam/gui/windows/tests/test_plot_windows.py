@@ -340,6 +340,9 @@ class TestPlotWindows(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
         pp_proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_all_btn.clicked.emit()
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
 
         # test loading meta data
         mediator = widget._mediator
@@ -496,6 +499,10 @@ class TestPlotWindows(unittest.TestCase):
             self.assertTrue(proc._reset)
             proc._reset = False
             self.gui.analysis_ctrl_widget._reset_correlation_btn.clicked.emit()
+            proc.update()
+            self.assertTrue(proc._reset)
+            proc._reset = False
+            self.gui.analysis_ctrl_widget._reset_all_btn.clicked.emit()
             proc.update()
             self.assertTrue(proc._reset)
 
@@ -656,6 +663,10 @@ class TestPlotWindows(unittest.TestCase):
         self.gui.analysis_ctrl_widget._reset_binning_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
+        proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_all_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
 
         # test "Auto level" button
         win._bin1d_vfom._auto_level = False
@@ -739,6 +750,10 @@ class TestPlotWindows(unittest.TestCase):
         self.assertTrue(proc._reset)
         proc._reset = False
         self.gui.analysis_ctrl_widget._reset_histogram_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
+        proc._reset = False
+        self.gui.analysis_ctrl_widget._reset_all_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
 

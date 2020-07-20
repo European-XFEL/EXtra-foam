@@ -190,7 +190,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.BINNING_PROC)
-        if not cfg:
+        if 'analysis_type' not in cfg:
             # BinningWindow not initialized
             return
 

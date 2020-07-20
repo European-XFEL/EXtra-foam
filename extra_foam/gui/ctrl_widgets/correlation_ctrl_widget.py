@@ -347,7 +347,7 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.CORRELATION_PROC)
-        if not cfg:
+        if "analysis_type" not in cfg:
             # not initialized
             return
 
