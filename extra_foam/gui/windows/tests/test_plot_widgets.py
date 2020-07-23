@@ -147,47 +147,6 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
         self.assertIsInstance(widget._plot_slave, ScatterPlotItem)
 
 
-class testCorrelationCurveFitting(unittest.TestCase):
-    def setUp(self):
-        self._widget = FittingCtrlWidget()
-
-    def testGeneral(self):
-        widget = self._widget
-
-        widget.fit_type_cb.setCurrentIndex(1)
-        self.assertEqual((None, None), widget.fit([], []))
-        self.assertEqual((None, None), widget.fit([1], [2]))
-
-    def testLinearFit(self):
-        widget = self._widget
-        self._setAndCheckFitType(FittingType.LINEAR)
-
-        x, y = np.random.randn(10), np.random.randn(10)
-        # mock a random return value to allow fit to finish
-        with patch("numpy.polyfit", return_value=[1, 2]) as mocked_fit:
-            new_x, new_y = widget.fit(x, y)
-            mocked_fit.assert_called_once_with(x, y, 1)
-            self.assertIsNotNone(new_x)
-            self.assertIsNotNone(new_y)
-
-    def testCubicFit(self):
-        widget = self._widget
-        self._setAndCheckFitType(FittingType.CUBIC)
-
-        x, y = np.random.randn(10), np.random.randn(10)
-        # mock a random return value to allow fit to finish
-        with patch("numpy.polyfit", return_value=[1, 2, 3, 4]) as mocked_fit:
-            new_x, new_y = widget.fit(x, y)
-            mocked_fit.assert_called_once_with(x, y, 3)
-            self.assertIsNotNone(new_x)
-            self.assertIsNotNone(new_y)
-
-    def _setAndCheckFitType(self, fit_type):
-        widget = self._widget
-        widget.fit_type_cb.setCurrentIndex(int(fit_type))
-        self.assertEqual(fit_type, widget._available_types[widget.fit_type_cb.currentText()])
-
-
 class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
     def testFomHist(self):
         from extra_foam.gui.windows.histogram_w import FomHist

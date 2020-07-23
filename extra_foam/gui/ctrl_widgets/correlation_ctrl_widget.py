@@ -9,16 +9,15 @@ All rights reserved.
 """
 from collections import OrderedDict
 import functools
-from enum import IntEnum
-import numpy as np
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QGridLayout, QHeaderView, QHBoxLayout,
-    QLabel, QPlainTextEdit, QPushButton, QTableWidget, QWidget
+    QLabel, QPushButton, QTableWidget
 )
 
+from .curve_fitting_ctrl_widget import _BaseFittingCtrlWidget, FittingType
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ..gui_helpers import invert_dict
@@ -30,94 +29,54 @@ _N_PARAMS = 2  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = 0.0
 
 
-class FittingType(IntEnum):
-    UNDEFINED = 0
-    LINEAR = 1
-    CUBIC = 2
-
-
-class FittingCtrlWidget(QWidget):
-
-    _available_types = OrderedDict({
-        "": FittingType.UNDEFINED,
-        "Linear": FittingType.LINEAR,
-        "Cubic": FittingType.CUBIC,
-    })
+class FittingCtrlWidget(_BaseFittingCtrlWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fit_type_cb = QComboBox()
-        for name in self._available_types:
-            self.fit_type_cb.addItem(name)
-
-        self.fit_btn = QPushButton("Fit")
-        self.clear_btn = QPushButton("Clear")
         self.corr1_cb = QCheckBox("Correlation 1")
         self.corr1_cb.setChecked(True)
         self.corr2_cb = QCheckBox("Correlation 2")
-
-        self._output = QPlainTextEdit()
-        self._output.setReadOnly(True)
-        self._output.setMaximumBlockCount(100)
 
         self.initUI()
         self.initConnections()
 
     def initUI(self):
-        llayout = QGridLayout()
-        llayout.addWidget(self.corr1_cb, 0, 0)
-        llayout.addWidget(self.corr2_cb, 0, 1)
-        llayout.addWidget(QLabel("Type of fit: "), 1, 0)
-        llayout.addWidget(self.fit_type_cb, 1, 1)
-        llayout.addWidget(self.fit_btn, 2, 0)
-        llayout.addWidget(self.clear_btn, 2, 1)
+        AR = Qt.AlignRight
 
-        layout = QHBoxLayout()
-        layout.addLayout(llayout)
-        layout.addWidget(self._output)
+        layout = QGridLayout()
+        layout.addWidget(self.corr1_cb, 0, 0, 1, 2)
+        layout.addWidget(self.corr2_cb, 0, 2, 1, 2)
+        layout.addWidget(QLabel("Fit type: "), 0, 4, AR)
+        layout.addWidget(self.fit_type_cb, 0, 5)
+        layout.addWidget(QLabel("Param a0 = "), 1, 0, AR)
+        layout.addWidget(self._params[0], 1, 1)
+        layout.addWidget(QLabel("Param b0 = "), 1, 2, AR)
+        layout.addWidget(self._params[1], 1, 3)
+        layout.addWidget(QLabel("Param c0 = "), 1, 4, AR)
+        layout.addWidget(self._params[2], 1, 5)
+        layout.addWidget(QLabel("Param d0 = "), 2, 0, AR)
+        layout.addWidget(self._params[3], 2, 1)
+        layout.addWidget(QLabel("Param e0 = "), 2, 2, AR)
+        layout.addWidget(self._params[4], 2, 3)
+        layout.addWidget(QLabel("Param f0 = "), 2, 4, AR)
+        layout.addWidget(self._params[5], 2, 5)
+        layout.addWidget(self.fit_btn, 3, 0, 1, 2)
+        layout.addWidget(self.clear_btn, 3, 2, 1, 2)
+        layout.addWidget(self._output, 4, 0, 1, 6)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
-        self._output.setMinimumWidth(1.5 * llayout.minimumSize().width())
         self.setFixedWidth(self.minimumSizeHint().width())
 
     def initConnections(self):
-        self.corr1_cb.toggled.connect(lambda x: self.corr2_cb.setChecked(not x))
-        self.corr2_cb.toggled.connect(lambda x: self.corr1_cb.setChecked(not x))
+        """Override."""
+        super().initConnections()
 
-    def fit(self, x, y, is_master=True):
-        new_x, new_y = None, None
-        if len(x) > 2:
-            fit_type_str = self.fit_type_cb.currentText()
-            fit_type = self._available_types[fit_type_str]
-            info = ""
-
-            # TODO: need to design to accommodate more fitting types
-            if fit_type == FittingType.LINEAR:
-                z = np.polyfit(x, y, 1)
-                p = np.poly1d(z)
-                info = f"p0 = {z[0]:.4e}, p1 = {z[1]:.4e}"
-                new_x, new_y = x, p(x)
-
-            elif fit_type == FittingType.CUBIC:
-                z = np.polyfit(x, y, 3)
-                p = np.poly1d(z)
-                info = f"p0 = {z[0]:.4e}, p1 = {z[1]:.4e}, " \
-                       f"p2 = {z[2]:.4e}, p3 = {z[3]:.4e}"
-                new_x, new_y = x, p(x)
-
-            if info:
-                if is_master:
-                    self._output.appendPlainText(
-                        f"\n{fit_type_str} fit for correlation "
-                        f"{1 if self.corr1_cb.isChecked() else 2}: ")
-                    self._output.appendPlainText("Master data - ")
-                else:
-                    self._output.appendPlainText("Slave data - ")
-                self._output.appendPlainText(info)
-
-        return new_x, new_y
+        self.corr1_cb.toggled.connect(
+            lambda x: self.corr2_cb.setChecked(not x))
+        self.corr2_cb.toggled.connect(
+            lambda x: self.corr1_cb.setChecked(not x))
 
 
 class CorrelationCtrlWidget(_AbstractCtrlWidget):
@@ -171,21 +130,20 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
     def initUI(self):
         """Overload."""
         AR = Qt.AlignRight
-        AT = Qt.AlignTop
         layout = QHBoxLayout()
 
         ctrl_widget = QFrame()
         llayout = QGridLayout()
         llayout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         llayout.addWidget(self._analysis_type_cb, 0, 1)
-        llayout.addWidget(self._auto_reset_ma_cb, 1, 0, 1, 2, AR)
-        llayout.addWidget(self._reset_btn, 2, 0, 1, 2)
+        llayout.addWidget(self._auto_reset_ma_cb, 0, 2, AR)
+        llayout.addWidget(self._reset_btn, 0, 3)
+        llayout.addWidget(self._table, 1, 0, 3, 4)
+        llayout.setContentsMargins(0, 0, 0, 0)
         ctrl_widget.setLayout(llayout)
-        ctrl_widget.setFixedWidth(ctrl_widget.minimumSizeHint().width())
 
-        layout.addWidget(ctrl_widget, 1, alignment=AT)
-        layout.addWidget(self._table, 2, alignment=AT)
-        layout.addWidget(self._fitting, 1, alignment=AT)
+        layout.addWidget(ctrl_widget)
+        layout.addWidget(self._fitting)
 
         self.setLayout(layout)
 
@@ -257,7 +215,6 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
 
         header_height = self._table.horizontalHeader().height()
         self._table.setMinimumHeight(header_height * (n_row + 2))
-        self._table.setMaximumHeight(header_height * (n_row + 3))
 
     @pyqtSlot(str)
     def onCategoryChange(self, i_col, category):
@@ -394,5 +351,5 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
         self._analysis_type_cb.setCurrentText(
             self._analysis_types_inv[AnalysisType.UNDEFINED])
 
-    def fit_curve(self, x, y, is_master):
-        return self._fitting.fit(x, y, is_master)
+    def fit_curve(self, x, y):
+        return self._fitting.fit(x, y)
