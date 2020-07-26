@@ -72,10 +72,10 @@ class TestCurveFitting:
                       105.22065798, 78.23873672, 52.12398640, 40.89729233, 40.60966561,
                        35.44761773, 40.06147386, 39.26495213, 36.69235285, 32.29345426])
 
-        popt = algo.fit(x, y, p0=[100, 1, 100, 1])
+        popt = algo.fit(x, y, p0=[100, 100, 1, 1])
         assert abs(popt[0] - 100) < 10
-        assert abs(popt[1] - 1) < 0.2
-        assert abs(popt[2] - 100) < 1
+        assert abs(popt[1] - 100) < 1
+        assert abs(popt[2] - 1) < 0.2
         assert abs(popt[3] - 30) < 5
 
     def testERF(self):
