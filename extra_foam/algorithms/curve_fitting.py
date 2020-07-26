@@ -74,7 +74,7 @@ class CurveFitting:
 
         @staticmethod
         def format(a, b, c, d):
-            return f"y = a * exp( -(x - b)^2 / (2 * c^2) + d, \n" \
+            return f"y = a * exp(-(x - b)^2 / (2 * c^2)) + d, \n" \
                    f"a = {a:.4E}, b = {b:.4E}, c = {c:.4E}, d = {d:.4E}"
 
     class Lorentzian(_BaseCurveFitting):
