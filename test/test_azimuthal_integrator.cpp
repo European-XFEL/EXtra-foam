@@ -49,6 +49,10 @@ TEST(TestAzimuthalIntegrator, TestDataType)
 TEST(TestAzimuthalIntegrator, TestIntegrator1D)
 {
   xt::xtensor<float, 2> src = xt::arange(1024).reshape({16, 128});
+  xt::xtensor<float, 2> src2 = src - 100;
+  auto src_a = xt::xtensor<float, 3>::from_shape({4, 16, 128});
+  for (size_t i = 0; i < 3; ++i) xt::view(src_a, i, xt::all(), xt::all()) = src;
+  xt::view(src_a, 3, xt::all(), xt::all()) = src2;
 
   double distance = 0.2;
   double pixel1 = 1e-4;
@@ -69,12 +73,19 @@ TEST(TestAzimuthalIntegrator, TestIntegrator1D)
   EXPECT_EQ(ret10.first, ret10_cut.first);
   EXPECT_THAT(ret10_cut.second, Each(Eq(0.)));
 
+  // test integrate an array of images
+  auto ret10_a = itgt.integrate1d(src_a, 10);
+  EXPECT_EQ(ret10.first, ret10_a.first);
+  for (size_t i = 0; i < 3; ++i) EXPECT_EQ(ret10.second, xt::view(ret10_a.second, i, xt::all()));
+  auto ret10_2 = itgt.integrate1d(src2, 10);
+  EXPECT_EQ(ret10_2.second, xt::view(ret10_a.second, 3, xt::all()));
+
   // big npt
   itgt.integrate1d(src, 999);
 
   // data has a single value
-  xt::xtensor<double, 2> src2 = xt::ones<double>({16, 128});
-  itgt.integrate1d(src2, 10);
+  xt::xtensor<double, 2> src_single_value = xt::ones<double>({16, 128});
+  itgt.integrate1d(src_single_value, 10);
 
   // integral source value type
   xt::xtensor<uint16_t, 2> src_int = xt::arange(1024).reshape({16, 128});
