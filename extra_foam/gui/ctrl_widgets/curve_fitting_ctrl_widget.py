@@ -12,8 +12,7 @@ from collections import OrderedDict
 import numpy as np
 
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QGridLayout, QLabel, QPlainTextEdit, QPushButton,
-    QWidget
+    QCheckBox, QComboBox, QPlainTextEdit, QPushButton, QWidget
 )
 
 from .smart_widgets import SmartLineEdit

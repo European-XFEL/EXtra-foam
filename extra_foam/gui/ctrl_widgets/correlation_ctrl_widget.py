@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QLabel, QPushButton, QTableWidget
 )
 
-from .curve_fitting_ctrl_widget import _BaseFittingCtrlWidget, FittingType
+from .curve_fitting_ctrl_widget import _BaseFittingCtrlWidget
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ..gui_helpers import invert_dict
@@ -29,7 +29,7 @@ _N_PARAMS = 2  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = 0.0
 
 
-class FittingCtrlWidget(_BaseFittingCtrlWidget):
+class _FittingCtrlWidget(_BaseFittingCtrlWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -121,7 +121,7 @@ class CorrelationCtrlWidget(_AbstractCtrlWidget):
             }
         }
 
-        self._fitting = FittingCtrlWidget()
+        self._fitting = _FittingCtrlWidget()
 
         self.initParamTable()
         self.initUI()

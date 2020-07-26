@@ -1,13 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-import numpy as np
-
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp
-from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
-    FittingType, FittingCtrlWidget
-)
 from extra_foam.gui.plot_widgets.plot_items import ScatterPlotItem
 from extra_foam.pipeline.data_model import ProcessedData
 from extra_foam.pipeline.tests import _TestDataMixin

@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow
 from ..ctrl_widgets import HistogramCtrlWidget
+from ..misc_widgets import FColor
 from ..plot_widgets import HistMixin, PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
@@ -51,6 +52,7 @@ class FomHist(HistMixin, TimedPlotWidgetF):
         super().__init__(parent=parent)
 
         self._plot = self.plotBar()
+        self._fitted = self.plotCurve(pen=FColor.mkPen('r'))
 
         self._title_template = Template(
             f"FOM Histogram (mean: $mean, median: $median, std: $std)")
@@ -67,6 +69,12 @@ class FomHist(HistMixin, TimedPlotWidgetF):
         else:
             self._plot.setData(bin_centers, hist.hist)
             self.updateTitle(hist.mean, hist.median, hist.std)
+
+    def data(self):
+        return self._plot.data()
+
+    def setFitted(self, x, y):
+        self._fitted.setData(x, y)
 
 
 class HistogramWindow(_AbstractPlotWindow):
@@ -115,7 +123,17 @@ class HistogramWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.fit_curve_sgn.connect(self._onCurveFit)
+        self._ctrl_widget.clear_fitting_sgn.connect(self._onClearFitting)
+
+    def _onCurveFit(self):
+        data = self._fom_hist.data()
+
+        x, y = self._ctrl_widget.fit_curve(*data)
+        self._fom_hist.setFitted(x, y)
+
+    def _onClearFitting(self):
+        self._fom_hist.setFitted([], [])
 
     def closeEvent(self, QCloseEvent):
         self._ctrl_widget.resetAnalysisType()
