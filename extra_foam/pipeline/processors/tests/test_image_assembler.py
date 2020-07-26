@@ -1212,9 +1212,35 @@ class TestBaslerCameraAssembler(unittest.TestCase):
                 }
             },
             'raw': {
-                src: np.ones((1024, 1024))
+                src: np.ones((1024, 1024), dtype=np.uint16)
             },
         }
 
         self._assembler.process(data)
         self.assertIsNone(data['raw'][src])
+
+        assembled = data['assembled']['data']
+        assert _IMAGE_DTYPE == assembled.dtype
+
+    def testAssembleFile(self):
+        key_name = 'data.image.pixels'
+        src, catalog = self._create_catalog('baslercamera_module', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'train_id': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones((1024, 1024), dtype=np.uint16),
+            },
+        }
+
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        assembled = data['assembled']['data']
+        assert _IMAGE_DTYPE == assembled.dtype
