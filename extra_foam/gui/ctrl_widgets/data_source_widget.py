@@ -26,7 +26,6 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..misc_widgets import FColor
 from ..mediator import Mediator
 from ...database import MonProxy
-from ...database import Metadata as mt
 from ...config import config, DataSource
 from ...geometries import module_indices
 from ...processes import list_foam_processes

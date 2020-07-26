@@ -49,3 +49,7 @@ from .computer_vision import (
 from .peak_finding import (
     find_peaks_1d
 )
+
+from .curve_fitting import (
+    CurveFitting, FittingType
+)

@@ -10,6 +10,7 @@ import numpy as np
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtTest import QTest, QSignalSpy
 
+from extra_foam.algorithms import FittingType
 from extra_foam.config import AnalysisType, BinMode, config, PumpProbeMode
 from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
@@ -542,37 +543,75 @@ class TestPlotWindows(unittest.TestCase):
         widget = win._ctrl_widget
         fitting = widget._fitting
 
-        # test correlation1 and correlation2 checkbox
+        # test exclusiveness of correlation1 and correlation2 checkboxes
         fitting.corr2_cb.setChecked(True)
         self.assertFalse(fitting.corr1_cb.isChecked())
         fitting.corr1_cb.setChecked(True)
         self.assertFalse(fitting.corr2_cb.isChecked())
 
+        # test setting fitting type
+        fitting.fit_type_cb.setCurrentText("Linear")
+        self.assertEqual(FittingType.LINEAR,
+                         fitting._available_types[fitting.fit_type_cb.currentText()])
+        self.assertTrue(fitting._params[0].isEnabled())
+        self.assertTrue(fitting._params[1].isEnabled())
+        self.assertFalse(fitting._params[2].isEnabled())
+
+        fitting.fit_type_cb.setCurrentText("Gaussian")
+        self.assertTrue(fitting._params[2].isEnabled())
+        self.assertTrue(fitting._params[3].isEnabled())
+        self.assertFalse(fitting._params[4].isEnabled())
+
+        fitting.fit_type_cb.setCurrentText("")
+        self.assertFalse(fitting._params[0].isEnabled())
+
         # test fit
-        x1, y1 = np.random.rand(10), np.random.rand(10)
-        win._corr1._plot.setData(x1, y1)
-        x1_slave, y1_slave = np.random.rand(10), np.random.rand(10)
-        win._corr1._plot_slave.setData(x1_slave, y1_slave)
+        self.assertTrue(fitting.corr1_cb.isChecked())
+
+        with patch.object(win._corr1, "setFitted") as mocked_set_fitted:
+            self.assertIsNone(fitting._algo)
+            QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+            mocked_set_fitted.assert_called_with(None, None)
+            mocked_set_fitted.reset_mock()
+
+            fitting.fit_type_cb.setCurrentText("Linear")
+            with patch.object(fitting._algo, "fit") as mocked_fit:
+                x1, y1 = np.random.rand(1), np.random.rand(1)
+                win._corr1._plot.setData(x1, y1)
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_not_called()
+                mocked_set_fitted.assert_called_with(None, None)
+                mocked_set_fitted.reset_mock()
+                self.assertEqual("Not enough data", fitting._output.toPlainText())
+
+                x1, y1 = np.random.rand(10), np.random.rand(10)
+                win._corr1._plot.setData(x1, y1)
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_called_once_with(x1, y1, p0=[1.0, 1.0])
+                mocked_fit.reset_mock()
+                mocked_set_fitted.assert_called_once()
+                mocked_set_fitted.reset_mock()
+                fitting._params[0].setText("1.1")
+                fitting._params[1].setText("2.2")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_called_once_with(x1, y1, p0=[1.1, 2.2])
+
+                mocked_fit.side_effect=RuntimeError("runtime error")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                self.assertEqual("RuntimeError('runtime error')", fitting._output.toPlainText())
+
+                mocked_fit.side_effect=ValueError("value error")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                self.assertEqual("ValueError('value error')", fitting._output.toPlainText())
+
         x2, y2 = np.random.rand(10), np.random.rand(10)
         win._corr2._plot.setData(x2, y2)
-        x2_slave, y2_slave = np.random.rand(10), np.random.rand(10)
-        win._corr2._plot_slave.setData(x2_slave, y2_slave)
-
-        self.assertTrue(fitting.corr1_cb.isChecked())
-        with patch.object(fitting, "fit") as mocked_fit:
-            mocked_fit.return_value = ([], [])
-            QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-            self.assertEqual(2, len(mocked_fit.call_args_list))
-            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x1, y1, True))
-            self.assertTupleEqual(mocked_fit.call_args_list[1][0], (x1_slave, y1_slave, False))
-
         fitting.corr2_cb.setChecked(True)
         with patch.object(fitting, "fit") as mocked_fit:
             mocked_fit.return_value = ([], [])
             QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-            self.assertEqual(2, len(mocked_fit.call_args_list))
-            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x2, y2, True))
-            self.assertTupleEqual(mocked_fit.call_args_list[1][0], (x2_slave, y2_slave, False))
+            self.assertEqual(1, len(mocked_fit.call_args_list))
+            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x2, y2))
 
     def _checkBinCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
