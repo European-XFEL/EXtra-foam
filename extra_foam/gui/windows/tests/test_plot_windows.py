@@ -101,6 +101,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertIsInstance(histogram_window, HistogramWindow)
         self._checkHistogramWindow(histogram_window)
         self._checkHistogramCtrlWidget(histogram_window)
+        self._checkHistogramCurveFitting(histogram_window)
 
         poi_window = self._check_open_window(self.poi_action)
         self.assertIsInstance(poi_window, PulseOfInterestWindow)
@@ -596,11 +597,11 @@ class TestPlotWindows(unittest.TestCase):
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
                 mocked_fit.assert_called_once_with(x1, y1, p0=[1.1, 2.2])
 
-                mocked_fit.side_effect=RuntimeError("runtime error")
+                mocked_fit.side_effect = RuntimeError("runtime error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
                 self.assertEqual("RuntimeError('runtime error')", fitting._output.toPlainText())
 
-                mocked_fit.side_effect=ValueError("value error")
+                mocked_fit.side_effect = ValueError("value error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
                 self.assertEqual("ValueError('value error')", fitting._output.toPlainText())
 
@@ -807,6 +808,46 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual("-10, 10", widget._bin_range_le.text())
         self.assertEqual("55", widget._n_bins_le.text())
         self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
+
+    def _checkHistogramCurveFitting(self, win):
+        widget = win._ctrl_widget
+        fitting = widget._fitting
+
+        with patch.object(win._fom_hist, "setFitted") as mocked_set_fitted:
+            self.assertIsNone(fitting._algo)
+            QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+            mocked_set_fitted.assert_called_with(None, None)
+            mocked_set_fitted.reset_mock()
+
+            fitting.fit_type_cb.setCurrentText("Gaussian")
+            with patch.object(fitting._algo, "fit") as mocked_fit:
+                x1, y1 = np.random.rand(1), np.random.rand(1)
+                win._fom_hist._plot.setData(x1, y1)
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_not_called()
+                mocked_set_fitted.assert_called_with(None, None)
+                mocked_set_fitted.reset_mock()
+                self.assertEqual("Not enough data", fitting._output.toPlainText())
+
+                x1, y1 = np.random.rand(10), np.random.rand(10)
+                win._fom_hist._plot.setData(x1, y1)
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_called_once_with(x1, y1, p0=[1.0, 1.0, 1.0, 1.0])
+                mocked_fit.reset_mock()
+                mocked_set_fitted.assert_called_once()
+                mocked_set_fitted.reset_mock()
+                fitting._params[2].setText("1.1")
+                fitting._params[3].setText("2.2")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                mocked_fit.assert_called_once_with(x1, y1, p0=[1.0, 1.0, 1.1, 2.2])
+
+                mocked_fit.side_effect = RuntimeError("runtime error")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                self.assertEqual("RuntimeError('runtime error')", fitting._output.toPlainText())
+
+                mocked_fit.side_effect = ValueError("value error")
+                QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
+                self.assertEqual("ValueError('value error')", fitting._output.toPlainText())
 
     def _checkHistogramCtrlWidgetTs(self, win):
         widget = win._ctrl_widget
