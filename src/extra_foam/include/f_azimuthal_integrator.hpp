@@ -32,7 +32,7 @@ namespace foam
 namespace
 {
 
-template<typename T, typename E, EnableIf<std::decay_t<E>, IsImage> = false>
+template<typename T, typename E>
 auto computeGeometry(E&& src, T poni1, T poni2, T pixel1, T pixel2)
 {
   auto shape = src.shape();
@@ -51,20 +51,13 @@ auto computeGeometry(E&& src, T poni1, T poni2, T pixel1, T pixel2)
   return geometry;
 }
 
-template<typename T, typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-auto histogramAI(E&& src, const xt::xtensor<T, 2>& geometry, T q_min, T q_max,
-                 size_t n_bins, size_t min_count=1)
+template<typename E1, typename E2, typename E3, typename T>
+void histogramAI(E1&& src, const E2& geometry, E3& hist, T q_min, T q_max, size_t n_bins, size_t min_count)
 {
-  auto shape = src.shape();
-
-  using vector_type = ReducedVectorType<E, T>;
-
   T norm = T(1) / (q_max - q_min);
-
-  vector_type edges = xt::linspace<T>(q_min, q_max, n_bins + 1);
-  vector_type hist = xt::zeros<T>({ n_bins });
   xt::xtensor<size_t, 1> counts = xt::zeros<size_t>({ n_bins });
 
+  auto shape = src.shape();
   for (size_t i = 0; i < shape[0]; ++i)
   {
     for (size_t j = 0; j < shape[1]; ++j)
@@ -103,7 +96,21 @@ auto histogramAI(E&& src, const xt::xtensor<T, 2>& geometry, T q_min, T q_max,
     else
       hist(i) /= counts(i);
   }
+}
 
+template<typename T, typename E, EnableIf<std::decay_t<E>, IsImage> = false>
+auto histogramAI(E&& src, const xt::xtensor<T, 2>& geometry, T q_min, T q_max,
+                 size_t n_bins, size_t min_count=1)
+{
+  auto shape = src.shape();
+
+  using vector_type = ReducedVectorType<E, T>;
+
+  vector_type hist = xt::zeros<T>({ n_bins });
+
+  histogramAI(std::forward<E>(src), geometry, hist, q_min, q_max, n_bins, min_count);
+
+  vector_type edges = xt::linspace<T>(q_min, q_max, n_bins + 1);
   auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
 
   return std::make_pair<vector_type, vector_type>(centers, std::move(hist));
@@ -117,6 +124,43 @@ auto histogramAI(E&& src, T poni1, T poni2, T pixel1, T pixel2, size_t npt, size
   std::array<T, 2> bounds = xt::minmax(geometry)();
 
   return histogramAI<T>(std::forward<E>(src), geometry, bounds[0], bounds[1], npt, min_count);
+}
+
+template<typename T, typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
+auto histogramAI(E&& src, const xt::xtensor<T, 2>& geometry, T q_min, T q_max,
+                 size_t n_bins, size_t min_count=1)
+{
+  size_t np = src.shape()[0];
+
+  using vector_type = ReducedVectorTypeFromArray<E, T>;
+  using image_type = ReducedImageType<E, T>;
+
+  image_type hist = xt::zeros<T>({ np, n_bins });
+
+#if defined(FOAM_USE_TBB)
+  tbb::parallel_for(tbb::blocked_range<int>(0, np),
+    [&src, &geometry, &hist, q_min, q_max, n_bins, min_count]
+    (const tbb::blocked_range<int> &block)
+    {
+      for(int k=block.begin(); k != block.end(); ++k)
+      {
+#else
+      for (size_t k = 0; k < np; ++k)
+      {
+#endif
+        auto hist_view = xt::view(hist, k, xt::all());
+        histogramAI(xt::view(src, k, xt::all(), xt::all()), geometry, hist_view,
+                    q_min, q_max, n_bins, min_count);
+      }
+#if defined(FOAM_USE_TBB)
+    }
+  );
+#endif
+
+  vector_type edges = xt::linspace<T>(q_min, q_max, n_bins + 1);
+  auto&& centers = 0.5 * (xt::view(edges, xt::range(0, -1)) + xt::view(edges, xt::range(1, xt::placeholders::_)));
+
+  return std::make_pair<vector_type, image_type>(centers, std::move(hist));
 }
 
 } //namespace
@@ -186,6 +230,10 @@ public:
   template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
   auto integrate1d(E&& src, size_t npt, size_t min_count=1,
                    AzimuthalIntegrationMethod method=AzimuthalIntegrationMethod::HISTOGRAM);
+
+  template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
+  auto integrate1d(E&& src, size_t npt, size_t min_count=1,
+                   AzimuthalIntegrationMethod method=AzimuthalIntegrationMethod::HISTOGRAM);
 };
 
 template<typename T>
@@ -235,6 +283,34 @@ auto AzimuthalIntegrator<T>::integrate1d(E&& src,
   if (!initialized_ || src_shape[0] != q_shape[0] || src_shape[1] != q_shape[1])
   {
     initQ(src);
+    initialized_ = true;
+  }
+
+  switch(method)
+  {
+    case AzimuthalIntegrationMethod::HISTOGRAM:
+    {
+      return histogramAI(std::forward<E>(src), q_, q_min_, q_max_, npt, min_count);
+    }
+    default:
+      throw std::runtime_error("Unknown azimuthal integration method");
+  }
+}
+
+template<typename T>
+template<typename E, EnableIf<std::decay_t<E>, IsImageArray>>
+auto AzimuthalIntegrator<T>::integrate1d(E&& src,
+                                         size_t npt,
+                                         size_t min_count,
+                                         AzimuthalIntegrationMethod method)
+{
+  if (npt == 0) npt = 1;
+
+  auto src_shape = src.shape();
+  std::array<size_t, 2> q_shape = q_.shape();
+  if (!initialized_ || src_shape[1] != q_shape[0] || src_shape[2] != q_shape[1])
+  {
+    initQ(xt::view(src, 0, xt::all(), xt::all()));
     initialized_ = true;
   }
 

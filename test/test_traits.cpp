@@ -34,6 +34,22 @@ TEST(TestReducedType, TestVector)
   EXPECT_FALSE(value);
 }
 
+TEST(TestReducedType, TestVectorFromArray)
+{
+  bool value;
+
+  value = std::is_same<typename xt::xtensor<double, 1>, ReducedVectorTypeFromArray<xt::xtensor<double, 3>>>::value;
+  EXPECT_TRUE(value);
+  value = std::is_same<typename xt::xtensor<float, 1>, ReducedVectorTypeFromArray<xt::xtensor<double, 3>, float>>::value;
+  EXPECT_TRUE(value);
+  value = std::is_same<typename xt::xtensor<int, 1>, ReducedVectorTypeFromArray<xt::xtensor<double, 3>, int>>::value;
+  EXPECT_TRUE(value);
+  value = std::is_same<typename xt::xtensor<double, 2>, ReducedVectorTypeFromArray<xt::xtensor<double, 3>>>::value;
+  EXPECT_FALSE(value);
+  value = std::is_same<typename xt::xtensor<long, 1>, ReducedVectorTypeFromArray<xt::xtensor<double, 3>, int>>::value;
+  EXPECT_FALSE(value);
+}
+
 TEST(TestReducedType, TestImage)
 {
   bool value;

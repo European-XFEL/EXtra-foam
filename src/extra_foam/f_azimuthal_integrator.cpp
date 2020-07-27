@@ -41,6 +41,19 @@ void declareAzimuthalIntegrator(py::module& m)
   AZIMUTHAL_INTEGRATE1D(float)
   AZIMUTHAL_INTEGRATE1D(uint16_t)
   AZIMUTHAL_INTEGRATE1D(int16_t)
+
+#define AZIMUTHAL_INTEGRATE1D_PARA(DTYPE)                                                             \
+  cls.def("integrate1d", (std::pair<foam::ReducedVectorTypeFromArray<xt::pytensor<value_type, 3>>,    \
+                                    foam::ReducedImageType<xt::pytensor<value_type, 3>>>              \
+                          (Integrator::*)(const xt::pytensor<DTYPE, 3>&, size_t, size_t,              \
+                                          foam::AzimuthalIntegrationMethod))                          \
+     &Integrator::template integrate1d<const xt::pytensor<DTYPE, 3>&>,                                \
+     py::arg("src").noconvert(), py::arg("npt"), py::arg("min_count")=1,                              \
+     py::arg("method")=foam::AzimuthalIntegrationMethod::HISTOGRAM);
+
+  AZIMUTHAL_INTEGRATE1D_PARA(float)
+  AZIMUTHAL_INTEGRATE1D_PARA(uint16_t)
+  AZIMUTHAL_INTEGRATE1D_PARA(int16_t)
 }
 
 void declareConcentricRingsFinder(py::module& m)
