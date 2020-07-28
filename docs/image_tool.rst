@@ -438,14 +438,15 @@ i.e., it cannot be used in real-time analysis.
 Fourier transform
 """""""""""""""""
 
-.. _fft2: https://numpy.org/doc/stable/reference/generated/numpy.fft.fft2.html#numpy.fft.fft2
+.. _fft: https://docs.scipy.org/doc/scipy/reference/fft.html#module-scipy.fft
 
-Apply 2D discrete Fourier Transform to the original image using fft2_ implemented in numpy.
+Apply 2D discrete Fourier Transform to the original image and shift the zero-frequency component to
+the center of the spectrum using fft_ package in scipy.
 
 +---------------------------------+--------------------------------------------------------------------+
 | Input                           | Description                                                        |
 +=================================+====================================================================+
-| ``Logrithmic scale``            | Check to display the transformed image in logrithmic scale.        |
+| ``Logrithmic scale``            | Check to display the amplitude in logrithmic scale.                |
 +---------------------------------+--------------------------------------------------------------------+
 
 Edge detection
