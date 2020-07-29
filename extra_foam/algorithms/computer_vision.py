@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
-from numpy.fft import fft2
+from scipy import fft
 
 from .imageproc_py import mask_image_data
 from .canny import cannyEdge
@@ -50,12 +50,14 @@ def fourier_transform_2d(image, *, logrithmic=True, mask_nan=True):
 
     :return numpy.ndarray: transformed image data. Shape = (y, x)
     """
-    masked = image
+    masked = np.copy(image)
     if mask_nan:
-        masked = np.copy(image)
         mask_image_data(masked, keep_nan=False)
 
-    out = fft2(masked)
+    # TODO: improve performance
+    out = fft.fftshift(fft.fft2(masked, overwrite_x=True))
+
+    np.abs(out, out=out)
     if logrithmic:
-        out = np.log(1 + np.abs(out))
-    return np.abs(out)
+        np.log10(1 + out, out=out)
+    return out
