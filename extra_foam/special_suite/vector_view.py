@@ -41,8 +41,6 @@ class VectorViewProcessor(QThreadWorker):
         self._vector1 = ''
         self._vector2 = ''
 
-        self._digitizer_ch = ''
-
         self._vector1_full = SimpleSequence(max_len=6000)
         self._vector2_full = SimpleSequence(max_len=6000)
 
@@ -52,17 +50,12 @@ class VectorViewProcessor(QThreadWorker):
     def onVector2Change(self, value: str):
         self._vector2 = value
 
-    def onDigitizerChannelChange(self, value: str):
-        self._digitizer_ch = value
-
     @profiler("Vector view processor")
     def process(self, data):
         """Override."""
-        meta = data["meta"]
+        processed = data["processed"]
 
-        tid = self.getTrainId(meta)
-
-        vec1, vec2 = self._fetch_data(data["processed"])
+        vec1, vec2 = self._fetch_data(processed)
 
         if vec1 is not None and vec2 is not None:
             if len(vec1) != len(vec2):
@@ -74,7 +67,7 @@ class VectorViewProcessor(QThreadWorker):
             self._vector1_full.extend(vec1)
             self._vector2_full.extend(vec2)
 
-        self.log.info(f"Train {tid} processed")
+        self.log.info(f"Train {processed.tid} processed")
 
         return {
             "vector1": vec1,
@@ -90,7 +83,8 @@ class VectorViewProcessor(QThreadWorker):
             if name == 'ROI FOM':
                 vec = processed.pulse.roi.fom
                 if vec is None:
-                    raise ProcessingError("ROI FOM is not available!")
+                    raise ProcessingError(
+                        "Pulse-resolved ROI FOM is not available!")
 
             elif name == 'XGM intensity':
                 vec = processed.pulse.xgm.intensity
@@ -98,9 +92,11 @@ class VectorViewProcessor(QThreadWorker):
                     raise ProcessingError("XGM intensity is not available!")
 
             elif name == 'Digitizer pulse integral':
-                vec = processed.pulse.digitizer[self._digitizer_ch].pulse_integral
+                digit = processed.pulse.digitizer
+                vec = digit[digit.ch_normalizer].pulse_integral
                 if vec is None:
-                    raise ProcessingError("Digitizer APD is not available!")
+                    raise ProcessingError(
+                        "Digitizer pulse integral is not available!")
 
             ret.append(vec)
         return ret
@@ -119,20 +115,17 @@ class VectorViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         self.vector1_cb = QComboBox()
         for item in _PREDEFINED_VECTORS:
-            self.vector1_cb.addItem(item)
+            if item:
+                # vector1 cannot be empty
+                self.vector1_cb.addItem(item)
 
         self.vector2_cb = QComboBox()
         for item in _PREDEFINED_VECTORS:
             self.vector2_cb.addItem(item)
 
-        self.channel_cb = QComboBox()
-        for item in _DIGITIZER_CHANNELS:
-            self.channel_cb.addItem(item)
-
         self._non_reconfigurable_widgets = [
             self.vector1_cb,
             self.vector2_cb,
-            self.channel_cb,
         ]
 
         self.initUI()
@@ -144,7 +137,6 @@ class VectorViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         layout.addRow("Vector 1: ", self.vector1_cb)
         layout.addRow("Vector 2: ", self.vector2_cb)
-        layout.addRow("Digitizer channel: ", self.channel_cb)
 
     def initConnections(self):
         """Override."""
@@ -276,8 +268,3 @@ class VectorViewWindow(_SpecialAnalysisBase):
             self._worker_st.onVector2Change)
         self._ctrl_widget_st.vector2_cb.currentTextChanged.emit(
             self._ctrl_widget_st.vector2_cb.currentText())
-
-        self._ctrl_widget_st.channel_cb.currentTextChanged.connect(
-            self._worker_st.onDigitizerChannelChange)
-        self._ctrl_widget_st.channel_cb.currentTextChanged.emit(
-            self._ctrl_widget_st.channel_cb.currentText())
