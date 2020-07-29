@@ -23,6 +23,7 @@ from .gotthard_w import GotthardWindow
 from .module_scan_w import ModuleScanWindow
 from .multicam_view_w import MultiCamViewWindow
 from .trxas_w import TrXasWindow
+from .vector_view import VectorViewWindow
 from .xas_tim_w import XasTimWindow
 from .xas_tim_xmcd_w import XasTimXmcdWindow
 from .xes_timing_w import XesTimingWindow
@@ -82,8 +83,10 @@ class _SpecialSuiteFacadeBase(QMainWindow):
             layout_row.setRowStretch(2, 2)
         self._cw.setLayout(layout)
 
-        self.setFixedSize(
-            self._WIDTH, (len(self._buttons) // 4 + 1) * self._ROW_HEIGHT)
+        h = len(self._buttons) // 4
+        if len(self._buttons) % 4 != 0:
+            h += 1
+        self.setFixedSize(self._WIDTH, h * self._ROW_HEIGHT)
 
     def addSpecial(self, instance_type):
         """Add a button for the given analysis."""
@@ -98,6 +101,7 @@ class _SpecialSuiteFacadeBase(QMainWindow):
 
     def addCommonSpecials(self):
         self.addSpecial(CamViewWindow)
+        self.addSpecial(VectorViewWindow)
         self.addSpecial(MultiCamViewWindow)
 
 
