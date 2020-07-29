@@ -122,6 +122,8 @@ class FxeSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("FXE")
 
         self.addSpecial(XesTimingWindow)
+        self.addSpecial(GotthardWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()
@@ -155,6 +157,18 @@ class MidSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         self.show()
 
 
+class HedSpecialSuiteFacade(_SpecialSuiteFacadeBase):
+    def __init__(self):
+        super().__init__("HED")
+
+        self.addSpecial(GotthardWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
+        self.addCommonSpecials()
+
+        self.initUI()
+        self.show()
+
+
 class DetSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("DET")
@@ -178,6 +192,9 @@ def create_special_suite(topic):
 
     if topic == "MID":
         return MidSpecialSuiteFacade()
+
+    if topic == "HED":
+        return HedSpecialSuiteFacade()
 
     if topic == "DET":
         return DetSpecialSuiteFacade()
