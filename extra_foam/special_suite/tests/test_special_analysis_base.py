@@ -293,6 +293,22 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
 
     def testSqueezeCameraImage(self):
         a1d = np.ones((4, ))
+        a2d = np.ones((2, 1))
+        a3d = np.ones((3, 3, 1))
+
+        func = functools.partial(self._win._worker_st.squeezeToVector, 1234)
+
+        assert func(None) is None
+        assert func(a3d) is None
+
+        ret_1d = func(a1d)
+        np.testing.assert_array_equal(a1d, ret_1d)
+
+        ret_2d = func(a2d)
+        np.testing.assert_array_equal(a2d.squeeze(axis=-1), ret_2d)
+
+    def testSqueezeToVector(self):
+        a1d = np.ones((4, ))
         a2d = np.ones((2, 2))
         a3d = np.ones((3, 3, 1))
         a3d_f = np.ones((3, 3, 2))
