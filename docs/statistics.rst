@@ -73,8 +73,8 @@ themselves to click the reset button.
 Histogram
 ---------
 
-.. image:: images/histogram_setup.png
-   :width: 640
+.. image:: images/histogram_window.jpg
+   :width: 800
 
 Setup the visualization of pulse- / train- resolved statistics analysis.
 
@@ -95,16 +95,13 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 | ``Reset``                  | Reset the histogram history.                                       |
 +----------------------------+--------------------------------------------------------------------+
 
-.. image:: images/histogram_window.png
-   :width: 800
-
 
 .. _Correlation:
 
 Correlation
 -----------
 
-.. image:: images/correlation.jpg
+.. image:: images/correlation_window.jpg
    :width: 800
 
 The correlation window allows to setup the visualization of correlations of a given FOM with
