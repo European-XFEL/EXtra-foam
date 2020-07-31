@@ -599,11 +599,11 @@ class TestPlotWindows(unittest.TestCase):
 
                 mocked_fit.side_effect = RuntimeError("runtime error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                self.assertEqual("RuntimeError('runtime error')", fitting._output.toPlainText())
+                self.assertIn("RuntimeError", fitting._output.toPlainText())
 
                 mocked_fit.side_effect = ValueError("value error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                self.assertEqual("ValueError('value error')", fitting._output.toPlainText())
+                self.assertIn("ValueError", fitting._output.toPlainText())
 
         x2, y2 = np.random.rand(10), np.random.rand(10)
         win._corr2._plot.setData(x2, y2)
@@ -843,11 +843,11 @@ class TestPlotWindows(unittest.TestCase):
 
                 mocked_fit.side_effect = RuntimeError("runtime error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                self.assertEqual("RuntimeError('runtime error')", fitting._output.toPlainText())
+                self.assertIn("RuntimeError", fitting._output.toPlainText())
 
                 mocked_fit.side_effect = ValueError("value error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                self.assertEqual("ValueError('value error')", fitting._output.toPlainText())
+                self.assertIn("ValueError", fitting._output.toPlainText())
 
     def _checkHistogramCtrlWidgetTs(self, win):
         widget = win._ctrl_widget
