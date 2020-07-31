@@ -37,8 +37,20 @@ class TestAzimuthalIntegrator:
         assert q0 == q1
         assert s0 == s1
 
-        q10, s10 = integrator.integrate1d(img, npt=10, min_count=img.size)
-        assert not np.any(s10)
+        # test threshold
+        q10_0, s10_0 = integrator.integrate1d(img, npt=10, min_count=img.size)
+        assert not np.any(s10_0)
+
+        # test integrate an array of images
+        q10, s10 = integrator.integrate1d(img, npt=10)
+        img_a = np.tile(img, (4, 1, 1))
+        img_a[3, ...] = img - 1000
+        q10_a, s10_a = integrator.integrate1d(img_a, npt=10)
+        np.testing.assert_array_equal(q10_a, q10)
+        for i in range(3):
+            np.testing.assert_array_equal(s10_a[i], s10)
+        _, s10_2 = integrator.integrate1d(img - 1000, npt=10)
+        np.testing.assert_array_equal(s10_a[3], s10_2)
 
         q100, s100 = integrator.integrate1d(img, npt=999)
 

@@ -92,6 +92,20 @@ class _AbstractProxy(ProcessLogger):
         return self._db.execute_command('HGETALL', name)
 
     @redis_except_handler
+    def hget_all_multi(self, name_list):
+        """Get all key-value pairs of a list of hash.
+
+        :return: None if the connection failed;
+                 otherwise, a list of dictionaries of key-value pairs.
+                 If the hash does not exist, an empty dictionary will
+                 be returned.
+        """
+        pipe = self._db.pipeline()
+        for name in name_list:
+            pipe.execute_command('HGETALL', name)
+        return pipe.execute()
+
+    @redis_except_handler
     def hincrease_by(self, name, key, amount=1):
         """Increase the value of a key in a hash by the given amount.
 

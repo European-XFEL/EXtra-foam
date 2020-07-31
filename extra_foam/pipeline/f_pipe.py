@@ -306,7 +306,13 @@ class MpOutQueue(_PipeOutBase):
                         n_pulses = data_out.pidx.n_kept(data_out.n_pulses)
                         self._mon.add_tid_with_timestamp(
                             tid, n_pulses=n_pulses)
+
                         logger.info(f"Train {tid} processed!")
+
+                        if data.get("reset_ma", False):
+                            self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
+                        else:
+                            self._meta.hdel(mt.GLOBAL_PROC, "reset_ma")
                     else:
                         data_out = {key: data[key] for key
                                     in self._pipeline_dtype}

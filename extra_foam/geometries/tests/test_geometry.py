@@ -49,7 +49,7 @@ class TestJungFrauGeometryFast:
             cls.geom_32_cfel = JungFrauGeometryFast(3, 2, module_coordinates)
         cls.cases.append((cls.geom_32_cfel, 6, (1607, 2260)))
 
-    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
+    @pytest.mark.parametrize("dtype", [np.float64, _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
     def testAssemblingArray(self, dtype):
         for geom, n_modules, assembled_shape_gt in self.cases:
             modules = np.ones((self.n_pulses, n_modules, *self.module_shape), dtype=dtype)
@@ -63,7 +63,7 @@ class TestJungFrauGeometryFast:
             geom.dismantle_all_modules(assembled, dismantled)
             np.testing.assert_array_equal(modules, dismantled)
 
-    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
+    @pytest.mark.parametrize("dtype", [np.float64, _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
     def testAssemblingVector(self, dtype):
         for geom, n_modules, assembled_shape_gt in self.cases:
             modules = StackView(

@@ -24,9 +24,7 @@ In your Anaconda_ environment, run the following commands:
     $ conda install -c anaconda libstdcxx-ng
 
     # install gcc-7.5 (experimenting)
-    # $ conda install -c conda-forge gxx_linux-64
-    # $ ln -s ${CONDA_PREFIX}/bin/x86_64-conda_cos6-linux-gnu-gcc  ${CONDA_PREFIX}/bin/gcc
-    # $ ln -s ${CONDA_PREFIX}/bin/x86_64-conda_cos6-linux-gnu-g++  ${CONDA_PREFIX}/bin/g++
+    # $ conda install -c conda-forge compilers
 
     # install cmake and dependencies
     $ conda install -c anaconda cmake numpy
@@ -43,19 +41,29 @@ Install **EXtra-foam**
     $ git submodule update --init
 
     $ cd EXtra-foam
-
-    # optional
-    $ export FOAM_USE_TBB=0  # turn off intel TBB in extra-foam
-    $ export XTENSOR_USE_TBB=0  # turn off intel TBB in xtensor
-    $ export FOAM_USE_XSIMD=0  # turn off XSIMD in extra-foam
-    $ export XTENSOR_USE_XSIMD=0  # turn off XSIMD in xtensor
-
-    # Note: This step is also required if one wants to change the above
-    #       environmental parameters.
-    $ python setup.py clean  # alternatively "rm -r build"
-
     $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
     $ pip install .
+
+
+Install your own **EXtra-foam** kernel on the Maxwell cluster for offline analysis
+----------------------------------------------------------------------------------
+
+For now, there is no documentation for the Python bindings of the C++ implementations in
+**EXtra-foam**. If you are interested in using those super fast C++ implementation to
+accelerate your analysis, please feel free to dig into the code and ask questions.
+
+.. code-block:: bash
+
+    # ssh to the Maxwell cluster and then
+    $ module load anaconda3
+    $ conda create --name extra-foam-offline -y
+    $ conda activate extra-foam-offline
+
+    # follow the previous steps to install EXtra-foam
+
+    $ conda install ipykernel nb_conda_kernels -y
+
+    # Now you should be able to load the newly created kernel on max-jhub.
 
 
 Install C++ API of **EXtra-foam** only

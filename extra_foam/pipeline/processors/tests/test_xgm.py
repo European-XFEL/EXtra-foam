@@ -158,7 +158,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         proc = XgmProcessor()
         proc._meta.hdel = MagicMock()
         proc._update_moving_average({
-            'reset_ma_xgm': 1,
+            'reset_ma': 1,
             'ma_window': 5
         })
 

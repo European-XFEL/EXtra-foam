@@ -235,7 +235,6 @@ inline void maskImageDataZero(E& src, T lb, T ub)
   using value_type = typename E::value_type;
   auto shape = src.shape();
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
@@ -265,7 +264,6 @@ inline void maskImageDataZero(E& src, T lb, T ub, N& out)
 
   utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
@@ -356,7 +354,6 @@ inline void maskImageDataZero(E& src, const M& mask)
 
   utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
@@ -384,7 +381,6 @@ inline void maskImageDataZero(E& src, const M& mask, M& out)
   utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
   utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
@@ -475,7 +471,6 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub)
 
   utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
@@ -510,7 +505,6 @@ inline void maskImageDataZero(E& src, const M& mask, T lb, T ub, N& out)
   utils::checkShape(shape, mask.shape(), "Image and mask have different shapes");
   utils::checkShape(shape, out.shape(), "Image and output array have different shapes");
 
-  auto nan = std::numeric_limits<value_type>::quiet_NaN();
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)

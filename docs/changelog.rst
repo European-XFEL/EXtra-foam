@@ -1,24 +1,47 @@
 CHANGELOG
 =========
 
+1.0.0 (31 July 2020)
+------------------------
+
+- **Improvement**
+
+    - Improve FFT of image in feature extraction. #268
+    - Improve fitting interface. #265
+    - Add reset panel in the main GUI. #264
+    - Update default config files. #262
+    - Improve azimuthal integration performance. #261, #268
+    - Revert y-axis orientation change. #260
+    - Add Python binding for double dtype in generalized geometry. #259
+
+- **New Feature**
+
+    - Implemented pulse-resolved correlation in special suite. #270
+    - Add curve fitting in histogram window. #267
+    - Support streaming Basler camera from files. #266
+    - Add more fitting types, Gaussian, Lorentzian and erf. #265
+    - Add pump-probe FOM to histogram window. #263
+    - Reset moving average in correlation scan mode. #263
+
+
 0.9.1 (15 July 2020)
 ------------------------
 
 - **Bug Fix**
 
-  - Fix transform type update in TransformView in ImageTool. #251
+    - Fix transform type update in TransformView in ImageTool. #251
 
 - **Improvement**
 
-  - PlotItem will not be shown in legend if its name is empty. #254
-  - Improve y2-axis plot implementation. #253
-  - Improve stack detector modules. #247
-  - Implement ScatterPlotItem to replace the pyqtgraph one. #238
+    - PlotItem will not be shown in legend if its name is empty. #254
+    - Improve y2-axis plot implementation. #253
+    - Improve stack detector modules. #247
+    - Implement ScatterPlotItem to replace the pyqtgraph one. #238
 
 - **New Feature**
 
-  - Implement curve fitting in correlation window. #255
-  - Implement azimuthal integration and concentric ring detection in C++. #252
+    - Implement curve fitting in correlation window. #255
+    - Implement azimuthal integration and concentric ring detection in C++. #252
 
 
 0.9.0 (30 June 2020)
@@ -26,32 +49,32 @@ CHANGELOG
 
 - **Bug Fix**
 
-  - Fix bug in data source tree introduced in 0.8.4. #235
-  - Fix transparent Nan pixel with the latest pyqtgraph version. #231
+    - Fix bug in data source tree introduced in 0.8.4. #235
+    - Fix transparent Nan pixel with the latest pyqtgraph version. #231
 
 - **Improvement**
 
-  - Improve performance of PlotCurveItem and add benchmarks for PlotItems and ImageViewF. #243
-  - Make ctrl widgets in Imagetool more compact. #241
-  - Improve C++ code quality and suppress TBB deprecate warning. #239
-  - Add meter bar to plot area. #236
-  - Reimplement ImageItem and PlotItem to replace the pyqtgraph ones. #232 #242
-  - Improve data source updating and color encoding matched source items in
-    the data source tree. #230 #234
-  - Rename configurator to analysis setup manager and allow take snapshot for
-    each setup. #228
-  - Update data source and trouble shooting in documentation. #227
-  - Add summary of compiler flags for EXtra-foam-python. #226
-  - Update installation (gcc7) and CI (gcc8). #226
-  - Rename misleading mouse mode in the right-click context menu. #211
-  - Update pyqtgraph to the latest master branch. #206 #211 #233
+    - Improve performance of PlotCurveItem and add benchmarks for PlotItems and ImageViewF. #243
+    - Make ctrl widgets in Imagetool more compact. #241
+    - Improve C++ code quality and suppress TBB deprecate warning. #239
+    - Add meter bar to plot area. #236
+    - Reimplement ImageItem and PlotItem to replace the pyqtgraph ones. #232 #242
+    - Improve data source updating and color encoding matched source items in
+      the data source tree. #230 #234
+    - Rename configurator to analysis setup manager and allow take snapshot for
+      each setup. #228
+    - Update data source and trouble shooting in documentation. #227
+    - Add summary of compiler flags for EXtra-foam-python. #226
+    - Update installation (gcc7) and CI (gcc8). #226
+    - Rename misleading mouse mode in the right-click context menu. #211
+    - Update pyqtgraph to the latest master branch. #206 #211 #233
 
 - **New Feature**
 
-  - Annotate peaks in azimuthal integration view. #240
-  - Enable Legend for all the plot items. #206 #237
-  - Implement logarithmic X/Y scale in right-click context menu. #206
-  - Enable C++ API installation and add examples. #227
+    - Annotate peaks in azimuthal integration view. #240
+    - Enable Legend for all the plot items. #206 #237
+    - Implement logarithmic X/Y scale in right-click context menu. #206
+    - Enable C++ API installation and add examples. #227
 
 
 0.8.4 (8 June 2020)
@@ -59,33 +82,33 @@ CHANGELOG
 
 - **Bug Fix**
 
-  - Beam size in the bar plot will change when the resolution changes in the
-    correlation analysis. #209
+    - Beam size in the bar plot will change when the resolution changes in the
+      correlation analysis. #209
 
 - **Improvement**
 
-  - Update Redis versions: server -> 6.0.5; redis-py -> 3.5.2; hiredis-py -> 1.0.1. #220
-  - Slightly improve image proc C++ code performance on machines with few threads. #219
-  - Visualize data type in data source Tree. #218
-  - Improve the performance of pulse filter. #214
-  - Improve setup.py. #212
-  - Keep data when resolution changes in correlation analysis; move sequence classes
-    into algorithms/data_structures. #209
-  - Mask ASIC edge when n_modules == 1; simplify geometry binding code. #207
-  - Add benchmark for generalized geometry. #205
-  - Make special suite more self-contained. #204
-  - Mask JungFrau and JungFrauPR. #200
-  - Move statistics ctrl widgets into corresponding windows. #199
+    - Update Redis versions: server -> 6.0.5; redis-py -> 3.5.2; hiredis-py -> 1.0.1. #220
+    - Slightly improve image proc C++ code performance on machines with few threads. #219
+    - Visualize data type in data source Tree. #218
+    - Improve the performance of pulse filter. #214
+    - Improve setup.py. #212
+    - Keep data when resolution changes in correlation analysis; move sequence classes
+      into algorithms/data_structures. #209
+    - Mask ASIC edge when n_modules == 1; simplify geometry binding code. #207
+    - Add benchmark for generalized geometry. #205
+    - Make special suite more self-contained. #204
+    - Mask JungFrau and JungFrauPR. #200
+    - Move statistics ctrl widgets into corresponding windows. #199
 
 - **New Feature**
 
-  - Color encoding matched sources in the data source tree. #220
-  - Add processed pulse counter in ImageTool. #216
-  - Add support for C++ API. #213
-  - Add xtensor-blas as a submodule. #210
-  - Implement image transform processor and view (FFT, edge detection). #203
-  - Integrate Karabo gate (PipeToEXtraFoam device) which allows request pipeline
-    and control data in special suite. #168
+    - Color encoding matched sources in the data source tree. #220
+    - Add processed pulse counter in ImageTool. #216
+    - Add support for C++ API. #213
+    - Add xtensor-blas as a submodule. #210
+    - Implement image transform processor and view (FFT, edge detection). #203
+    - Integrate Karabo gate (PipeToEXtraFoam device) which allows request pipeline
+      and control data in special suite. #168
 
 
 0.8.3 (11 May 2020)
@@ -163,6 +186,7 @@ CHANGELOG
     - Implement Gotthard analysis (special suite) for MID. #89
     - Implement interface and examples for special analysis suite. #89
 
+
 0.8.1 (16 March 2020)
 ------------------------
 
@@ -179,6 +203,7 @@ CHANGELOG
     - Add branch-based CI and Singularity image deployment. #92
     - Add support for ePix100 detector. #90
     - Implement save and load metadata. #87
+
 
 0.8.0.1 (3 March 2020)
 ------------------------
@@ -215,6 +240,7 @@ CHANGELOG
     - Use nansum in Tr-XAS analysis. #75
     - Fix typo in unittest. #74
     - Fix changing device ID in data source on the fly. #69
+
 
 0.7.3 (24 February 2020)
 ------------------------
@@ -267,6 +293,7 @@ CHANGELOG
     - Fix logger level. #41
     - Fix extra-foam-kill. #41
 
+
 0.7.2 (16 January 2020)
 -----------------------
 
@@ -318,6 +345,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 - **Test**
     - Migrate CI from EuXFEL gitlab to public github #1
 
+
 0.7.0 (25 November 2019)
 ------------------------
 
@@ -338,6 +366,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 
     - Clean-up thread logger gracefully #170
 
+
 0.6.2 (15 November 2019)
 ------------------------
 
@@ -356,6 +385,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 
     - Pulse slicer will also slice the stored dark images #165
 
+
 0.6.1 (28 October 2019)
 -----------------------
 
@@ -370,6 +400,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
     - Implement normalization by XGM pipeline data !157
     - New data source management interface !157
     - Implemented web monitor in Dash !152
+
 
 0.6.0 (31 August 2019)
 ----------------------
@@ -390,6 +421,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 
 
 - **Test**
+
 
 0.5.5 (26 August 2019)
 ----------------------
@@ -413,6 +445,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 
 - **Test**
 
+
 0.5.4 (20 August 2019)
 ----------------------
 
@@ -427,6 +460,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
     - Support pulse-resolved and two-module JungFrau !83
 
 - **Test**
+
 
 0.5.3 (16 August 2019)
 ----------------------
@@ -449,6 +483,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
 
     - Integrate cpp unittest into setuptools and CI (both parallel and series) !110
 
+
 0.5.2 (9 August 2019)
 ---------------------
 
@@ -468,6 +503,7 @@ This is the first release after migrating from EuXFEL gitlab to github!!!
     - New widget SmartSliceLineEdit !98
 
 - **Test**
+
 
 0.5.1 (5 August 2019)
 ---------------------

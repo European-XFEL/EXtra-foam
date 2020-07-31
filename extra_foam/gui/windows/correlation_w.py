@@ -7,7 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame, QSplitter, QVBoxLayout
 
 from .base_window import _AbstractPlotWindow
@@ -122,7 +121,6 @@ class CorrelationPlot(TimedPlotWidgetF):
         self._plot_slave = self.plotScatter(brush=brush_pair[1], name="slave")
 
         self._fitted = self.plotCurve(pen=pen_pair[0])
-        self._fitted_slave = self.plotCurve(pen=pen_pair[1])
 
     def _newStatisticsBarPlot(self, resolution):
         pen_pair = self._pens[self._idx]
@@ -133,20 +131,17 @@ class CorrelationPlot(TimedPlotWidgetF):
             beam=resolution, pen=pen_pair[1], name="slave")
 
         self._fitted = self.plotCurve(pen=pen_pair[0])
-        self._fitted_slave = self.plotCurve(pen=pen_pair[1])
 
     def _removeBothPlots(self):
         self.removeItem(self._fitted)
-        self.removeItem(self._fitted_slave)
         self.removeItem(self._plot)
         self.removeItem(self._plot_slave)
 
     def data(self):
         return self._plot.data()[:2], self._plot_slave.data()[:2]
 
-    def setFitted(self, fitted, fitted_slave):
-        self._fitted.setData(*fitted)
-        self._fitted_slave.setData(*fitted_slave)
+    def setFitted(self, x, y):
+        self._fitted.setData(x, y)
 
 
 class CorrelationWindow(_AbstractPlotWindow):
@@ -201,15 +196,14 @@ class CorrelationWindow(_AbstractPlotWindow):
     def _onCurveFit(self, is_corr1):
         corr = self._corr1 if is_corr1 else self._corr2
 
-        data, data_slave = corr.data()
+        data, _ = corr.data()
 
-        x, y = self._ctrl_widget.fit_curve(*data, True)
-        x_slave, y_slave = self._ctrl_widget.fit_curve(*data_slave, False)
-        corr.setFitted((x, y), (x_slave, y_slave))
+        x, y = self._ctrl_widget.fit_curve(*data)
+        corr.setFitted(x, y)
 
     def _onClearFitting(self, is_corr1):
         corr = self._corr1 if is_corr1 else self._corr2
-        corr.setFitted(([], []), ([], []))
+        corr.setFitted([], [])
 
     def closeEvent(self, QCloseEvent):
         self._ctrl_widget.resetAnalysisType()

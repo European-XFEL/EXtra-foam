@@ -144,10 +144,6 @@ target_link_libraries(${PROJECT_NAME}
         xtensor-blas
         $<$<BOOL:${FOAM_USE_XSIMD}>:xsimd>)
 
-if(BUILD_FOAM_TESTS)
-    add_subdirectory(test)
-endif()
-
 # ============
 # Build flags
 # ============
@@ -158,6 +154,14 @@ else()
     set(FOAM_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
 endif()
 string(STRIP "${FOAM_COMPILER_STR}" FOAM_COMPILER_STR)
+
+# ============
+# Unit test
+# ============
+
+if(BUILD_FOAM_TESTS)
+    add_subdirectory(test)
+endif()
 
 # ============
 # Installation

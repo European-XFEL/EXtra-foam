@@ -87,16 +87,15 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._peak_prominence = None
         self._peak_slicer = slice(None, None)
 
-        self._reset_ma = False
-
     def update(self):
         """Override."""
-        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        g_cfg, cfg = self._meta.hget_all_multi(
+            [mt.GLOBAL_PROC, mt.AZIMUTHAL_INTEG_PROC])
+
         self._sample_dist = float(g_cfg['sample_distance'])
         self._wavelength = energy2wavelength(1e3 * float(g_cfg['photon_energy']))
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
         self._pixel1 = float(cfg['pixel_size_y'])
         self._pixel2 = float(cfg['pixel_size_x'])
         self._poni1 = float(cfg['integ_center_y']) * self._pixel1
@@ -234,13 +233,15 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         self.__class__._intensity_on_ma.window = v
         self.__class__._intensity_off_ma.window = v
 
+    def _reset_ma(self):
+        del self._intensity_ma
+        del self._intensity_on_ma
+        del self._intensity_off_ma
+
     def _update_moving_average(self, cfg):
-        if 'reset_ma_ai' in cfg:
-            # reset moving average
-            del self._intensity_ma
-            del self._intensity_on_ma
-            del self._intensity_off_ma
-            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_ai')
+        """Override."""
+        if 'reset_ma' in cfg:
+            self._reset_ma()
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

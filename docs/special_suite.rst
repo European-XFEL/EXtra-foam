@@ -89,7 +89,7 @@ More info on command line arguments can be obtained as
 General purposed apps
 ---------------------
 
-Camera view, multi-camera view
+:ref:`Camera view`, :ref:`Vector view`, multi-camera view
 
 
 .. _Camera view:
@@ -120,6 +120,37 @@ More small features will be added in the future.
 +----------------------------+--------------------------------------------------------------------+
 | ``# of bins``              | Number of histogram bins.                                          |
 +----------------------------+--------------------------------------------------------------------+
+
+
+.. _Vector view:
+
+Vector view
+"""""""""""
+
+.. image:: images/special_suite_vector_view.jpg
+   :width: 800
+
+Vector view helps you monitor 1D data like XGM intensity, digitizer pulse integral, pulse-resolved
+ROI FOM and the correlation between them. **Vector view receives processed data from a main EXtra-foam
+instance.**
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Vector1``                | Vector 1.                                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``Vector2``                | Vector 2 (optional).                                               |
++----------------------------+--------------------------------------------------------------------+
+
+.. note::
+    In order to correlate two vectors, you will need to use the `Pulse slicer` in the data source
+    tree located in the main GUI to select the data.
+
+.. warning::
+    To have the pulse-resolved ROI FOM data, currently you must open the :ref:`Histogram` window
+    in the main GUI and select `ROI FOM` as the analysis type. This will activate the pulse-resolved
+    ROI FOM calculation, which is a little bit expensive. Also, make sure the `Pulse resolved`
+    checkbox is checked.
 
 
 Special purposed apps

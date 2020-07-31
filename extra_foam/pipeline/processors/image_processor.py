@@ -109,9 +109,8 @@ class ImageProcessor(_BaseProcessor):
         self._cal_sub = CalConstantsSub()
 
     def update(self):
-        cfg = self._meta.hget_all(mt.IMAGE_PROC)
-        geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
-        global_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        cfg, geom_cfg, global_cfg = self._meta.hget_all_multi(
+            [mt.IMAGE_PROC, mt.GEOMETRY_PROC, mt.GLOBAL_PROC])
 
         self._assembler.update(
             geom_cfg,

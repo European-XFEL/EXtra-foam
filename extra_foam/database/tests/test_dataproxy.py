@@ -47,6 +47,10 @@ class TestDataProxy(unittest.TestCase):
         proxy.hmset('name2', {'key1': 'value1', 'kay2': 'value2'})
         self.assertDictEqual({'key1': 'value1', 'kay2': 'value2'}, proxy.hget_all('name2'))
 
+        ret = proxy.hget_all_multi(['name1', 'name2'])
+        self.assertDictEqual({'key1': 'value1'}, ret[0])
+        self.assertDictEqual({'key1': 'value1', 'kay2': 'value2'}, ret[1])
+
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
         type2 = AnalysisType.PUMP_PROBE

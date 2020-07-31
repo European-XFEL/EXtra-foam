@@ -53,14 +53,15 @@ class XgmProcessor(_BaseProcessor):
         self.__class__._y_ma.window = v
         self.__class__._pulse_intensity_ma.window = v
 
+    def _reset_ma(self):
+        del self._intensity_ma
+        del self._x_ma
+        del self._y_ma
+        del self._pulse_intensity_ma
+
     def _update_moving_average(self, cfg):
-        if 'reset_ma_xgm' in cfg:
-            # reset moving average
-            del self._intensity_ma
-            del self._x_ma
-            del self._y_ma
-            del self._pulse_intensity_ma
-            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_xgm')
+        if 'reset_ma' in cfg:
+            self._reset_ma()
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

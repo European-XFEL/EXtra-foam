@@ -83,6 +83,11 @@ using ReducedVectorType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_s
                                                                        T>>(std::declval<E>(), {0})));
 
 template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImageArray> = false>
+using ReducedVectorTypeFromArray = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
+                                                                                typename std::decay_t<E>::value_type,
+                                                                                T>>(std::declval<E>(), {0, 1})));
+
+template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImageArray> = false>
 using ReducedImageType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
                                                                       typename std::decay_t<E>::value_type,
                                                                       T>>(std::declval<E>(), {0})));

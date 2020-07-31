@@ -4,7 +4,7 @@ MAIN GUI
 The main GUI of **EXtra-foam** is divided into several control panels grouped
 by functionality and a log window.
 
-.. image:: images/MainGUI.png
+.. image:: images/main_gui.jpg
    :width: 800
 
 Action bar

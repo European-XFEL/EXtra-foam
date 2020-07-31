@@ -78,6 +78,7 @@ class AnalysisType(IntEnum):
     ROI_PROJ = 21
     AZIMUTHAL_INTEG = 41
     PULSE = 2700
+    PUMP_PROBE_PULSE = 2701
     ROI_FOM_PULSE = 2711
     ROI_NORM_PULSE = 2712
     ROI_PROJ_PULSE = 2721

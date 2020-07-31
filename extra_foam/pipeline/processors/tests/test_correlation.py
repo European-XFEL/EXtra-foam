@@ -36,13 +36,17 @@ class TestCorrelationProcessor(_TestDataMixin):
         proc = CorrelationProcessor(1)
 
         with mock.patch.object(proc, "_update_analysis", return_value=False):
-            with mock.patch.object(proc._meta, "hget_all") as patched_cfg:
+            with mock.patch.object(proc._meta, "hget_all_multi") as patched_cfg:
+                g_cfg = {
+                    "ma_window": '1',
+                }
                 cfg = {
                     "analysis_type": '1',
                     "source1": "ABC abc",
                     "resolution1": '0',
+                    "auto_reset_ma": 'True',
                 }
-                patched_cfg.return_value = cfg
+                patched_cfg.return_value = g_cfg, cfg
                 proc.update()
                 assert proc._corr is proc._raw
                 assert proc._corr_slave is proc._raw_slave
@@ -95,6 +99,7 @@ class TestCorrelationProcessor(_TestDataMixin):
         proc = CorrelationProcessor(index+1)
         proc.analysis_type = analysis_type
         proc._resolution = resolution
+        assert not proc._auto_reset_ma
         if resolution > 0:
             proc._corr = OneWayAccuPairSequence(resolution)
             proc._corr_slave = OneWayAccuPairSequence(resolution)
@@ -250,6 +255,7 @@ class TestCorrelationProcessor(_TestDataMixin):
             assert len(corr[index].y_slave[0]) == 1
 
         # test reset
+        proc._prepare_reset_ma = True
         proc._reset = True
         with mock.patch.object(proc._corr_pp, "reset") as patched_reset:
             proc.process(data)
@@ -266,3 +272,84 @@ class TestCorrelationProcessor(_TestDataMixin):
 
             # correlation_pp has another reset flag
             patched_reset.assert_not_called()
+
+            assert not proc._prepare_reset_ma
+
+    @mock.patch('extra_foam.ipc.ProcessLogger.error')
+    @pytest.mark.parametrize("resolution", [0, 2])
+    def testAutoResetMovingAverage(self, error, resolution):
+        data, processed = self.simple_data(1001, (2, 2))
+        analysis_type = AnalysisType.PUMP_PROBE
+        slow_src = f'A0 ppt'
+
+        proc = CorrelationProcessor(1)
+        proc.analysis_type = analysis_type
+        proc._source = slow_src
+        proc._resolution = resolution
+        proc._auto_reset_ma = True
+        if resolution > 0:
+            proc._corr = OneWayAccuPairSequence(resolution)
+            proc._corr_slave = OneWayAccuPairSequence(resolution)
+
+        # 1st
+        data['raw'] = {slow_src: 1}
+        self._set_fom(processed, analysis_type, 10)
+        proc.process(data)
+        x, _ = proc._corr.data()
+        if resolution == 0:
+            assert not data['reset_ma']
+        else:
+            np.testing.assert_array_equal(np.array([], dtype=np.float64), x)
+            assert data['reset_ma']
+
+        # 2nd
+        data['raw'] = {slow_src: 2}
+        self._set_fom(processed, analysis_type, 20)
+        proc.process(data)
+        x, _ = proc._corr.data()
+        assert not data['reset_ma']
+        if resolution != 0:
+            # the first (previous) data is dropped
+            np.testing.assert_array_equal(np.array([], dtype=np.float64), x)
+
+        # 3rd
+        data['raw'] = {slow_src: 5}
+        self._set_fom(processed, analysis_type, 50)
+        proc.process(data)
+        x, _ = proc._corr.data()
+        if resolution == 0:
+            assert not data['reset_ma']
+        else:
+            np.testing.assert_array_equal(np.array([], dtype=np.float64), x)
+            assert data['reset_ma']
+
+        # 4th, 5th
+        data['raw'] = {slow_src: 6}
+        self._set_fom(processed, analysis_type, 60)
+        proc.process(data)
+        data['raw'] = {slow_src: 7}
+        self._set_fom(processed, analysis_type, 70)
+        proc.process(data)
+        x, _ = proc._corr.data()
+        assert not data['reset_ma']
+        if resolution != 0:
+            np.testing.assert_array_equal(np.array([6.5], dtype=np.float64), x)
+
+        # 6th
+        data['raw'] = {slow_src: 8}
+        self._set_fom(processed, analysis_type, 80)
+        proc.process(data)
+        x, _ = proc._corr.data()
+        assert not data['reset_ma']
+        if resolution != 0:
+            np.testing.assert_array_equal(np.array([7], dtype=np.float64), x)
+
+        # 7th
+        data['raw'] = {slow_src: 1}
+        self._set_fom(processed, analysis_type, 10)
+        proc.process(data)
+        if resolution == 0:
+            assert not data['reset_ma']
+        else:
+            np.testing.assert_array_equal(np.array([7], dtype=np.float64), x)
+            assert data['reset_ma']

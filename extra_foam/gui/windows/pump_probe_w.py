@@ -7,50 +7,14 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import ImageViewF, PlotWidgetF, TimedPlotWidgetF
+from ..ctrl_widgets import PumpProbeCtrlWidget
+from ..plot_widgets import PlotWidgetF, TimedPlotWidgetF
 from ..misc_widgets import FColor
 from ...config import config, AnalysisType, plot_labels
-
-
-class PumpProbeImageView(ImageViewF):
-    """PumpProbeImageView class.
-
-    Widget for displaying the on or off image in the pump-probe analysis.
-    """
-    def __init__(self, on=True, *, parent=None):
-        """Initialization.
-
-        :param bool on: True for display the on image while False for
-            displaying the off image.
-        """
-        super().__init__(has_roi=True, parent=parent)
-
-        self._on = on
-
-        flag = "On" if on else "Off"
-        self.setTitle(f"{flag} (averaged over train)")
-
-    def updateF(self, data):
-        """Override."""
-        if self._on:
-            img = data.pp.image_on
-        else:
-            img = data.pp.image_off
-
-        if img is None:
-            return
-
-        self.setImage(img, auto_range=False, auto_levels=(not self._is_initialized))
-        self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
 
 
 class PumpProbeVFomPlot(PlotWidgetF):
@@ -137,8 +101,7 @@ class PumpProbeWindow(_AbstractPlotWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._on_image = PumpProbeImageView(on=True, parent=self)
-        self._off_image = PumpProbeImageView(on=False, parent=self)
+        self._ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
 
         self._pp_fom = PumpProbeFomPlot(parent=self)
 
@@ -146,6 +109,9 @@ class PumpProbeWindow(_AbstractPlotWindow):
         self._pp_diff = PumpProbeVFomPlot(diff=True, parent=self)
 
         self.initUI()
+        self.initConnections()
+        self.loadMetaData()
+        self.updateMetaData()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
@@ -154,26 +120,26 @@ class PumpProbeWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QSplitter()
-        left_panel = QSplitter(Qt.Vertical)
+        plots = QSplitter()
         right_panel = QSplitter(Qt.Vertical)
-        self._cw.addWidget(left_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes([1, 1])
-        self.setCentralWidget(self._cw)
-
-        # TODO: determine the split based on image shape
-        view = QSplitter(Qt.Vertical)
-        view.addWidget(self._on_image)
-        view.addWidget(self._off_image)
-
-        left_panel.addWidget(view)
-        left_panel.addWidget(self._pp_fom)
-        left_panel.setSizes([self._TOTAL_H / 2, self._TOTAL_H / 2])
-
         right_panel.addWidget(self._pp_onoff)
         right_panel.addWidget(self._pp_diff)
+        plots.addWidget(self._pp_fom)
+        plots.addWidget(right_panel)
+
+        self._cw = QFrame()
+        layout = QVBoxLayout()
+        layout.addWidget(plots)
+        layout.addWidget(self._ctrl_widget)
+        self._ctrl_widget.setFixedHeight(
+            self._ctrl_widget.minimumSizeHint().height())
+        self._cw.setLayout(layout)
+        self.setCentralWidget(self._cw)
 
     def initConnections(self):
         """Override."""
         pass
+
+    def closeEvent(self, QCloseEvent):
+        self._ctrl_widget.resetAnalysisType()
+        super().closeEvent(QCloseEvent)

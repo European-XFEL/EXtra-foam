@@ -15,14 +15,14 @@ from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QGridLayout, QLabel, QPushButton
 )
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
 from ..gui_helpers import invert_dict
 from ...config import PumpProbeMode, AnalysisType
 from ...database import Metadata as mt
 
 
-class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class PumpProbeCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up pump-probe analysis parameters."""
 
     __available_modes = OrderedDict({
@@ -42,7 +42,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
     _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Pump-probe setup", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._mode_cb = QComboBox()
 
@@ -78,15 +78,16 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         layout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(self._abs_difference_cb, 0, 2, 1, 2, AR)
-        layout.addWidget(self._reset_btn, 0, 4, 1, 2, AR)
-
         layout.addWidget(QLabel("Mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
-        layout.addWidget(QLabel("On-pulse indices: "), 1, 2, AR)
-        layout.addWidget(self._on_pulse_le, 1, 3)
-        layout.addWidget(QLabel("Off-pulse indices: "), 1, 4, AR)
-        layout.addWidget(self._off_pulse_le, 1, 5)
+        layout.addWidget(self._reset_btn, 2, 0, 1, 2)
+
+        layout.addWidget(QLabel("On-pulse indices: "), 0, 2, AR)
+        layout.addWidget(self._on_pulse_le, 0, 3)
+        layout.addWidget(QLabel("Off-pulse indices: "), 1, 2, AR)
+        layout.addWidget(self._off_pulse_le, 1, 3)
+
+        layout.addWidget(self._abs_difference_cb, 0, 4, AR)
 
         self.setLayout(layout)
 
@@ -131,6 +132,10 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
+        if "analysis_type" not in cfg:
+            # not initialized
+            return
+
         self._analysis_type_cb.setCurrentText(
             self._analysis_types_inv[int(cfg["analysis_type"])])
 
@@ -154,3 +159,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
             self._off_pulse_le.setEnabled(False)
         else:
             self._off_pulse_le.setEnabled(True)
+
+    def resetAnalysisType(self):
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[AnalysisType.UNDEFINED])

@@ -512,6 +512,37 @@ class QThreadWorker(QObject):
 
         return img
 
+    def squeezeToVector(self, tid, arr):
+        """Try to squeeze an array to get a 1D vector data.
+
+        It attempts to squeeze the input array if its dimension is 2D.
+
+        :param int tid: train ID.
+        :param numpy.ndarray arr: image data.
+        """
+        if arr is None:
+            return
+
+        if arr.ndim not in (1, 2):
+            self.log.error(f"[{tid}] Array dimension must be either 1 or 2! "
+                           f"actual {arr.ndim}!")
+            return
+
+        if arr.ndim == 2:
+            try:
+                img = np.squeeze(arr, axis=0)
+            except ValueError:
+                try:
+                    img = np.squeeze(arr, axis=-1)
+                except ValueError:
+                    self.log.error(
+                        "f[{tid}] Failed to squeeze a 2D array to 1D!")
+                    return
+        else:
+            img = arr
+
+        return img
+
     def getRoiData(self, img, copy=False):
         """Get the ROI(s) of an image or arrays of images.
 

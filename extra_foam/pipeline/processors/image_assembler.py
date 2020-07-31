@@ -566,8 +566,6 @@ class ImageAssemblerFactory(ABC):
             return data[src]
 
     class BaslerCameraImageAssembler(BaseAssembler):
-        # TODO: remove BaslerCamera from detector
-        #       make a category for BaslerCamera.
         def _get_modules_bridge(self, data, src, modules):
             """Override.
 
@@ -583,7 +581,7 @@ class ImageAssemblerFactory(ABC):
             - raw, "data.image.pixels", (y, x)
             -> (y, x)
             """
-            raise NotImplementedError
+            return data[src]
 
     @classmethod
     def create(cls, detector):
