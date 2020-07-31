@@ -4,7 +4,7 @@ DEVELOPER
 Design
 """"""
 
-.. image:: images/design_overview_developer.png
+.. image:: images/architecture.jpg
    :width: 800
 
 
