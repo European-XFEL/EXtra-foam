@@ -313,6 +313,13 @@ at the start and/or end of the curve.
 | ``Peak slicer``            | Pixel size along the detector's 2nd dimension.                     |
 +----------------------------+--------------------------------------------------------------------+
 
+**EXtra-foam** also has its own fast azimuthal integration implemented in C++. On a cluster with 40 cores,
+it takes about only 9 ms to integrate a train of 40 1.3-Megapixel images. Unfortunately, this implementation
+has not been integrated into the GUI for now.
+
+.. image:: images/azimuthal_integration_benchmark.jpg
+   :width: 640
+
 
 .. _Geometry:
 
@@ -402,6 +409,7 @@ further used for feature extraction. A feature extraction analysis will be activ
 only if the corresponding control widget tab is activated. *Not all transformed images support feature
 extraction and not all feature extractions require a prior image transform.*
 
+
 +---------------------------------+--------------------------------------------------------------------+
 | Input                           | Description                                                        |
 +=================================+====================================================================+
@@ -411,6 +419,9 @@ extraction and not all feature extractions require a prior image transform.*
 
 Concentric rings
 """"""""""""""""
+
+.. image:: images/feature_extraction_concentric_rings.jpg
+   :width: 640
 
 Find the center of concentric rings in an image. It is typically used in finding the center for
 :ref:`Azimuthal integration`. It is only available when the data processing pipeline is not running,
@@ -437,6 +448,9 @@ i.e., it cannot be used in real-time analysis.
 
 Fourier transform
 """""""""""""""""
+
+.. image:: images/feature_extraction_fft.jpg
+   :width: 640
 
 .. _fft: https://docs.scipy.org/doc/scipy/reference/fft.html#module-scipy.fft
 

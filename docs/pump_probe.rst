@@ -75,5 +75,5 @@ Otherwise, FOM :math:`K` is given by
 |                              | moving average count.                                              |
 +------------------------------+--------------------------------------------------------------------+
 
-.. image:: images/pump_probe_window.png
+.. image:: images/pump_probe_window.jpg
    :width: 800
