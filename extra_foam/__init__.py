@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 
 
-__version__ = "1.0.0"
+__version__ = "1.1.0dev"
 
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".EXtra-foam")
