@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+1.0.0 (31 July 2020)
+------------------------
+
+- **Improvement**
+
+    - Improve FFT of image in feature extraction. #268
+    - Improve fitting interface. #265
+    - Add reset panel in the main GUI. #264
+    - Update default config files. #262
+    - Improve azimuthal integration performance. #261, #268
+    - Revert y-axis orientation change. #260
+    - Add Python binding for double dtype in generalized geometry. #259
+
+- **New Feature**
+
+    - Implemented pulse-resolved correlation in special suite. #270
+    - Add curve fitting in histogram window. #267
+    - Support streaming Basler camera from files. #266
+    - Add more fitting types, Gaussian, Lorentzian and erf. #265
+    - Add pump-probe FOM to histogram window. #263
+    - Reset moving average in correlation scan mode. #263
+
+
 0.9.1 (15 July 2020)
 ------------------------
 
