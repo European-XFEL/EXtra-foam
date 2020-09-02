@@ -25,6 +25,7 @@ Contents:
    :maxdepth: 1
 
    tutorial_data_flow
+   tutorial_file_stream
 
 .. toctree::
    :caption: Development
