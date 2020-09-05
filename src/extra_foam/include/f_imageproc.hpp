@@ -973,6 +973,11 @@ class IntraDarkOffsetPolicy {
 public:
   template<typename T>
   static T correct(T Xi, T Di, T Xj, T Dj) {
+    // 256 bug in DSSC where pixel with value
+    // 256 are sometimes returned as 0 instead
+    Xi = Xi ? Xi : (T)256;
+    Xj = Xj ? Xj : (T)256;
+    
     return (Xi - Di) - (Xj - Dj);
   }
 };
