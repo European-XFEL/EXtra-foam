@@ -40,6 +40,8 @@ class ImageProcessor(_BaseProcessor):
             and shape = (y, x) for train-resolved
         _correct_gain (bool): whether to apply gain correction.
         _correct_offset (bool): whether to apply offset correction.
+        _correct_intradark (bool): special version of offset correction
+            using subsequent frames as background.
         _full_gain (numpy.ndarray): gain constants loaded from the
             file/database. Shape = (memory cell, y, x)
         _full_offset (numpy.ndarray): offset constants loaded from the
@@ -81,6 +83,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = True
         self._correct_offset = True
+        self._correct_intradark = False
         self._full_gain = None
         self._full_offset = None
         self._gain_cells = None
@@ -120,6 +123,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
+        self._correct_intradark = cfg['correct_intradark'] == 'True'
 
         gain_cells = self.str2slice(cfg['gain_cells'])
         if gain_cells != self._gain_cells:
@@ -184,7 +188,17 @@ class ImageProcessor(_BaseProcessor):
         self._update_gain_offset()
         image_data.gain_mean = self._gain_mean
         image_data.offset_mean = self._offset_mean
-        self._correct_image_data(sliced_assembled, pulse_slicer)
+
+        if self._correct_intradark:
+            # Intra-dark correction requires the full POI for the
+            # correction and applies the slice again afterwards. In the
+            # long run, the processor needs to be refactored to allow
+            # processing steps before and after slicing, i.e. use
+            # information not visible later on.
+            self._correct_image_data(assembled, slice(None, None))
+            sliced_assembled = assembled[pulse_slicer]
+        else:
+            self._correct_image_data(sliced_assembled, pulse_slicer)
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
@@ -355,7 +369,7 @@ class ImageProcessor(_BaseProcessor):
         else:
             offset = None
 
-        if sliced_assembled.ndim == 3:
+        if sliced_assembled.ndim == 3 and not self._correct_intradark:
             if gain is not None:
                 gain = gain[slicer]
             if offset is not None:
@@ -371,7 +385,8 @@ class ImageProcessor(_BaseProcessor):
                 f"Assembled shape {sliced_assembled.shape} and "
                 f"offset shape {offset.shape} are different!")
 
-        correct_image_data(sliced_assembled, gain=gain, offset=offset)
+        correct_image_data(sliced_assembled, gain=gain, offset=offset,
+                intradark=self._correct_intradark)
 
     def _update_pois(self, image_data, assembled):
         if assembled.ndim == 2 or image_data.poi_indices is None:

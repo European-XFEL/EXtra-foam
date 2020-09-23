@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import (
     QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton
 )
@@ -26,6 +26,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._correct_gain_cb = QCheckBox("Apply gain correction")
         self._correct_offset_cb = QCheckBox("Apply offset correction")
+        self._correct_intradark_cb = QCheckBox('+intradark')
 
         self.load_gain_btn = QPushButton("Load gain constants")
         self.load_offset_btn = QPushButton("Load offset constants")
@@ -72,23 +73,24 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         AR = Qt.AlignRight
 
         layout.addWidget(self._correct_gain_cb, 0, 0)
-        layout.addWidget(self.load_gain_btn, 0, 1)
-        layout.addWidget(self.gain_fp_le, 0, 2)
+        layout.addWidget(self.load_gain_btn, 0, 2)
+        layout.addWidget(self.gain_fp_le, 0, 3)
         layout.addWidget(self.remove_gain_btn, 0, 5)
         layout.addWidget(QLabel("Memory cells: "), 0, 6, AR)
         layout.addWidget(self._gain_cells_le, 0, 7)
         self._gain_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._correct_offset_cb, 1, 0)
-        layout.addWidget(self.load_offset_btn, 1, 1)
-        layout.addWidget(self.offset_fp_le, 1, 2)
+        layout.addWidget(self._correct_intradark_cb, 1, 1)
+        layout.addWidget(self.load_offset_btn, 1, 2)
+        layout.addWidget(self.offset_fp_le, 1, 3)
         layout.addWidget(self.remove_offset_btn, 1, 5)
         layout.addWidget(QLabel("Memory cells: "), 1, 6, AR)
         layout.addWidget(self._offset_cells_le, 1, 7)
         self._offset_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._dark_as_offset_cb, 2, 0)
-        layout.addWidget(self.load_dark_btn, 2, 1)
+        layout.addWidget(self.load_dark_btn, 2, 2)
         layout.addWidget(self.record_dark_btn, 2, 4)
         layout.addWidget(self._remove_dark_btn, 2, 5)
 
@@ -100,8 +102,12 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         mediator = self._mediator
 
+        self._correct_offset_cb.toggled.connect(self._onCorrectOffsetToggled)
+        self._correct_intradark_cb.toggled.connect(self._onCorrectIntradarkToggled)
+
         self._correct_gain_cb.toggled.connect(mediator.onCalGainCorrection)
         self._correct_offset_cb.toggled.connect(mediator.onCalOffsetCorrection)
+        self._correct_intradark_cb.toggled.connect(mediator.onCalIntradarkCorrection)
 
         self._gain_cells_le.value_changed_sgn.connect(
             mediator.onCalGainMemoCellsChange)
@@ -113,12 +119,24 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self.record_dark_btn.toggled.emit(self.record_dark_btn.isChecked())
         self._remove_dark_btn.clicked.connect(mediator.onCalDarkRemove)
 
+    @pyqtSlot(bool)
+    def _onCorrectOffsetToggled(self, state):
+        if state and self._correct_intradark_cb.isChecked():
+            self._correct_intradark_cb.setChecked(False)
+
+    @pyqtSlot(bool)
+    def _onCorrectIntradarkToggled(self, state):
+        if state and self._correct_offset_cb.isChecked():
+            self._correct_offset_cb.setChecked(False)
+
     def updateMetaData(self):
         """Override."""
         self._correct_gain_cb.toggled.emit(
             self._correct_gain_cb.isChecked())
         self._correct_offset_cb.toggled.emit(
             self._correct_offset_cb.isChecked())
+        self._correct_intradark_cb.toggled.emit(
+            self._correct_intradark_cb.isChecked())
         self._dark_as_offset_cb.toggled.emit(
             self._dark_as_offset_cb.isChecked())
         self._gain_cells_le.returnPressed.emit()
@@ -131,6 +149,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._correct_gain_cb.setChecked(cfg["correct_gain"] == 'True')
         self._correct_offset_cb.setChecked(cfg["correct_offset"] == 'True')
+        self._correct_intradark_cb.setChecked(cfg["correct_intradark"] == 'True')
         self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
 
         if self._pulse_resolved:

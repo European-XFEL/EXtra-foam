@@ -83,6 +83,9 @@ class Mediator(QObject):
     def onCalOffsetCorrection(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "correct_offset", str(value))
 
+    def onCalIntradarkCorrection(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "correct_intradark", str(value))
+
     def onCalGainMemoCellsChange(self, value: list):
         self._meta.hset(mt.IMAGE_PROC, "gain_cells", str(value))
 
