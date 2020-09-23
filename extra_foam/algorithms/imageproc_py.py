@@ -12,7 +12,8 @@ import numpy as np
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
     imageDataNanMask, maskImageDataNan, maskImageDataZero,
-    correctGain, correctOffset, correctGainOffset
+    correctGain, correctOffset, correctGainOffset,
+    correctIntraDarkOffset
 )
 
 
@@ -35,7 +36,7 @@ def nanmean_image_data(data, *, kept=None):
     return nanmeanImageArray(data, kept)
 
 
-def correct_image_data(data, *, gain=None, offset=None):
+def correct_image_data(data, *, gain=None, offset=None, intradark=False):
     """Apply gain and/or offset correct to image data.
 
     :param numpy.array data: image data, Shape = (y, x) or (indices, y, x)
@@ -43,9 +44,13 @@ def correct_image_data(data, *, gain=None, offset=None):
         shape as the image data.
     :param None/numpy.array offset: offset constants, which has the same
         shape as the image data.
+    :param bool intradark: temporary flag to use subsequent frames as
+        background, only in combination with pure offset correction.
     """
     if gain is not None and offset is not None:
         correctGainOffset(data, gain, offset)
+    elif offset is not None and intradark:
+        correctIntraDarkOffset(data, offset)
     elif offset is not None:
         correctOffset(data, offset)
     elif gain is not None:

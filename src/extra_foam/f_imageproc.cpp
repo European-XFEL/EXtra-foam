@@ -171,6 +171,15 @@ PYBIND11_MODULE(imageproc, m)
   // gain / offset correction
   //
 
+#define FOAM_CORRECT_INTRADARKOFFSET_IMPL(VALUE_TYPE, N_DIM)                                \
+  m.def("correctIntraDarkOffset",                                                           \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))    \
+    &correctIntraDarkImageData<IntraDarkOffsetPolicy, xt::pytensor<VALUE_TYPE, N_DIM>>,              \
+    py::arg("src").noconvert(), py::arg("offset").noconvert());
+
+  FOAM_CORRECT_INTRADARKOFFSET_IMPL(double, 3)
+  FOAM_CORRECT_INTRADARKOFFSET_IMPL(float, 3)
+
 #define FOAM_CORRECT_OFFSET_IMPL(VALUE_TYPE, N_DIM)                                         \
   m.def("correctOffset",                                                                    \
     (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))    \

@@ -969,6 +969,14 @@ public:
   }
 };
 
+class IntraDarkOffsetPolicy {
+public:
+  template<typename T>
+  static T correct(T Xi, T Di, T Xj, T Dj) {
+    return (Xi - Di) - (Xj - Dj);
+  }
+};
+
 class GainPolicy {
 public:
   template<typename T>
@@ -976,6 +984,44 @@ public:
     return v * a;
   }
 };
+
+/**
+ * Inplace apply intra dark offset correct for an array of images.
+ *
+ * @tparam Policy: correction policy (IntraDarkOffsetPolicy)
+ *
+ * @param src: image data. shape = (indices, y, x)
+ * @param constants: correction constants, which has the same shape as src.
+ */
+template <typename Policy, typename E, EnableIf<E, IsImageArray> = false>
+inline void correctIntraDarkImageData(E& src, const E& constants)
+{
+  auto shape = src.shape();
+
+  utils::checkShape(shape, constants.shape(), "data and constants have different shapes");
+
+#if defined(FOAM_USE_TBB)
+  tbb::parallel_for((size_t)0, (size_t)(shape[0]-1), (size_t)2,
+    [&src, &constants, &shape] (size_t i)
+    {
+#else
+    for (size_t i = 0; i < shape[0]-1; i+=2)
+    {
+#endif
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+            src(i, j, k) = Policy::correct(src(i, j, k), constants(i, j, k),
+                           src(i+1, j, k), constants(i+1, j, k));
+          }
+        }
+      }
+#if defined(FOAM_USE_TBB)
+  );
+#endif
+}
+
 
 /**
  * Inplace apply either gain or offset correct for an array of images.
