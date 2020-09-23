@@ -34,7 +34,6 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         validator.setBottom(1)
         self.moving_avg_le.setValidator(validator)
         self.moving_avg_le.setMinimumWidth(60)
-        self.moving_avg_le.setEnabled(False)
 
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
@@ -71,6 +70,9 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
     def initConnections(self):
         """Override."""
         mediator = self._mediator
+
+        self.moving_avg_le.value_changed_sgn.connect(
+            mediator.onItMaWindowChange)
 
         self.auto_update_cb.toggled.connect(
             lambda: self.update_image_btn.setEnabled(
