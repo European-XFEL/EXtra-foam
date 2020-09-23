@@ -11,7 +11,8 @@ import os.path as osp
 
 import numpy as np
 
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QFileDialog, QCheckBox, QWidgetAction
 
 from .image_view_base import ImageViewF
 from .image_items import MaskItem
@@ -51,6 +52,25 @@ class ImageAnalysis(ImageViewF):
         self._mask_in_modules = None
         self._mask_save_in_modules = False
 
+        self._show_ma = False
+
+        # Inject temporary menu option for moving average.
+        # The current implementation of `getContextMenus()` in the plot
+        # widget's plot area is somewhat "creative" and slices from
+        # either end into a list of menus depending on the features
+        # needed. We can abuse this by injecting right in the middle.
+        self._show_ma_cb = QCheckBox('Show moving average')
+        self._show_ma_cb.toggled.connect(self._onShowMaChanged)
+
+        show_ma_act = QWidgetAction(self)
+        show_ma_act.setDefaultWidget(self._show_ma_cb)
+
+        self._plot_widget._plot_area._menu.insert(2, show_ma_act)
+
+    @pyqtSlot(bool)
+    def _onShowMaChanged(self, state):
+        self._show_ma = state
+
     def setImage(self, image_data, **kwargs):
         """Overload."""
         if not isinstance(image_data, ImageData):
@@ -61,7 +81,8 @@ class ImageAnalysis(ImageViewF):
         # with a geometry but has no masking operation yet.
         self._mask_in_modules = image_data.image_mask_in_modules
 
-        image = image_data.masked_mean
+        image = image_data.masked_mean_ma if self._show_ma \
+            else image_data.masked_mean
 
         # re-assemble a mask if image shape changes
         # caveat: the image shape checked must be done before updating image
