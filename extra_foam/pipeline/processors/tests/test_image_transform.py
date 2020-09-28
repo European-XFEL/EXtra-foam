@@ -8,7 +8,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from unittest.mock import patch
-import pytest
 
 import numpy as np
 
@@ -22,10 +21,9 @@ np.warnings.filterwarnings("ignore", category=RuntimeWarning)
 class TestImageTransform(_TestDataMixin):
     def setup_method(self):
         self._proc = ImageTransformProcessor()
-        self._proc._set_ma_window(2)
 
     def teardown_method(self):
-        self._proc._reset_ma()
+        pass
 
     def testUndefined(self):
         self._proc._transform_type = ImageTransformType.UNDEFINED
@@ -34,7 +32,6 @@ class TestImageTransform(_TestDataMixin):
             data, processed = self.data_with_assembled(1001, (4, 10, 10))
             image = processed.image
             self._proc.process(data)
-            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
             assert image.transformed is None
             assert image.transform_type == ImageTransformType.UNDEFINED
 
@@ -45,7 +42,6 @@ class TestImageTransform(_TestDataMixin):
             data, processed = self.data_with_assembled(1000 + i, (4, 10, 10))
             image = processed.image
             self._proc.process(data)
-            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
             assert image.transformed is None
             assert image.transform_type == ImageTransformType.CONCENTRIC_RINGS
 
@@ -59,8 +55,7 @@ class TestImageTransform(_TestDataMixin):
             data, processed = self.data_with_assembled(1001, (4, 10, 10))
             image = processed.image
             self._proc.process(data)
-            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
-            mocked_f.assert_called_with(image.masked_mean_ma, logrithmic=fft.logrithmic)
+            mocked_f.assert_called_with(image.masked_mean, logrithmic=fft.logrithmic)
             assert image.transform_type == ImageTransformType.FOURIER_TRANSFORM
 
     @patch("extra_foam.pipeline.processors.image_transform.edge_detect")
@@ -76,8 +71,7 @@ class TestImageTransform(_TestDataMixin):
             data, processed = self.data_with_assembled(1001, (4, 10, 10))
             image = processed.image
             self._proc.process(data)
-            np.testing.assert_array_equal(self._proc._masked_ma, image.masked_mean_ma)
-            mocked_f.assert_called_with(image.masked_mean_ma,
+            mocked_f.assert_called_with(image.masked_mean,
                                         kernel_size=ed.kernel_size,
                                         sigma=ed.sigma,
                                         threshold=ed.threshold)

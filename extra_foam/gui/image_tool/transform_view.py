@@ -65,10 +65,10 @@ class TransformView(_AbstractImageToolView):
         """Override."""
         image = data.image
         if auto_update or self._corrected.image is None:
-            self._corrected.setImage(image.masked_mean_ma)
+            self._corrected.setImage(image.masked_mean)
 
         if self._transform_type == ImageTransformType.CONCENTRIC_RINGS:
-            self._transformed.setImage(image.masked_mean_ma)
+            self._transformed.setImage(image.masked_mean)
         elif image.transform_type == self._transform_type:
             self._transformed.setImage(image.transformed)
         else:

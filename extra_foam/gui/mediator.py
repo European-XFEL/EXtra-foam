@@ -98,6 +98,9 @@ class Mediator(QObject):
     def onCalDarkRemove(self):
         self._meta.hset(mt.IMAGE_PROC, "remove_dark", 1)
 
+    def onImageMovingAverageChange(self, value: int):
+        self._meta.hset(mt.IMAGE_PROC, "ma_window", value)
+
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
 
@@ -320,9 +323,6 @@ class Mediator(QObject):
 
     def onFomFilterPulseResolvedChange(self, value: bool):
         self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
-
-    def onItMaWindowChange(self, value: int):
-        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ma_window", value)
 
     def onItCrCxChange(self, value: float):
         self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "cr:cx", value)

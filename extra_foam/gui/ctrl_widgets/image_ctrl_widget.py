@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
 
 from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
+from ...database import Metadata as mt
 
 
 class ImageCtrlWidget(_AbstractCtrlWidget):
@@ -28,13 +29,11 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         self.update_image_btn = QPushButton("Update image")
         self.update_image_btn.setEnabled(False)
 
-        # It is just a placeholder
         self.moving_avg_le = SmartLineEdit(str(1))
         validator = QIntValidator()
         validator.setBottom(1)
         self.moving_avg_le.setValidator(validator)
         self.moving_avg_le.setMinimumWidth(60)
-        self.moving_avg_le.setEnabled(False)
 
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
@@ -70,16 +69,16 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
 
     def initConnections(self):
         """Override."""
-        mediator = self._mediator
-
-        self.auto_update_cb.toggled.connect(
-            lambda: self.update_image_btn.setEnabled(
-                not self.sender().isChecked()))
+        # implemented in ImageTool.initConnections
+        pass
 
     def updateMetaData(self):
         """Override."""
+        self.moving_avg_le.returnPressed.emit()
         return True
 
     def loadMetaData(self):
         """Override."""
-        pass
+        cfg = self._meta.hget_all(mt.IMAGE_PROC)
+
+        self._updateWidgetValue(self.moving_avg_le, cfg, "ma_window")

@@ -157,6 +157,7 @@ class TestRawImageData(unittest.TestCase):
 
         dm.data = arr
         self.assertEqual(3, Dummy.data.n_images)
+        self.assertIs(dm.data, arr)
 
         Dummy.data.window = 10
         self.assertEqual(10, Dummy.data.window)
@@ -187,6 +188,16 @@ class TestRawImageData(unittest.TestCase):
         self.assertIsNone(dm.data)
         self.assertEqual(2, Dummy.data.window)
         self.assertEqual(0, Dummy.data.count)
+
+    def testCopyFirst(self):
+        class Dummy:
+            data = RawImageData(copy_first=True)
+
+        dm = Dummy()
+
+        arr = np.ones((3, 4, 4), dtype=np.float32)
+        dm.data = arr
+        self.assertIsNot(dm.data, arr)
 
 
 class TestProcessedData(unittest.TestCase):
