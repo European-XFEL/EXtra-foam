@@ -176,11 +176,6 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._ma_window_le = SmartLineEdit("1")
-        validator = QIntValidator()
-        validator.setBottom(1)
-        self._ma_window_le.setValidator(validator)
-
         self._concentric_rings = _ConcentricRingsCtrlWidget()
         self._fourier_transform = _FourierTransformCtrlWidget()
         self._edge_detection = _EdgeDetectionCtrlWidget()
@@ -199,14 +194,7 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        common = QFrame()
-        common_layout = QGridLayout()
-        common_layout.addWidget(QLabel("Moving average window: "), 0, 0)
-        common_layout.addWidget(self._ma_window_le, 0, 1)
-        common.setLayout(common_layout)
-
         layout = QHBoxLayout()
-        layout.addWidget(common)
         layout.addWidget(self._opt_tab)
         self.setLayout(layout)
 
@@ -215,9 +203,6 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
     def initConnections(self):
         """Override."""
         mediator = self._mediator
-
-        self._ma_window_le.value_changed_sgn.connect(
-            mediator.onItMaWindowChange)
 
         self._opt_tab.currentChanged.connect(mediator.onItTransformTypeChange)
         self._opt_tab.currentChanged.connect(self.transform_type_changed_sgn)
@@ -245,8 +230,6 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override."""
-        self._ma_window_le.returnPressed.emit()
-
         if self.isVisible():
             self.registerTransformType()
         else:
@@ -272,8 +255,6 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_TRANSFORM_PROC)
-
-        self._updateWidgetValue(self._ma_window_le, cfg, "ma_window")
 
         # do not load transform type since it is not an "input"
 

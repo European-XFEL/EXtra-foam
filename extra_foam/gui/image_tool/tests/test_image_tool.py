@@ -196,18 +196,27 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             proc.update()
             self.assertListEqual(RectRoiGeom.INVALID, getattr(proc, f"_geom{i}"))
 
-    def testMovingAverageQLineEdit(self):
-        # TODO: remove it in the future
-        widget = self.image_tool._image_ctrl_widget
-        # moving average is disabled
-        self.assertFalse(widget.moving_avg_le.isEnabled())
-
     def testImageCtrlWidget(self):
         widget = self.image_tool._image_ctrl_widget
+        proc = self.pulse_worker._image_proc
 
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
+
+        proc.update()
+        self.assertEqual(1, proc._ma_window)
+
+        # test setting new values
+        widget.moving_avg_le.setText("10")
+        proc.update()
+        self.assertEqual(10, proc._ma_window)
+
+        # test loading metadata
+        mediator = widget._mediator
+        mediator.onImageMovingAverageChange("100")
+        widget.loadMetaData()
+        self.assertEqual("100", widget.moving_avg_le.text())
 
     def testMaskCtrlWidget(self):
         win = self.image_tool
@@ -903,7 +912,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test default
         # also test only parameters of the activated transform type are updated
         proc.update()
-        self.assertEqual(1, proc._ma_window)
         self.assertEqual(ImageTransformType.CONCENTRIC_RINGS, proc._transform_type)
         self.assertIsNone(ed.kernel_size)
         # fourier transform
@@ -926,7 +934,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual((50, 100), ed.threshold)
 
         # test setting new values
-        ctrl_widget._ma_window_le.setText("10")
         cr_widget.cx_le.setText("-10.1")
         cr_widget.cy_le.setText("-10.2")
         cr_widget.prominence_le.setText("99.3")
@@ -942,7 +949,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(99.3, cr._prominence)
         self.assertEqual(99, cr._distance)
         self.assertEqual(999, cr._min_count)
-        self.assertEqual(10, proc._ma_window)
         self.assertTrue(fft.logrithmic)
         self.assertEqual(3, ed.kernel_size)
         self.assertEqual(0.5, ed.sigma)
@@ -981,14 +987,12 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onItCrDistanceChange("444")
         mediator.onItCrMinCountChange("555")
         mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM)
-        mediator.onItMaWindowChange("100")
         mediator.onItFftLogrithmicScaleChange(True)
         mediator.onItEdKernelSizeChange("3")
         mediator.onItEdSigmaChange("2.1")
         mediator.onItEdThresholdChange((20, 40))
         ctrl_widget.loadMetaData()
         self.assertEqual(ImageTransformType.UNDEFINED, proc._transform_type)  # unchanged
-        self.assertEqual("100", ctrl_widget._ma_window_le.text())
         self.assertEqual("11.1", cr_widget.cx_le.text())
         self.assertEqual("22.2", cr_widget.cy_le.text())
         self.assertEqual("33.3", cr_widget.prominence_le.text())
@@ -1080,12 +1084,6 @@ class TestImageToolTs(unittest.TestCase):
         self.assertFalse(self.image_tool._require_geometry)
         self.assertFalse(self.image_tool._image_ctrl_widget._pulse_resolved)
         self.assertFalse(self.image_tool._geometry_view._ctrl_widget._require_geometry)
-
-    def testMovingAverageQLineEdit(self):
-        # TODO: remove it in the future
-        widget = self.image_tool._image_ctrl_widget
-        # moving average is disabled
-        self.assertFalse(widget.moving_avg_le.isEnabled())
 
     def testGeometryCtrlWidget(self):
         cw = self.image_tool._views_tab

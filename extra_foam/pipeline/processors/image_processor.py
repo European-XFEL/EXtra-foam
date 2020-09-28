@@ -71,6 +71,7 @@ class ImageProcessor(_BaseProcessor):
         _poi_indices (list): indices of POI pulses.
     """
 
+    _raw = RawImageData(copy_first=True)
     _dark = RawImageData(_MAX_INT32)
 
     def __init__(self):
@@ -78,6 +79,8 @@ class ImageProcessor(_BaseProcessor):
 
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._require_geom = config['REQUIRE_GEOMETRY']
+
+        self._set_ma_window(1)
 
         self._correct_gain = True
         self._correct_offset = True
@@ -111,6 +114,8 @@ class ImageProcessor(_BaseProcessor):
     def update(self):
         cfg, geom_cfg, global_cfg = self._meta.hget_all_multi(
             [mt.IMAGE_PROC, mt.GEOMETRY_PROC, mt.GLOBAL_PROC])
+
+        self._update_moving_average(cfg)
 
         self._assembler.update(
             geom_cfg,
@@ -151,6 +156,35 @@ class ImageProcessor(_BaseProcessor):
         self._poi_indices = [
             int(global_cfg['poi1_index']), int(global_cfg['poi2_index'])]
 
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._raw.window = v
+
+        if v == 1:
+            # necessary since _raw will not be updated if _ma_window == 1
+            del self._raw
+
+    def _reset_ma(self):
+        del self._raw
+
+    def _update_moving_average(self, cfg):
+        v = int(cfg['ma_window'])
+
+        if self._ma_window != v:
+            self._set_ma_window(v)
+
+    def _apply_moving_average(self, assembled):
+        if self._ma_window == 1:
+            # skip since the first data is copied
+            return
+
+        # The first data must be copied into, otherwise _raw shares
+        # the memory with the array in ImageAssembler.
+        self._raw = assembled
+        # Here is an expensive copy since assembled will be modified
+        # inplace and hence cannot share the memory with _raw.
+        assembled[:] = self._raw
+
     @profiler("Image processor")
     def process(self, data):
 
@@ -184,7 +218,10 @@ class ImageProcessor(_BaseProcessor):
         self._update_gain_offset()
         image_data.gain_mean = self._gain_mean
         image_data.offset_mean = self._offset_mean
+
         self._correct_image_data(sliced_assembled, pulse_slicer)
+
+        self._apply_moving_average(sliced_assembled)
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are

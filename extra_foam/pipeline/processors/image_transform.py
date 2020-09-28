@@ -36,12 +36,8 @@ class _EdgeDetection:
 
 class ImageTransformProcessor(_BaseProcessor):
 
-    _masked_ma = MovingAverageArray()
-
     def __init__(self):
         super().__init__()
-
-        self._set_ma_window(1)
 
         self._transform_type = ImageTransformType.UNDEFINED
 
@@ -51,8 +47,6 @@ class ImageTransformProcessor(_BaseProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.IMAGE_TRANSFORM_PROC)
-
-        self._update_moving_average(cfg)
 
         transform_type = ImageTransformType(int(cfg["transform_type"]))
         if self._transform_type != transform_type:
@@ -67,39 +61,24 @@ class ImageTransformProcessor(_BaseProcessor):
             ed.sigma = float(cfg["ed:sigma"])
             ed.threshold = self.str2tuple(cfg["ed:threshold"])
 
-    def _set_ma_window(self, v):
-        self._ma_window = v
-        self.__class__._masked_ma.window = v
-
-    def _reset_ma(self):
-        del self._masked_ma
-
-    def _update_moving_average(self, cfg):
-        v = int(cfg['ma_window'])
-        if self._ma_window != v:
-            self._set_ma_window(v)
-
     @profiler("Image transform processor")
     def process(self, data):
         processed = data['processed']
         image = processed.image
 
-        # moving average will continue even if the type is undefined
-        self._masked_ma = image.masked_mean
-        masked_ma = self._masked_ma
         transform_type = self._transform_type
 
-        image.masked_mean_ma = masked_ma
+        masked_mean = image.masked_mean
         image.transform_type = transform_type
 
         if transform_type == ImageTransformType.FOURIER_TRANSFORM:
             fft = self._fft
             image.transformed = fourier_transform_2d(
-                masked_ma, logrithmic=fft.logrithmic)
+                masked_mean, logrithmic=fft.logrithmic)
         elif transform_type == ImageTransformType.EDGE_DETECTION:
             ed = self._ed
             image.transformed = edge_detect(
-                masked_ma,
+                masked_mean,
                 kernel_size=ed.kernel_size,
                 sigma=ed.sigma,
                 threshold=ed.threshold)
