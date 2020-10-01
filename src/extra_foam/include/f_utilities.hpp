@@ -43,6 +43,17 @@ inline void checkShape(S1&& shape1, S2&& shape2, std::string&& header, size_t s0
   }
 }
 
+template<typename T>
+inline void checkEven(T a, std::string&& header)
+{
+  if (a % 2 != 0)
+  {
+    std::ostringstream ss;
+    ss << header << ": " << a;
+    throw std::invalid_argument(ss.str());
+  }
+}
+
 } //utils
 } //foam
 
