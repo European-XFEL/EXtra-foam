@@ -335,6 +335,20 @@ TEST(correctImageData, TestOffset3D)
               ElementsAre(0.f, nan_mt, 1.f, -1.f, nan_mt, -1.f));
 }
 
+TEST(correctImageData, TestDsscOffset)
+{
+  xt::xtensor<float, 3> imgs {{{200.f, 210.f, 200.f}, {200.f, 210.f, 200.f}},
+                              {{200.f, 210.f, 0.f}, {200.f, 210.f, 0.f}}};
+  xt::xtensor<float, 3> offset {{{40.f, 50.f, 45.f}, {40.f, 50.f, 45.f}},
+                                {{40.f, 45.f, 50.f}, {40.f, 45.f, 50.f}}};
+  correctImageData<DsscOffsetPolicy>(imgs, offset);
+
+  EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
+              ElementsAre(160.f, 160.f, 155.f, 160.f, 160.f, 155.f));
+  EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
+              ElementsAre(160.f, 165.f, 206.f, 160.f, 165.f, 206.f));
+}
+
 TEST(correctImageData, TestOffset2D)
 {
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
