@@ -232,12 +232,14 @@ class TestImageProc(unittest.TestCase):
                                                 [[-1, 1, 1], [1, np.nan, np.nan]]],
                                                dtype=np.float32), img)
 
-        # including intradark
-        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
-                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
-        correct_image_data(img, offset=offset, intradark=True)
-        np.testing.assert_array_equal(np.array([[[1, -1, 1], [-1, np.nan, np.nan]],
-                                                [[-1, 1, 1], [1, np.nan, np.nan]]],
+        # including DSSC and intradark
+        img = np.array([[[200, 210, 220], [200, 210, 220]],
+                        [[200, 220, 0], [200, 220, 0]]], dtype=np.float32)
+        offset = np.array([[[40, 45, 50], [40, 45, 50]],
+                           [[40, 50, 45], [40, 50, 45]]], dtype=np.float32)
+        correct_image_data(img, offset=offset, intradark=True, detector="DSSC")
+        np.testing.assert_array_equal(np.array([[[0, -5, -41], [0, -5, -41]],
+                                                [[160, 170, 211], [160, 170, 211]]],
                                                dtype=np.float32), img)
 
         # gain only
@@ -253,6 +255,10 @@ class TestImageProc(unittest.TestCase):
         # both gain and offset
         img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
                         [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
+        gain = np.array([[[1, 2, 1], [2, 2, 1]],
+                         [[2, 1, 2], [2, 1, 2]]], dtype=np.float32)
+        offset = np.array([[[1, 2, 1], [3, np.nan, np.nan]],
+                           [[2, 1, 2], [2, np.nan, np.nan]]], dtype=np.float32)
         correct_image_data(img, gain=gain, offset=offset)
         np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
                                                 [[-2, 1, 2], [2, np.nan, np.nan]]],

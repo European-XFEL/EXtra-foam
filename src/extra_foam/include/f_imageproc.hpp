@@ -979,6 +979,29 @@ public:
   }
 };
 
+/**
+ * DSSC raw data has dark values around 40. However, pixels with values
+ * of 256 are sometimes saved as 0.
+ */
+class DsscOffsetPolicy
+{
+public:
+  template<typename E1, typename E2>
+  static void correct(E1& src, const E2& offset)
+  {
+    // TODO:: simplify after xtensor-python bug fixing
+    auto shape = src.shape();
+    using value_type = typename E1::value_type;
+    for (size_t j = 0; j < shape[0]; ++j)
+    {
+      for (size_t k = 0; k < shape[1]; ++k)
+      {
+        src(j, k) = (src(j, k) ? src(j, k) : value_type(256)) - offset(j, k);
+      }
+    }
+  }
+};
+
 class GainPolicy
 {
 public:

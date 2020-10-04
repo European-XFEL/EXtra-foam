@@ -12,7 +12,7 @@ import numpy as np
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
     imageDataNanMask, maskImageDataNan, maskImageDataZero,
-    correctGain, correctOffset, correctGainOffset
+    correctGain, correctOffset, correctDsscOffset, correctGainOffset
 )
 
 
@@ -35,7 +35,11 @@ def nanmean_image_data(data, *, kept=None):
     return nanmeanImageArray(data, kept)
 
 
-def correct_image_data(data, *, gain=None, offset=None, intradark=False):
+def correct_image_data(data, *,
+                       gain=None,
+                       offset=None,
+                       intradark=False,
+                       detector=""):
     """Apply gain and/or offset correct to image data.
 
     :param numpy.array data: image data, Shape = (y, x) or (indices, y, x)
@@ -45,11 +49,17 @@ def correct_image_data(data, *, gain=None, offset=None, intradark=False):
         shape as the image data.
     :param bool intradark: apply interleaved intra-dark correction after
         the gain/offset correction.
+    :param str detector: detector name. If given, specialized correction
+        may be applied. "DSSC" - change data pixels with value 0 to 256
+        before applying offset correction.
     """
     if gain is not None and offset is not None:
         correctGainOffset(data, gain, offset)
     elif offset is not None:
-        correctOffset(data, offset)
+        if detector == "DSSC":
+            correctDsscOffset(data, offset)
+        else:
+            correctOffset(data, offset)
     elif gain is not None:
         correctGain(data, gain)
 

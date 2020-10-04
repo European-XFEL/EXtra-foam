@@ -182,6 +182,15 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_CORRECT_OFFSET_IMPL(double, 3)
   FOAM_CORRECT_OFFSET_IMPL(float, 3)
 
+#define FOAM_CORRECT_DSSC_OFFSET_IMPL(VALUE_TYPE, N_DIM)                                    \
+  m.def("correctDsscOffset",                                                                \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))    \
+    &correctImageData<DsscOffsetPolicy, xt::pytensor<VALUE_TYPE, N_DIM>>,                   \
+    py::arg("src").noconvert(), py::arg("offset").noconvert());
+
+  FOAM_CORRECT_DSSC_OFFSET_IMPL(double, 3)
+  FOAM_CORRECT_DSSC_OFFSET_IMPL(float, 3)
+
 #define FOAM_CORRECT_INTRA_DARK_IMPL(VALUE_TYPE)                                            \
   m.def("correctOffset",                                                                    \
     (void (*)(xt::pytensor<VALUE_TYPE, 3>&))                                                \
