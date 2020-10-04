@@ -11,7 +11,8 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, ImageTransformType, Normalizer, RoiCombo, RoiFom, RoiProjType
+    AnalysisType, config, CaliOffsetPolicy, ImageTransformType, Normalizer,
+    RoiCombo, RoiFom, RoiProjType
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
@@ -439,6 +440,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc.update()
         self.assertFalse(proc._correct_gain)
         self.assertFalse(proc._correct_offset)
+        self.assertEqual(CaliOffsetPolicy.UNDEFINED, proc._offset_policy)
         self.assertEqual(slice(None), proc._gain_cells)
         self.assertEqual(slice(None), proc._offset_cells)
         self.assertTrue(proc._gain_cells_updated)
@@ -448,6 +450,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         widget._correct_gain_cb.setChecked(True)
         widget._correct_offset_cb.setChecked(True)
+        widget._offset_policy_cb.setCurrentText(
+            widget._available_offset_policies_inv[CaliOffsetPolicy.INTRA_DARK])
         widget._gain_cells_le.setText(":70")
         widget._offset_cells_le.setText("2:120:4")
         widget._dark_as_offset_cb.setChecked(False)
@@ -455,6 +459,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc.update()
         self.assertTrue(proc._correct_gain)
         self.assertTrue(proc._correct_offset)
+        self.assertEqual(CaliOffsetPolicy.INTRA_DARK, proc._offset_policy)
         self.assertEqual(slice(None, 70), proc._gain_cells)
         self.assertEqual(slice(2, 120, 4), proc._offset_cells)
         self.assertTrue(proc._gain_cells_updated)
@@ -562,12 +567,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onCalDarkAsOffset(True)
         mediator.onCalGainCorrection(False)
         mediator.onCalOffsetCorrection(False)
+        mediator.onCalOffsetPolicyChange(CaliOffsetPolicy.UNDEFINED)
         mediator.onCalGainMemoCellsChange([0, None, 2])
         mediator.onCalOffsetMemoCellsChange([0, None, 4])
         widget.loadMetaData()
         self.assertEqual(True, widget._dark_as_offset_cb.isChecked())
         self.assertEqual(False, widget._correct_gain_cb.isChecked())
         self.assertEqual(False, widget._correct_offset_cb.isChecked())
+        self.assertEqual("", widget._offset_policy_cb.currentText())
         self.assertEqual("0::2", widget._gain_cells_le.text())
         self.assertEqual("0::4", widget._offset_cells_le.text())
 

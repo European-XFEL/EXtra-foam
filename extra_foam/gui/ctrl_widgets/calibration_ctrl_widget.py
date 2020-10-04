@@ -7,25 +7,38 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton
+    QCheckBox, QComboBox, QGridLayout, QLabel, QLineEdit, QPushButton
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
-from ..gui_helpers import create_icon_button
+from ..gui_helpers import create_icon_button, invert_dict
+from ...config import CaliOffsetPolicy
 from ...database import Metadata as mt
 
 
 class CalibrationCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up calibration parameters."""
 
+    _available_offset_policies = OrderedDict({
+        "": CaliOffsetPolicy.UNDEFINED,
+        "+ Intra-dark": CaliOffsetPolicy.INTRA_DARK,
+    })
+    _available_offset_policies_inv = invert_dict(_available_offset_policies)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._correct_gain_cb = QCheckBox("Apply gain correction")
         self._correct_offset_cb = QCheckBox("Apply offset correction")
+
+        self._offset_policy_cb = QComboBox()
+        for item in self._available_offset_policies:
+            self._offset_policy_cb.addItem(item)
 
         self.load_gain_btn = QPushButton("Load gain constants")
         self.load_offset_btn = QPushButton("Load offset constants")
@@ -72,23 +85,24 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         AR = Qt.AlignRight
 
         layout.addWidget(self._correct_gain_cb, 0, 0)
-        layout.addWidget(self.load_gain_btn, 0, 1)
-        layout.addWidget(self.gain_fp_le, 0, 2)
+        layout.addWidget(self.load_gain_btn, 0, 2)
+        layout.addWidget(self.gain_fp_le, 0, 3)
         layout.addWidget(self.remove_gain_btn, 0, 5)
         layout.addWidget(QLabel("Memory cells: "), 0, 6, AR)
         layout.addWidget(self._gain_cells_le, 0, 7)
         self._gain_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._correct_offset_cb, 1, 0)
-        layout.addWidget(self.load_offset_btn, 1, 1)
-        layout.addWidget(self.offset_fp_le, 1, 2)
+        layout.addWidget(self._offset_policy_cb, 1, 1)
+        layout.addWidget(self.load_offset_btn, 1, 2)
+        layout.addWidget(self.offset_fp_le, 1, 3)
         layout.addWidget(self.remove_offset_btn, 1, 5)
         layout.addWidget(QLabel("Memory cells: "), 1, 6, AR)
         layout.addWidget(self._offset_cells_le, 1, 7)
         self._offset_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._dark_as_offset_cb, 2, 0)
-        layout.addWidget(self.load_dark_btn, 2, 1)
+        layout.addWidget(self.load_dark_btn, 2, 2)
         layout.addWidget(self.record_dark_btn, 2, 4)
         layout.addWidget(self._remove_dark_btn, 2, 5)
 
@@ -102,6 +116,9 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._correct_gain_cb.toggled.connect(mediator.onCalGainCorrection)
         self._correct_offset_cb.toggled.connect(mediator.onCalOffsetCorrection)
+        self._offset_policy_cb.currentTextChanged.connect(
+            lambda x: mediator.onCalOffsetPolicyChange(
+                self._available_offset_policies[x]))
 
         self._gain_cells_le.value_changed_sgn.connect(
             mediator.onCalGainMemoCellsChange)
@@ -119,6 +136,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
             self._correct_gain_cb.isChecked())
         self._correct_offset_cb.toggled.emit(
             self._correct_offset_cb.isChecked())
+        self._offset_policy_cb.currentTextChanged.emit(
+            self._offset_policy_cb.currentText())
         self._dark_as_offset_cb.toggled.emit(
             self._dark_as_offset_cb.isChecked())
         self._gain_cells_le.returnPressed.emit()
@@ -131,6 +150,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._correct_gain_cb.setChecked(cfg["correct_gain"] == 'True')
         self._correct_offset_cb.setChecked(cfg["correct_offset"] == 'True')
+        self._offset_policy_cb.setCurrentText(
+            self._available_offset_policies_inv[int(cfg["offset_policy"])])
         self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
 
         if self._pulse_resolved:
