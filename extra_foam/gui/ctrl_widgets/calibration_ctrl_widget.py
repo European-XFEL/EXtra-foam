@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
 from ..gui_helpers import create_icon_button, invert_dict
-from ...config import CaliOffsetPolicy
+from ...config import CalibrationOffsetPolicy
 from ...database import Metadata as mt
 
 
@@ -25,8 +25,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up calibration parameters."""
 
     _available_offset_policies = OrderedDict({
-        "": CaliOffsetPolicy.UNDEFINED,
-        "+ Intra-dark": CaliOffsetPolicy.INTRA_DARK,
+        "": CalibrationOffsetPolicy.UNDEFINED,
+        "+ Intra-dark": CalibrationOffsetPolicy.INTRA_DARK,
     })
     _available_offset_policies_inv = invert_dict(_available_offset_policies)
 

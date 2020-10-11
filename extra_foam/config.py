@@ -102,7 +102,7 @@ class PipelineSlowPolicy(IntEnum):
     WAIT = 1
 
 
-class CaliOffsetPolicy(IntEnum):
+class CalibrationOffsetPolicy(IntEnum):
     UNDEFINED = 0
     INTRA_DARK = 1
 

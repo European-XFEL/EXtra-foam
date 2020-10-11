@@ -19,7 +19,7 @@ from ...ipc import (
 )
 from ...ipc import process_logger as logger
 from ...utils import profiler
-from ...config import config, CaliOffsetPolicy, _MAX_INT32
+from ...config import config, CalibrationOffsetPolicy, _MAX_INT32
 
 from extra_foam.algorithms import (
     correct_image_data, mask_image_data, nanmean_image_data
@@ -40,7 +40,7 @@ class ImageProcessor(_BaseProcessor):
             and shape = (y, x) for train-resolved
         _correct_gain (bool): whether to apply gain correction.
         _correct_offset (bool): whether to apply offset correction.
-        _offset_policy (CaliOffsetPolicy): policy for offset correction.
+        _offset_policy (CalibrationOffsetPolicy): policy for offset correction.
         _full_gain (numpy.ndarray): gain constants loaded from the
             file/database. Shape = (memory cell, y, x)
         _full_offset (numpy.ndarray): offset constants loaded from the
@@ -85,7 +85,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = True
         self._correct_offset = True
-        self._offset_policy = CaliOffsetPolicy.UNDEFINED
+        self._offset_policy = CalibrationOffsetPolicy.UNDEFINED
         self._full_gain = None
         self._full_offset = None
         self._gain_cells = None
@@ -127,7 +127,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
-        self._offset_policy = CaliOffsetPolicy(int(cfg['offset_policy']))
+        self._offset_policy = CalibrationOffsetPolicy(int(cfg['offset_policy']))
 
         gain_cells = self.str2slice(cfg['gain_cells'])
         if gain_cells != self._gain_cells:
@@ -178,7 +178,8 @@ class ImageProcessor(_BaseProcessor):
 
     def _apply_moving_average(self, assembled):
         if self._ma_window == 1:
-            # skip since the first data is copied
+            # skip to avoid the copy when assigning the first data
+            # to self._raw
             return
 
         # The first data must be copied into, otherwise _raw shares
@@ -411,7 +412,7 @@ class ImageProcessor(_BaseProcessor):
             assembled,
             gain=gain,
             offset=offset,
-            intradark=(self._offset_policy == CaliOffsetPolicy.INTRA_DARK),
+            intradark=(self._offset_policy == CalibrationOffsetPolicy.INTRA_DARK),
             detector=config["DETECTOR"])
 
     def _update_pois(self, image_data, assembled):
