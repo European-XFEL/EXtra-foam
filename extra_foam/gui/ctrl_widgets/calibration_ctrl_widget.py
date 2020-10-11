@@ -39,6 +39,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._offset_policy_cb = QComboBox()
         for item in self._available_offset_policies:
             self._offset_policy_cb.addItem(item)
+        if not self._pulse_resolved:
+            self._offset_policy_cb.setEnabled(False)
 
         self.load_gain_btn = QPushButton("Load gain constants")
         self.load_offset_btn = QPushButton("Load offset constants")
@@ -150,10 +152,10 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._correct_gain_cb.setChecked(cfg["correct_gain"] == 'True')
         self._correct_offset_cb.setChecked(cfg["correct_offset"] == 'True')
-        self._offset_policy_cb.setCurrentText(
-            self._available_offset_policies_inv[int(cfg["offset_policy"])])
         self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
 
         if self._pulse_resolved:
             self._updateWidgetValue(self._gain_cells_le, cfg, "gain_cells")
             self._updateWidgetValue(self._offset_cells_le, cfg, "offset_cells")
+            self._offset_policy_cb.setCurrentText(
+                self._available_offset_policies_inv[int(cfg["offset_policy"])])

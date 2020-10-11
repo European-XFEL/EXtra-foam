@@ -185,9 +185,14 @@ class ImageProcessor(_BaseProcessor):
         # The first data must be copied into, otherwise _raw shares
         # the memory with the array in ImageAssembler.
         self._raw = assembled
-        # Here is an expensive copy since assembled will be modified
-        # inplace and hence cannot share the memory with _raw.
-        assembled[:] = self._raw
+        if self.__class__._raw.count > 1:
+            # Here is an expensive copy since assembled could be modified
+            # inplace:
+            # - When calculating the pulse-resolved ROI FOM, the ROIs are
+            #   masked inplace;
+            # - ...
+            # Hence assembled cannot share the memory with _raw.
+            assembled[:] = self._raw
 
     @profiler("Image processor")
     def process(self, data):
@@ -408,12 +413,15 @@ class ImageProcessor(_BaseProcessor):
                 f"Assembled shape {assembled.shape} and "
                 f"offset shape {offset.shape} are different!")
 
-        correct_image_data(
-            assembled,
-            gain=gain,
-            offset=offset,
-            intradark=(self._offset_policy == CalibrationOffsetPolicy.INTRA_DARK),
-            detector=config["DETECTOR"])
+        try:
+            correct_image_data(
+                assembled,
+                gain=gain,
+                offset=offset,
+                intradark=(self._offset_policy == CalibrationOffsetPolicy.INTRA_DARK),
+                detector=config["DETECTOR"])
+        except ValueError as e:
+            raise ImageProcessingError(repr(e))
 
     def _update_pois(self, image_data, assembled):
         if assembled.ndim == 2 or image_data.poi_indices is None:

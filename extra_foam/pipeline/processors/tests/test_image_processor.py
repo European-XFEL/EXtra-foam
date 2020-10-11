@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+from extra_foam.config import CalibrationOffsetPolicy
 from extra_foam.pipeline.processors.image_processor import ImageProcessor, _IMAGE_DTYPE
 from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
 from extra_foam.pipeline.tests import _TestDataMixin
@@ -124,41 +125,49 @@ class _ImageProcessorTestBase(_TestDataMixin, unittest.TestCase):
         data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
         assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
-        np.testing.assert_array_almost_equal(data['assembled']['sliced'],
-                                             assembled_gt[slicer_gt])
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt)
 
         # test apply offset correction only
         proc._correct_offset = True
         data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
         assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
-        np.testing.assert_array_almost_equal(data['assembled']['sliced'],
-                                             (assembled_gt - offset_gt)[slicer_gt],
-                                             decimal=3)
+        np.testing.assert_array_almost_equal(
+            data['assembled']['data'], (assembled_gt - offset_gt), decimal=3)
 
         # test apply both gain and offset correction
         proc._correct_gain = True
         data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
         assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
-        np.testing.assert_array_almost_equal(data['assembled']['sliced'],
-                                             (gain_gt * (assembled_gt - offset_gt))[slicer_gt])
+        np.testing.assert_array_almost_equal(
+            data['assembled']['data'], (gain_gt * (assembled_gt - offset_gt)))
+
+        # test intra-dark correction
+        if ndim == 3:
+            proc._offset_policy = CalibrationOffsetPolicy.INTRA_DARK
+            data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
+            assembled_gt = data['assembled']['data'].copy()
+            proc.process(data)
+            corrected_gt = (gain_gt * (assembled_gt - offset_gt))
+            corrected_gt[::2] -= corrected_gt[1::2]
+            np.testing.assert_array_almost_equal(data['assembled']['data'], corrected_gt)
+            proc._offset_policy = CalibrationOffsetPolicy.UNDEFINED
 
         # test dark is used as offset
         proc._dark_as_offset = True
         data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
         assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
-        np.testing.assert_array_almost_equal(data['assembled']['sliced'],
-                                             (gain_gt * (assembled_gt - dark_gt))[slicer_gt])
+        np.testing.assert_array_almost_equal(
+            data['assembled']['data'], (gain_gt * (assembled_gt - dark_gt)))
 
         proc._correct_gain = False
         proc._correct_offset = False
         data, processed = self.data_with_assembled(1, shape, gen='range', slicer=slicer_gt)
         assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
-        np.testing.assert_array_almost_equal(data['assembled']['sliced'],
-                                             assembled_gt[slicer_gt])
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt)
 
     def _reference_update_test_imp(self, ndim, info):
         proc = self._proc
@@ -217,6 +226,7 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
         self._proc._threshold_mask = (-100, 100)
 
         del self._proc._dark
+        del self._proc._raw
 
     def testPulseSlice(self):
         data, processed = self.data_with_assembled(1, (2, 2))
@@ -230,6 +240,31 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
 
     def testGainOffsetCorrection(self):
         self._gain_offset_correction_test_imp(2)
+
+    def testMovingAverage(self):
+        self._proc._set_ma_window(3)
+        self.assertEqual(3, self._proc.__class__._raw.window)
+
+        data, processed = self.data_with_assembled(1, (2, 2))
+        assembled = data['assembled']['data']
+        raw_gt = assembled.copy()
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(raw_gt, self._proc._raw)
+        np.testing.assert_array_almost_equal(raw_gt, data['assembled']['data'])
+        assembled[0, 0] = 999
+        self.assertNotEqual(999, self._proc._raw[0, 0])  # test the first data is copied
+
+        data, processed = self.data_with_assembled(1, (2, 2))
+        raw_gt = (raw_gt + data['assembled']['data']) / 2.
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(raw_gt, self._proc._raw)
+        np.testing.assert_array_almost_equal(raw_gt, data['assembled']['data'])
+
+        # reset moving average to 1
+        self._proc._set_ma_window(1)
+        data, processed = self.data_with_assembled(1, (2, 2))
+        self._proc.process(data)
+        self.assertIsNone(self._proc._raw)
 
     @patch("extra_foam.ipc.ProcessLogger.info")
     def testReferenceUpdate(self, info):
@@ -272,6 +307,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
             side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
 
         del self._proc._dark
+        del self._proc._raw
 
         self._proc._threshold_mask = (-100, 100)
 
@@ -395,6 +431,37 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
 
     def testGainOffsetCorrection(self):
         self._gain_offset_correction_test_imp(3)
+
+    def testMovingAverage(self):
+        self._proc._set_ma_window(3)
+        self.assertEqual(3, self._proc.__class__._raw.window)
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled = data['assembled']['data']
+        raw_gt = assembled.copy()
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(raw_gt, self._proc._raw)
+        np.testing.assert_array_almost_equal(raw_gt, data['assembled']['data'])
+        assembled[0, 0, 0] = 999
+        self.assertNotEqual(999, self._proc._raw[0, 0, 0])  # test the first data is copied
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        raw_gt = (raw_gt + data['assembled']['data']) / 2.
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(raw_gt, self._proc._raw)
+        np.testing.assert_array_almost_equal(raw_gt, data['assembled']['data'])
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        raw_gt = (2 * raw_gt + data['assembled']['data']) / 3.
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(raw_gt, self._proc._raw)
+        np.testing.assert_array_almost_equal(raw_gt, data['assembled']['data'])
+
+        # reset moving average to 1
+        self._proc._set_ma_window(1)
+        data, processed = self.data_with_assembled(1, (2, 2))
+        self._proc.process(data)
+        self.assertIsNone(self._proc._raw)
 
     def testMaskUpdate(self):
         proc = self._proc

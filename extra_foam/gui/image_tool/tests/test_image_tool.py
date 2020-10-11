@@ -1122,15 +1122,18 @@ class TestImageToolTs(unittest.TestCase):
         widget = self.image_tool._calibration_view._ctrl_widget
         self.assertFalse(widget._gain_cells_le.isEnabled())
         self.assertFalse(widget._offset_cells_le.isEnabled())
+        self.assertFalse(widget._offset_policy_cb.isEnabled())
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onCalGainMemoCellsChange([0, None, 2])
         mediator.onCalOffsetMemoCellsChange([0, None, 2])
+        mediator.onCalOffsetPolicyChange(CalibrationOffsetPolicy.INTRA_DARK)
         widget.loadMetaData()
         self.assertEqual(":", widget._gain_cells_le.text())
         self.assertEqual(":", widget._offset_cells_le.text())
+        self.assertEqual("", widget._offset_policy_cb.currentText())
 
 
 if __name__ == '__main__':
