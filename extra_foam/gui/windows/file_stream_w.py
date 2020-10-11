@@ -15,7 +15,7 @@ import socket
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFontMetrics, QIntValidator, QValidator
 from PyQt5.QtWidgets import (
-    QComboBox, QFileDialog, QGridLayout, QHBoxLayout,
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout,
     QHeaderView, QGroupBox, QLabel, QLineEdit, QLCDNumber, QProgressBar,
     QPushButton, QSlider, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget
@@ -100,6 +100,7 @@ class _FileStreamCtrlWidget(QWidget):
         self.tid_progress_br = QProgressBar()
 
         self._run = None
+        self._select_all_cb = QCheckBox("Select all")
         self._detector_src_tb = QTableWidget()
         self._instrument_src_tb = QTableWidget()
         self._control_src_tb = QTableWidget()
@@ -122,7 +123,8 @@ class _FileStreamCtrlWidget(QWidget):
 
         self._non_reconfigurable_widgets = [
             self.data_folder_le,
-            self._detector_src_tb ,
+            self._select_all_cb,
+            self._detector_src_tb,
             self._instrument_src_tb,
             self._control_src_tb,
             self.tid_start_sld,
@@ -171,7 +173,7 @@ class _FileStreamCtrlWidget(QWidget):
         table_area = QSplitter()
         sp_sub = QSplitter(Qt.Vertical)
         sp_sub.addWidget(self._createListGroupBox(
-            self._detector_src_tb, "Detector sources"))
+            self._detector_src_tb, "Detector sources", self._select_all_cb))
         sp_sub.addWidget(self._createListGroupBox(
             self._instrument_src_tb,
             "Instrument sources (excluding detector sources)"))
@@ -191,6 +193,9 @@ class _FileStreamCtrlWidget(QWidget):
 
         self.tid_start_sld.valueChanged.connect(self._onTidStartChanged)
         self.tid_end_sld.valueChanged.connect(self._onTidEndChanged)
+
+        self._select_all_cb.toggled.connect(
+            lambda x: self._setAllChecked(self._detector_src_tb, x))
 
     def onRunFolderLoad(self):
         folder_name = QFileDialog.getExistingDirectory(
@@ -273,10 +278,12 @@ class _FileStreamCtrlWidget(QWidget):
         for w in self._non_reconfigurable_widgets:
             w.setEnabled(True)
 
-    def _createListGroupBox(self, widget, title):
+    def _createListGroupBox(self, widget, title, ctrl_widget=None):
         gb = QGroupBox(title)
         gb.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
+        if ctrl_widget is not None:
+            layout.addWidget(ctrl_widget)
         layout.addWidget(widget)
         gb.setLayout(layout)
         return gb
@@ -301,6 +308,11 @@ class _FileStreamCtrlWidget(QWidget):
                 ret.append((table.item(i, 0).text(),
                             table.cellWidget(i, 1).currentText()))
         return ret
+
+    def _setAllChecked(self, table, checked):
+        for i in range(table.rowCount()):
+            table.item(i, 0).setCheckState(
+                Qt.Checked if checked else Qt.Unchecked)
 
     def resetDisplay(self):
         self.curr_tid_lcd.display(None)
