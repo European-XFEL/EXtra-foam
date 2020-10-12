@@ -102,6 +102,11 @@ class PipelineSlowPolicy(IntEnum):
     WAIT = 1
 
 
+class CalibrationOffsetPolicy(IntEnum):
+    UNDEFINED = 0
+    INTRA_DARK = 1
+
+
 def list_azimuthal_integ_methods(detector):
     """Return a list of available azimuthal integration methos.
 

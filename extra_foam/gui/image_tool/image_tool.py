@@ -147,30 +147,29 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
     def initConnections(self):
-        self._image_ctrl_widget.auto_update_cb.toggled.connect(
-            self.onAutoUpdateToggled)
-
         mediator = self._mediator
 
-        self._image_ctrl_widget.update_image_btn.clicked.connect(
-            self.onUpdateWidgets)
-        self._image_ctrl_widget.auto_level_btn.clicked.connect(
-            mediator.reset_image_level_sgn)
-        self._image_ctrl_widget.save_image_btn.clicked.connect(
-            self._corrected_view.onSaveImage)
+        corr_view = self._corrected_view
 
-        self._mask_ctrl_widget.draw_mask_btn.toggled.connect(
-            self._corrected_view.onDrawMask)
-        self._mask_ctrl_widget.erase_mask_btn.toggled.connect(
-            self._corrected_view.onEraseMask)
-        self._mask_ctrl_widget.remove_btn.clicked.connect(
-            self._corrected_view.onRemoveMask)
-        self._mask_ctrl_widget.load_btn.clicked.connect(
-            self._corrected_view.onLoadMask)
-        self._mask_ctrl_widget.save_btn.clicked.connect(
-            self._corrected_view.onSaveMask)
-        self._mask_ctrl_widget.mask_save_in_modules_cb.toggled.connect(
-            self._corrected_view.onMaskSaveInModulesChange)
+        img_widget = self._image_ctrl_widget
+        img_widget.auto_update_cb.toggled.connect(self.onAutoUpdateToggled)
+        img_widget.auto_update_cb.toggled.connect(
+            img_widget.update_image_btn.setDisabled)
+        img_widget.update_image_btn.clicked.connect(self.onUpdateWidgets)
+        img_widget.save_image_btn.clicked.connect(corr_view.onSaveImage)
+        img_widget.auto_level_btn.clicked.connect(
+            mediator.reset_image_level_sgn)
+        img_widget.moving_avg_le.value_changed_sgn.connect(
+            mediator.onImageMovingAverageChange)
+
+        msk_widget = self._mask_ctrl_widget
+        msk_widget.draw_mask_btn.toggled.connect(corr_view.onDrawMask)
+        msk_widget.erase_mask_btn.toggled.connect(corr_view.onEraseMask)
+        msk_widget.remove_btn.clicked.connect(corr_view.onRemoveMask)
+        msk_widget.load_btn.clicked.connect(corr_view.onLoadMask)
+        msk_widget.save_btn.clicked.connect(corr_view.onSaveMask)
+        msk_widget.mask_save_in_modules_cb.toggled.connect(
+            corr_view.onMaskSaveInModulesChange)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)

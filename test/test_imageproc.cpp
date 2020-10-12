@@ -335,6 +335,20 @@ TEST(correctImageData, TestOffset3D)
               ElementsAre(0.f, nan_mt, 1.f, -1.f, nan_mt, -1.f));
 }
 
+TEST(correctImageData, TestDsscOffset)
+{
+  xt::xtensor<float, 3> imgs {{{200.f, 210.f, 200.f}, {200.f, 210.f, 200.f}},
+                              {{200.f, 210.f, 0.f}, {200.f, 210.f, 0.f}}};
+  xt::xtensor<float, 3> offset {{{40.f, 50.f, 45.f}, {40.f, 50.f, 45.f}},
+                                {{40.f, 45.f, 50.f}, {40.f, 45.f, 50.f}}};
+  correctImageData<DsscOffsetPolicy>(imgs, offset);
+
+  EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
+              ElementsAre(160.f, 160.f, 155.f, 160.f, 160.f, 155.f));
+  EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
+              ElementsAre(160.f, 165.f, 206.f, 160.f, 165.f, 206.f));
+}
+
 TEST(correctImageData, TestOffset2D)
 {
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
@@ -375,7 +389,7 @@ TEST(correctImageData, TestGainOffset3D)
                                 {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
   xt::xtensor<float, 3> gain {{{1.f, 2.f, 1.f}, {2.f, 1.f, 2.f}},
                               {{1.f, 1.f, 2.f}, {1.f, 2, 2.f}}};
-  correctImageData(imgs, gain, offset);
+  correctImageData<GainOffsetPolicy>(imgs, gain, offset);
 
   EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
               ElementsAre(nan_mt, -4.f, nan_mt, -2.f, -1.f, -2.f));
@@ -383,12 +397,32 @@ TEST(correctImageData, TestGainOffset3D)
               ElementsAre(0.f, nan_mt, 2.f, -1.f, nan_mt, -2.f));
 }
 
+TEST(correctImageData, TestIntraBunchOffsetCorrection)
+{
+  xt::xtensor<float, 3> imgs_w {{{nan, 2.f, nan}, {4.f, 6.f, 8.f}}};
+  EXPECT_THROW(correctImageData(imgs_w), std::invalid_argument);
+
+  xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {4.f, 6.f, 8.f}},
+                              {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}},
+                              {{nan, 2.f, nan}, {4.f, 6.f, 8.f}},
+                              {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
+  correctImageData(imgs);
+
+  for (int i = 0; i < 2; ++i)
+  {
+    EXPECT_THAT(xt::view(imgs, 2*i, xt::all(), xt::all()),
+                ElementsAre(nan_mt, 0.f, nan_mt, 1.f, 2.f, 3.f));
+    EXPECT_THAT(xt::view(imgs, 2*i + 1, xt::all(), xt::all()),
+                ElementsAre(1.f, 2.f, 3.f, 3.f, 4.f, 5.f));
+  }
+}
+
 TEST(correctImageData, TestGainOffset2D)
 {
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
   xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
   xt::xtensor<float, 2> gain {{2.f, 1.f, 2.f}, {1.f, 2.f, 2.f}};
-  correctImageData(img, gain, offset);
+  correctImageData<GainOffsetPolicy>(img, gain, offset);
 
   EXPECT_THAT(img, ElementsAre(nan_mt, -2.f, nan_mt, -1.f, 0.f, -2.f));
 }

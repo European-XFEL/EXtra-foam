@@ -19,7 +19,7 @@ from ...ipc import (
 )
 from ...ipc import process_logger as logger
 from ...utils import profiler
-from ...config import config, _MAX_INT32
+from ...config import config, CalibrationOffsetPolicy, _MAX_INT32
 
 from extra_foam.algorithms import (
     correct_image_data, mask_image_data, nanmean_image_data
@@ -40,6 +40,7 @@ class ImageProcessor(_BaseProcessor):
             and shape = (y, x) for train-resolved
         _correct_gain (bool): whether to apply gain correction.
         _correct_offset (bool): whether to apply offset correction.
+        _offset_policy (CalibrationOffsetPolicy): policy for offset correction.
         _full_gain (numpy.ndarray): gain constants loaded from the
             file/database. Shape = (memory cell, y, x)
         _full_offset (numpy.ndarray): offset constants loaded from the
@@ -71,6 +72,7 @@ class ImageProcessor(_BaseProcessor):
         _poi_indices (list): indices of POI pulses.
     """
 
+    _raw = RawImageData(copy_first=True)
     _dark = RawImageData(_MAX_INT32)
 
     def __init__(self):
@@ -79,8 +81,11 @@ class ImageProcessor(_BaseProcessor):
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._require_geom = config['REQUIRE_GEOMETRY']
 
+        self._set_ma_window(1)
+
         self._correct_gain = True
         self._correct_offset = True
+        self._offset_policy = CalibrationOffsetPolicy.UNDEFINED
         self._full_gain = None
         self._full_offset = None
         self._gain_cells = None
@@ -112,6 +117,8 @@ class ImageProcessor(_BaseProcessor):
         cfg, geom_cfg, global_cfg = self._meta.hget_all_multi(
             [mt.IMAGE_PROC, mt.GEOMETRY_PROC, mt.GLOBAL_PROC])
 
+        self._update_moving_average(cfg)
+
         self._assembler.update(
             geom_cfg,
             mask_tile=cfg["mask_tile"] == 'True',
@@ -120,6 +127,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
+        self._offset_policy = CalibrationOffsetPolicy(int(cfg['offset_policy']))
 
         gain_cells = self.str2slice(cfg['gain_cells'])
         if gain_cells != self._gain_cells:
@@ -151,6 +159,41 @@ class ImageProcessor(_BaseProcessor):
         self._poi_indices = [
             int(global_cfg['poi1_index']), int(global_cfg['poi2_index'])]
 
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._raw.window = v
+
+        if v == 1:
+            # necessary since _raw will not be updated if _ma_window == 1
+            del self._raw
+
+    def _reset_ma(self):
+        del self._raw
+
+    def _update_moving_average(self, cfg):
+        v = int(cfg['ma_window'])
+
+        if self._ma_window != v:
+            self._set_ma_window(v)
+
+    def _apply_moving_average(self, assembled):
+        if self._ma_window == 1:
+            # skip to avoid the copy when assigning the first data
+            # to self._raw
+            return
+
+        # The first data must be copied into, otherwise _raw shares
+        # the memory with the array in ImageAssembler.
+        self._raw = assembled
+        if self.__class__._raw.count > 1:
+            # Here is an expensive copy since assembled could be modified
+            # inplace:
+            # - When calculating the pulse-resolved ROI FOM, the ROIs are
+            #   masked inplace;
+            # - ...
+            # Hence assembled cannot share the memory with _raw.
+            assembled[:] = self._raw
+
     @profiler("Image processor")
     def process(self, data):
 
@@ -161,16 +204,6 @@ class ImageProcessor(_BaseProcessor):
         catalog = data['catalog']
         det = catalog.main_detector
         pulse_slicer = catalog.get_slicer(det)
-
-        if assembled.ndim == 3:
-            sliced_assembled = assembled[pulse_slicer]
-            image_data.sliced_indices = list(range(
-                *(pulse_slicer.indices(assembled.shape[0]))))
-            n_sliced = len(image_data.sliced_indices)
-        else:
-            sliced_assembled = assembled
-            image_data.sliced_indices = [0]
-            n_sliced = 1
 
         if self._recording_dark:
             self._record_dark(assembled)
@@ -184,7 +217,22 @@ class ImageProcessor(_BaseProcessor):
         self._update_gain_offset()
         image_data.gain_mean = self._gain_mean
         image_data.offset_mean = self._offset_mean
-        self._correct_image_data(sliced_assembled, pulse_slicer)
+
+        self._correct_image_data(assembled)
+        self._apply_moving_average(assembled)
+
+        # Due to the some calibration policies (e.g. intra-dark offset
+        # correction, image correction must be applied before pulse
+        # slicing.
+        if assembled.ndim == 3:
+            sliced_assembled = assembled[pulse_slicer]
+            image_data.sliced_indices = list(range(
+                *(pulse_slicer.indices(assembled.shape[0]))))
+            n_sliced = len(image_data.sliced_indices)
+        else:
+            sliced_assembled = assembled
+            image_data.sliced_indices = [0]
+            n_sliced = 1
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
@@ -347,7 +395,7 @@ class ImageProcessor(_BaseProcessor):
                     self._offset = None
                     self._offset_mean = None
 
-    def _correct_image_data(self, sliced_assembled, slicer):
+    def _correct_image_data(self, assembled):
         gain = self._gain if self._correct_gain else None
 
         if self._correct_offset:
@@ -355,23 +403,25 @@ class ImageProcessor(_BaseProcessor):
         else:
             offset = None
 
-        if sliced_assembled.ndim == 3:
-            if gain is not None:
-                gain = gain[slicer]
-            if offset is not None:
-                offset = offset[slicer]
-
-        if gain is not None and sliced_assembled.shape != gain.shape:
+        if gain is not None and assembled.shape != gain.shape:
             raise ImageProcessingError(
-                f"Assembled shape {sliced_assembled.shape} and "
+                f"Assembled shape {assembled.shape} and "
                 f"gain shape {gain.shape} are different!")
 
-        if offset is not None and sliced_assembled.shape != offset.shape:
+        if offset is not None and assembled.shape != offset.shape:
             raise ImageProcessingError(
-                f"Assembled shape {sliced_assembled.shape} and "
+                f"Assembled shape {assembled.shape} and "
                 f"offset shape {offset.shape} are different!")
 
-        correct_image_data(sliced_assembled, gain=gain, offset=offset)
+        try:
+            correct_image_data(
+                assembled,
+                gain=gain,
+                offset=offset,
+                intradark=(self._offset_policy == CalibrationOffsetPolicy.INTRA_DARK),
+                detector=config["DETECTOR"])
+        except ValueError as e:
+            raise ImageProcessingError(repr(e))
 
     def _update_pois(self, image_data, assembled):
         if assembled.ndim == 2 or image_data.poi_indices is None:

@@ -109,13 +109,14 @@ class TestViews(_TestDataMixin, unittest.TestCase):
                 data = self.processed_data(1001, (2, 2))
 
                 # empty data
+                data.image.masked_mean = None
                 view.updateF(data, True)
                 QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
 
                 # non-empty data
                 image_data = np.random.randn(2, 2).astype(np.float)
                 data.image.transform_type = ImageTransformType.CONCENTRIC_RINGS
-                data.image.masked_mean_ma = image_data
+                data.image.masked_mean = image_data
                 data.image.transformed = None
                 view.updateF(data, True)
                 np.testing.assert_array_equal(image_data, view._corrected.image)
@@ -132,19 +133,6 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         view._ctrl_widget._opt_tab.setCurrentIndex(int(ImageTransformType.FOURIER_TRANSFORM))
         self.assertEqual(ImageTransformType.FOURIER_TRANSFORM, view._transform_type)
         self.assertFalse(view._ring_item.isVisible())
-
-        # empty data
-        data = self.processed_data(1001, (3, 3))
-        view.updateF(data, True)
-
-        # non-empty data
-        image_data = np.random.randn(3, 3).astype(np.float)
-        data.image.transform_type = ImageTransformType.FOURIER_TRANSFORM
-        data.image.masked_mean_ma = image_data
-        data.image.transformed = 2 * image_data
-        view.updateF(data, True)
-        np.testing.assert_array_equal(image_data, view._corrected.image)
-        np.testing.assert_array_equal(2 * image_data, view._transformed.image)
 
         # ------------------------------
         # test edge detection

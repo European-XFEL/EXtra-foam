@@ -83,10 +83,11 @@ class MovingAverageScalar:
 class MovingAverageArray:
     """Stores moving average of 2D/3D (and higher dimension) array data."""
 
-    def __init__(self, window=1):
+    def __init__(self, window=1, *, copy_first=False):
         """Initialization.
 
         :param int window: moving average window size.
+        :param bool copy_first: True for copy the first data.
         """
         self._data = None  # moving average
 
@@ -95,6 +96,8 @@ class MovingAverageArray:
 
         self._window = window
         self._count = 0
+
+        self._copy_first = copy_first
 
     def __get__(self, instance, instance_type):
         if instance is None:
@@ -123,7 +126,7 @@ class MovingAverageArray:
                 else:
                     self._data += (data - self._data) / self._count
         else:
-            self._data = data
+            self._data = data.copy() if self._copy_first else data
             self._count = 1
 
     def __delete__(self, instance):
@@ -149,8 +152,8 @@ class MovingAverageArray:
 class RawImageData(MovingAverageArray):
     """Stores moving average of raw images."""
 
-    def __init__(self, window=1):
-        super().__init__(window)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @property
     def n_images(self):
@@ -438,7 +441,6 @@ class ImageData:
             will be masked as Nan/0, depending on the masking policy.
         mask (numpy.ndarray): overall mask for the average image.
             Shape = (y, x), dtype = np.bool
-        masked_mean_ma (numpy.ndarray): moving averaged masked_mean.
         transform_type (ImageTransformType): image transform type.
         transformed (numpy.ndarray): transformed image.
         reference (numpy.ndarray): reference image.
@@ -451,7 +453,7 @@ class ImageData:
                  "n_dark_pulses", "dark_mean", "dark_count",
                  "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
                  "reference",
-                 "masked_mean_ma", "transform_type", "transformed"]
+                 "transform_type", "transformed"]
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
@@ -478,7 +480,6 @@ class ImageData:
 
         self.reference = None
 
-        self.masked_mean_ma = None
         self.transform_type = ImageTransformType.UNDEFINED
         self.transformed = None
 
