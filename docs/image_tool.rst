@@ -11,7 +11,7 @@ IMAGE TOOL
 The *ImageTool* window is the second control window which provides various image-related
 information and controls.
 
-.. image:: images/ImageTool.png
+.. image:: images/image_tool.jpg
    :width: 800
 
 Image control
@@ -26,6 +26,12 @@ Image control
 | ``Update automatically``   | Automatically update the current displayed image in the            |
 |                            | *ImageTool* window.                                                |
 +----------------------------+--------------------------------------------------------------------+
+| ``Moving average``         | Apply moving average to the image data. It affects both the        |
+|                            | individual images in a train and the averaged image, as well as    |
+|                            | the subsequent analysis. If a new window size is smaller than      |
+|                            | the old one, the moving average calculation will start from the    |
+|                            | scratch.                                                           |
++----------------------------+--------------------------------------------------------------------+
 | ``Auto level``             | Update the detector images (not only in the *ImageTool* window,    |
 |                            | but also in other plot windows) by automatically selecting levels  |
 |                            | based on the maximum and minimum values in the data.               |
@@ -33,6 +39,15 @@ Image control
 | ``Save image``             | Save the current image to file. Please also see ImageFileFormat_   |
 +----------------------------+--------------------------------------------------------------------+
 
+.. Warning::
+
+    The moving average here is not calculated by nanmean_, which means that if a pixel of the image
+    in a certain pulse is *NaN*, the moving average of that pixel will be *NaN* for that pulse.
+
+.. Warning::
+
+    Please be aware that there is another moving average setup in the :ref:`Global setup` in the
+    main GUI.
 
 Mask panel
 """"""""""
@@ -173,6 +188,8 @@ Gain / offset
 
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
+.. image:: images/gain_offset_correction.jpg
+
 Apply pixel-wised gain and offset correction, where
 
 .. math::
@@ -183,25 +200,44 @@ Users can record a "dark run" whenever data is available. The dark run consists 
 of trains. The moving average of the each "dark pulse" in the train will be calculated,
 which will then be used to apply dark subtraction to image data pulse-by-pulse.
 
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| ``Gain correction``        | Check to activate gain correction.                                 |
-+----------------------------+--------------------------------------------------------------------+
-| ``Offset correction``      | Check to activate offset correction.                               |
-+----------------------------+--------------------------------------------------------------------+
-| ``Use dark as offset``     | Check to use recorded dark images as offset. The already loaded    |
-|                            | offset constants will be ignored.                                  |
-+----------------------------+--------------------------------------------------------------------+
-| ``Record dark``            | Start and stop dark run recording.                                 |
-+----------------------------+--------------------------------------------------------------------+
-| ``Remove dark``            | Remove the recorded dark run.                                      |
-+----------------------------+--------------------------------------------------------------------+
++-----------------------------+--------------------------------------------------------------------+
+| Input                       | Description                                                        |
++=============================+====================================================================+
+| ``Apply gain correction``   | Check to activate gain correction.                                 |
++-----------------------------+--------------------------------------------------------------------+
+| ``Apply offset correction`` | Check to activate offset correction. Since version 1.10, a         |
+|                             | variation of offset correction has been introduced:                |
+|                             |                                                                    |
+|                             | - ``+intra-dark``:                                                 |
+|                             |                                                                    |
+|                             |   After the pulse-by-pulse offset correction, every other pulse    |
+|                             |   will be subtracted by the following one starting from the        |
+|                             |   first pulse. For instance, imaging a pulse train consisting of   |
+|                             |   four pulses *ABAB*, the extra intra-dark correction will         |
+|                             |   result in a train *A'BA'B*, where *A'* = *A* - *B*.              |
+|                             |   Then one can make use of the pulse slicer in the                 |
+|                             |   :ref:`Data source tree` to remove the intra-dark pulses.         |
++-----------------------------+--------------------------------------------------------------------+
+| ``Use dark as offset``      | Check to use recorded dark images as offset. The already loaded    |
+|                             | offset constants will be ignored.                                  |
++-----------------------------+--------------------------------------------------------------------+
+| ``Record dark``             | Start and stop dark run recording.                                 |
++-----------------------------+--------------------------------------------------------------------+
+| ``Remove dark``             | Remove the recorded dark run.                                      |
++-----------------------------+--------------------------------------------------------------------+
 
-.. Note::
+.. Warning::
 
     The moving average here is not calculated by nanmean_, which means that if a pixel of the image
     in a certain pulse is *NaN*, the moving average of that pixel will be *NaN* for that pulse.
+
+.. Note::
+
+    Some detectors have its own special treatment for gain/offset correction:
+
+    - DSSC:
+
+      Due to the readout issue, pixels with value 0 will be converted to 256.
 
 
 Reference image

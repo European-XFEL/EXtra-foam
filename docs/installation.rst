@@ -66,11 +66,9 @@ accelerate your analysis, please feel free to dig into the code and ask question
     # Now you should be able to load the newly created kernel on max-jhub.
 
 
-Install C++ API of **EXtra-foam** only
---------------------------------------
+Install C++ API only
+--------------------
 
-.. code-block:: bash
+.. _foamalgo: https://github.com/zhujun98/foamalgo
 
-    $ mkdir build && cd build
-    $ cmake -DFOAM_USE_XSIMD=ON -DCMAKE_INSTALL_PREFIX=/YOUR/INSTALL/PREFIX
-    $ make && make install
+Please check foamalgo_.

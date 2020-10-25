@@ -1,3 +1,5 @@
+
+
 MAIN GUI
 ========
 
@@ -80,6 +82,8 @@ Namely, only one connection should be checked.
 | ``Port``                   | Port number of the TCP connection.                                 |
 +----------------------------+--------------------------------------------------------------------+
 
+.. _Data source tree:
+
 Data source tree
 """"""""""""""""
 
@@ -137,6 +141,7 @@ online analysis in the hutch, or in the :ref:`File streamer` when you are stream
 General analysis
 ----------------
 
+.. _Global setup:
 
 Global setup
 """"""""""""
@@ -154,12 +159,27 @@ Define analysis parameters used globally.
 +----------------------------+--------------------------------------------------------------------+
 | ``Moving average window``  | Moving average window size. If the moving average window size is   |
 |                            | larger than 1, moving average will be applied to all the           |
-|                            | registered analysis types. If the new window size is smaller than  |
+|                            | registered analysis types. If a new window size is smaller than    |
 |                            | the old one, the moving average calculation will start from the    |
-|                            | scratch.                                                           |
+|                            | scratch. Currently, this setup will affect the calculations of:    |
+|                            |                                                                    |
+|                            | - Pulse intensity of XGM                                           |
+|                            | - Pulse integral of Digitizer                                      |
+|                            | - Train-resolved (pump/probe) azimuthal integration                |
+|                            | - Train-resolved (pump/probe) ROI FOM                              |
+|                            | - Train-resolved (pump/probe) ROI 1D projection                    |
+|                            |                                                                    |
 +----------------------------+--------------------------------------------------------------------+
 | ``Reset``                  | Reset the moving average counts of all registered analysis types.  |
 +----------------------------+--------------------------------------------------------------------+
+
+
+.. Warning::
+
+    Since version 1.10, another moving average was re-activated in :ref:`Image tool`. If both the
+    moving averages are set, the result of azimuthal integration, ROI FOM and ROI 1D projection
+    will be a moving average on top of the moving averaged image! This is due to some historical
+    reason and it will be fixed in the future.
 
 
 Pump-probe setup
