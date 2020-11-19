@@ -1,0 +1,91 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]  #  TODO: Enable additional versions: 3.7
+        gcc-version: [8]  #  TODO: Enable additional versions: 6, 7
+    env:
+      DISPLAY: ":99.0"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Cache Conda
+      uses: actions/cache@v1
+      env:
+        # Increase this value to reset cache manually
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+
+    - name: Cache pip
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/setup.py') }}
+
+    - name: Setup Conda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        environment-file: environment.yml
+        miniconda-version: "latest"
+        python-version: ${{ matrix.python-version }}
+        channel-priority: strict
+        use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+
+    - name: Install OS dependencies
+      run: |
+        export GXX="g++-${{ matrix.gcc-version }}" GCC="gcc-${{ matrix.gcc-version }}"
+        sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+        sudo apt-get -q update
+        sudo -E apt-get -yq --no-install-suggests --no-install-recommends install \
+            $GXX libxkbcommon-x11-0 x11-apps libgl1-mesa-glx qtbase5-dev xvfb
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/$GXX 0
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/$GCC 0
+        g++ --version
+        gcc --version
+        echo $'\nexport CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}' >> ~/.profile
+
+    - name: Install python dependencies
+      shell: bash -l {0}
+      run: |
+        git submodule update --init
+        python3 -m pip install --upgrade pip
+        python3 -m pip install ".[test]"
+
+    - name: Build and test with pytest - parallel
+      shell: bash -l {0}
+      run: |
+        /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1400x900x24
+        sleep 3
+        # test parallel version
+        python3 setup.py build_ext --inplace --with-tests
+        python3 setup.py test -v
+        python3 setup.py benchmark -v
+
+    - name: Build and test with pytest - serial
+      shell: bash -l {0}
+      run: |
+        # test serial version
+        export BUILD_SERIAL_FOAM=1
+        python3 setup.py build_ext --inplace --with-tests
+        python3 setup.py test -v
+        python3 setup.py benchmark -v
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1

@@ -1,0 +1,8 @@
+channels:
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - cmake>=3.18
+  - numpy>=1.19
+  - tbb-devel<2021.1
