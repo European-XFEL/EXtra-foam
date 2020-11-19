@@ -12,24 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]  # 3.7
-        gcc-version: [8]  # 6, 7
+        python-version: [3.8]  #  TODO: Enable additional versions: 3.7
+        gcc-version: [8]  #  TODO: Enable additional versions: 6, 7
 
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-
-    # - name: setup-python fix for local runs with nektos/act
-    #   run: |
-    #     #  Hack to get setup-python to work on act
-    #     #  https://github.com/nektos/act/issues/251#issuecomment-706412948
-    #     if [ $GITHUB_ACTOR == "nektos/act" ]; then
-    #       apt update -y
-    #       apt install -y build-essential
-    #       if [ ! -f "/etc/lsb-release" ] ; then
-    #         echo "DISTRIB_RELEASE=18.04" > /etc/lsb-release
-    #       fi
-    #     fi
+      with:
+        submodules: true
 
     - name: Cache Conda
       uses: actions/cache@v1
@@ -54,26 +44,29 @@ jobs:
         miniconda-version: "latest"
         python-version: ${{ matrix.python-version }}
         channel-priority: strict
-        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
 
     - name: Install OS dependencies
       run: |
         export GXX="g++-${{ matrix.gcc-version }}" GCC="gcc-${{ matrix.gcc-version }}"
         sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
         sudo apt-get -q update
-        sudo -E apt-get -yq --no-install-suggests --no-install-recommends $(travis_apt_get_options) install libxkbcommon-x11-0 $GXX
+        sudo -E apt-get -yq --no-install-suggests --no-install-recommends install \
+            libxkbcommon-x11-0 $GXX
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/$GXX 0
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/$GCC 0
         g++ --version
         gcc --version
+        echo $'\nexport CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}' >> ~/.profile
 
     - name: Install python dependencies
       shell: bash -l {0}
       run: |
+        git submodule update --init
         python3 -m pip install --upgrade pip
         python3 -m pip install ".[test]"
 
-    - name: Test with pytest
+    - name: Build and test with pytest - parallel
       shell: bash -l {0}
       run: |
         /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1400x900x24
@@ -83,6 +76,9 @@ jobs:
         python setup.py test -v
         python setup.py benchmark -v
 
+    - name: Build and test with pytest - serial
+      shell: bash -l {0}
+      run: |
         # test series version
         export BUILD_SERIAL_FOAM=1
         python setup.py build_ext --inplace --with-tests
