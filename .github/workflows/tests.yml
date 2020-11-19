@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]  #  TODO: Enable additional versions: 3.7
+        python-version: [3.7]  #  TODO: Enable additional versions: 3.7
         gcc-version: [8]  #  TODO: Enable additional versions: 6, 7
 
     steps:
@@ -52,7 +52,7 @@ jobs:
         sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
         sudo apt-get -q update
         sudo -E apt-get -yq --no-install-suggests --no-install-recommends install \
-            libxkbcommon-x11-0 $GXX
+            $GXX libxkbcommon-x11-0 x11-apps libgl1-mesa-glx qtbase5-dev
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/$GXX 0
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/$GCC 0
         g++ --version
@@ -79,6 +79,8 @@ jobs:
     - name: Build and test with pytest - serial
       shell: bash -l {0}
       run: |
+        /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1400x900x24
+        sleep 3
         # test series version
         export BUILD_SERIAL_FOAM=1
         python setup.py build_ext --inplace --with-tests
