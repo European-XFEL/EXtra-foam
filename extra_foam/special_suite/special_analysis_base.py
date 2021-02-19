@@ -42,6 +42,7 @@ from . import __version__
 from . import logger
 from .config import _IMAGE_DTYPE, config
 
+import gc
 
 class _SharedCtrlWidgetS(QFrame):
     """Control widget used in all special analysis window.
@@ -743,6 +744,8 @@ class QThreadKbClient(_BaseQThreadClient):
                     self._output_st.put_pop(correlated)
                     with self._cv_st:
                         self._cv_st.notify()
+
+                gc.collect()
 
         self.log.info(f"Disconnected with {self._endpoint_st}")
 
