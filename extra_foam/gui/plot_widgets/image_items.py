@@ -559,6 +559,36 @@ class RectROI(pg.ROI):
         self.addScaleHandle([1, 1], [0, 0])
 
 
+class CircleROI(pg.CircleROI):
+    """Circular ROI widget.
+
+    Note: the widget is slightly different from pyqtgraph.CircleROI
+    """
+    def __init__(self, idx, pos=(0, 0), radius=10, pen=None, parent=None):
+        """Initialization.
+
+        :param int idx: index of the ROI.
+        :param tuple pos: (x, y) of the left-upper corner.
+        :param int radius: inital radius of the ROI.
+        :param None/QPen pen: QPen to draw the ROI.
+        """
+        super().__init__(pos,
+                         radius,
+                         translateSnap=True,
+                         scaleSnap=True,
+                         pen=pen,
+                         parent=parent)
+
+        self._index = idx
+
+    @property
+    def index(self):
+        return self._index
+
+    def setLocked(self, _):
+        pass
+
+
 class GeometryItem(pg.GraphicsObject):
     def __init__(self, pen=None, brush=None, parent=None):
         super().__init__(parent=parent)
