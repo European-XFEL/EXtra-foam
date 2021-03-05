@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import multiprocessing
 
 import pyFAI
 
@@ -26,6 +27,37 @@ from .special_analysis_base import (
 from ..gui.misc_widgets import FColor
 from ..gui.plot_widgets.image_items import CircleROI
 import scipy
+
+
+def integrate_cone(pos):
+    i, x, y = pos
+    fit_2d = ai.getFit2D()
+    if not (np.isclose(fit_2d["centerX"], x) and np.isclose(fit_2d["centerY"], y)):
+        ai.setFit2D(7800, x, y)
+
+    q_min = 0.013
+    q_max = 0.05
+
+    _, I = ai.integrate1d(image,
+                          300,
+                          radial_range=(q_min, q_max),
+                          azimuth_range=(i * cone_width, (i + 1) * cone_width),
+                          mask=mask,
+                          unit="q_A^-1",
+                          dummy=np.nan)
+    return I
+
+def setup(_ai, image_shape, image_buffer, mask_buffer, _cone_width):
+    global ai
+    ai = _ai
+    global image
+    image = np.frombuffer(image_buffer)
+    image.shape = image_shape
+    global mask
+    mask = np.frombuffer(mask_buffer)
+    mask.shape = image_shape
+    global cone_width
+    cone_width = _cone_width
 
 class SpeckleContrastProcessor(QThreadWorker):
     def __init__(self, *args, **kwargs):
@@ -83,7 +115,16 @@ class SpeckleContrastProcessor(QThreadWorker):
             self.log.error("No images available")
             return None
 
-        image = np.mean(self._binned_averaged_image, (0)).reshape(16 * 512, 128)
+        desired_shape = (16 * 512, 128)
+        image_buffer = multiprocessing.Array("d", desired_shape[0] * desired_shape[1], lock=False)
+        image = np.frombuffer(image_buffer)
+        image.shape = desired_shape
+        image[...] = np.mean(self._binned_averaged_image, (0)).reshape(desired_shape)
+
+        mask_buffer = multiprocessing.Array("d", desired_shape[0] * desired_shape[1], lock=False)
+        mask = np.frombuffer(mask_buffer)
+        mask.shape = desired_shape
+        mask[...] = np.isnan(image).astype('bool')
 
         agipd = pyFAI.detectors.Detector(200e-6, 200e-6)
         agipd.aliases = ["AGIPD"]
@@ -99,35 +140,24 @@ class SpeckleContrastProcessor(QThreadWorker):
         ai.setFit2D(7800, px, py)
         ai.wavelength = 1.38e-10
 
+        # Set constants
         number_of_cones = 8
         cone_width = 360 // number_of_cones
-        q_min = 0.013
-        q_max = 0.05
-        _mask = np.isnan(image).astype('bool')
 
-        def get_SAXS_var(pos):
+        def get_SAXS_var(pos, worker_pool):
             x, y = pos
-            ai.setFit2D(7800, x, y)
-            _I = []
-
-            for i in range(number_of_cones):
-                _, I = ai.integrate1d(image,
-                                      300,
-                                      radial_range=(q_min, q_max),
-                                      azimuth_range=(i * cone_width, (i + 1) * cone_width),
-                                      mask=_mask.reshape(agipd.shape),
-                                      unit="q_A^-1",
-                                      dummy=np.nan)
-                _I.append(I)
+            _I = worker_pool.map(integrate_cone, [(i, x, y) for i in range(number_of_cones)])
 
             return np.nanmean(np.nanvar(np.log(np.array(_I)), 0), 0)
 
-        opt_result = scipy.optimize.minimize(get_SAXS_var,
-                                             (px + 1, py),
-                                             method="nelder-mead",
-                                             options={ "maxiter": 20, "xatol": 1, "fatol": 1 })
-        center = np.around(opt_result.x).astype(int)
-        final_variance = get_SAXS_var(center)
+        with multiprocessing.Pool(processes=2, initializer=setup, initargs=(ai, image.shape, image_buffer, mask_buffer, cone_width)) as worker_pool:
+            opt_result = scipy.optimize.minimize(get_SAXS_var,
+                                                 (px + 1, py),
+                                                 args=(worker_pool),
+                                                 method="nelder-mead",
+                                                 options={ "maxiter": 20, "xatol": 1, "fatol": 1 })
+            center = np.around(opt_result.x).astype(int)
+            final_variance = get_SAXS_var(center, worker_pool)
 
         self.log.info(f"Found beam center at ({center[0]}, {center[1]}), with variance {final_variance:.5f}")
         return center
