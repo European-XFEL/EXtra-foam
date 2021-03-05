@@ -1,16 +1,17 @@
 import time
-import numpy as np
 import multiprocessing
 
 import pyFAI
+import scipy
+import numpy as np
 
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QDoubleValidator, QIntValidator
-from PyQt5.QtWidgets import QCheckBox, QSplitter, QPushButton, QLabel, QFrame, QHBoxLayout
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
+from PyQt5.QtWidgets import (QCheckBox, QSplitter, QPushButton, QLabel, QFrame,
+                             QHBoxLayout, QTabWidget, QGraphicsLineItem)
 
 import extra_data
 from extra_geom import AGIPD_1MGeometry
-from extra_foam.algorithms import hist_with_stats
 
 from extra_foam.gui.ctrl_widgets import _SingleRoiCtrlWidget
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
@@ -19,14 +20,11 @@ from extra_foam.gui.ctrl_widgets.smart_widgets import (
 )
 
 from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
-from .special_analysis_base import (
-    create_special, profiler, QThreadKbClient, QThreadWorker,
-    _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase
-)
+from .special_analysis_base import ( create_special, QThreadKbClient,
+                                     QThreadWorker, _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase )
 
 from ..gui.misc_widgets import FColor
 from ..gui.plot_widgets.image_items import CircleROI
-import scipy
 
 
 def integrate_cone(pos):
@@ -255,19 +253,40 @@ class SpeckleContrastProcessor(QThreadWorker):
 
 
 class AveragedImageView(ImageViewF):
+    _CROSSHAIR_HALF_LEN = 40
+
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(has_roi=True, parent=parent)
+
+        crosshair_pen = FColor.mkPen("i")
+        self._horiz_beam_crosshair = QGraphicsLineItem(0., 0., 1., 1.)
+        self._horiz_beam_crosshair.hide()
+        self._horiz_beam_crosshair.setPen(crosshair_pen)
+        self._vertical_beam_crosshair = QGraphicsLineItem(0., 0., 1., 1.)
+        self._vertical_beam_crosshair.hide()
+        self._vertical_beam_crosshair.setPen(crosshair_pen)
 
         self.circle_roi = CircleROI(2, (50, 50),
                                     radius=50,
                                     pen=FColor.mkPen("r", width=2, style=Qt.SolidLine))
         self.circle_roi.hide()
         self._rois.append(self.circle_roi)
+
         self._plot_widget.addItem(self.circle_roi)
+        self._plot_widget.addItem(self._horiz_beam_crosshair)
+        self._plot_widget.addItem(self._vertical_beam_crosshair)
 
     def updateF(self, data):
         self.setImage(data["averaged_image"])
+
+    def setCrossHairPos(self, x, y):
+        self._horiz_beam_crosshair.setLine(x - self._CROSSHAIR_HALF_LEN, y,
+                                           x + self._CROSSHAIR_HALF_LEN, y)
+        self._vertical_beam_crosshair.setLine(x, y - self._CROSSHAIR_HALF_LEN,
+                                              x, y + self._CROSSHAIR_HALF_LEN)
+        self._horiz_beam_crosshair.show()
+        self._vertical_beam_crosshair.show()
 
 
 class ImageView(ImageViewF):
@@ -412,6 +431,7 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
         if self._beam_center is not None:
             self._ctrl_widget_st.beam_center_x_label.setText(str(self._beam_center[0]))
             self._ctrl_widget_st.beam_center_y_label.setText(str(self._beam_center[1]))
+            self._avg_image_view.setCrossHairPos(self._beam_center[0], self._beam_center[1])
 
     @pyqtSlot(int)
     def _onPhotonBinningToggled(self, state):
