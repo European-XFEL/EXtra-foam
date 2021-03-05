@@ -271,8 +271,13 @@ class AveragedImageView(ImageViewF):
 
 
 class ImageView(ImageViewF):
+    def __init__(self, display_key, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._display_key = display_key
+
     def updateF(self, data):
-        self.setImage(data["image"])
+        self.setImage(data[self._display_key])
 
 class SpeckleContrastCtrlWidget(_BaseAnalysisCtrlWidgetS):
     # Signal to notify that the circle ROI has been updated.
@@ -354,7 +359,7 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
 
         self._beam_center = None
 
-        self._image_view = ImageView(parent=self)
+        self._image_view = ImageView(display_key="image", parent=self)
         self._image_view.setTitle("Current image")
         self._avg_image_view = AveragedImageView(parent=self)
         self._avg_image_view.setTitle("Avg. image")
