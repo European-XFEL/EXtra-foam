@@ -186,18 +186,38 @@ class SpeckleContrastProcessor(QThreadWorker):
 
         frame = extra_data.stack_detector_data(rsd, self._ppt)
 
-        # If this is the first image in the stream, initialize self._averaged_image
+        self._image_count += 1
+
+        # If this is the first image in the stream, initialize images
         if self._averaged_image is None:
             self._averaged_image = frame
             self._binned_averaged_image = self.bin_and_clamp_photons(frame)
+            self._min_values_image = frame
+            self._max_values_image = frame
+
+            self._m_values = frame
+            self._s_values = np.zeros(frame.shape)
+            self._var_values_image = frame
+            self._std_values_image = frame
         else:
-            # Otherwise, update the running average of the images
+            # Otherwise, update the images
             self._averaged_image        += (frame                             - self._averaged_image)        / self._image_count
             self._binned_averaged_image += (self.bin_and_clamp_photons(frame) - self._binned_averaged_image) / self._image_count
-        self._image_count += 1
+            self._min_values_image = np.fmin(self._min_values_image, frame)
+            self._max_values_image = np.fmax(self._max_values_image, frame)
+
+            old_m_values = self._m_values.copy()
+            self._m_values += (frame - self._m_values) / self._image_count
+            self._s_values += (frame - old_m_values) * (frame - self._m_values)
+            self._var_values_image = self._s_values / (self._image_count - 1)
+            self._std_values_image = np.sqrt(self._var_values_image)
 
         image = avg_and_position(self.bin_and_clamp_photons(frame) if self.photonBinningEnabled else frame)
         avg_image = avg_and_position(self._binned_averaged_image if self.photonBinningEnabled else self._averaged_image)
+        min_values_image = avg_and_position(self._min_values_image)
+        max_values_image = avg_and_position(self._max_values_image)
+        var_values_image = avg_and_position(self._var_values_image)
+        std_values_image = avg_and_position(self._std_values_image)
 
         self.updateMasks(image)
         self._speckle_contrast_trend.append(self.calc_contrast(avg_and_position(frame), self._mask))
@@ -205,6 +225,10 @@ class SpeckleContrastProcessor(QThreadWorker):
         return {
             "image": image,
             "averaged_image": avg_image,
+            "min_values": min_values_image,
+            "max_values": max_values_image,
+            "var_values": var_values_image,
+            "std_values": std_values_image,
             "trendline": self._speckle_contrast_trend
         }
 
@@ -402,7 +426,29 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
         vsplitter.addWidget(self._trendline)
         vsplitter.setSizes([3 * self._TOTAL_H / 4, self._TOTAL_H / 4])
 
-        cw.addWidget(vsplitter)
+        max_value_view = ImageView(display_key="max_values", parent=self)
+        max_value_view.setTitle("Max value")
+        min_value_view = ImageView(display_key="min_values", parent=self)
+        min_value_view.setTitle("Min value")
+        std_value_view = ImageView(display_key="std_values", parent=self)
+        std_value_view.setTitle("Standard deviation")
+        var_value_view = ImageView(display_key="var_values", parent=self)
+        var_value_view.setTitle("Variance")
+        stats_top_hsplitter = QSplitter(Qt.Horizontal)
+        stats_top_hsplitter.addWidget(max_value_view)
+        stats_top_hsplitter.addWidget(min_value_view)
+        stats_bottom_hsplitter = QSplitter(Qt.Horizontal)
+        stats_bottom_hsplitter.addWidget(std_value_view)
+        stats_bottom_hsplitter.addWidget(var_value_view)
+        stats_vsplitter = QSplitter(Qt.Vertical)
+        stats_vsplitter.addWidget(stats_top_hsplitter)
+        stats_vsplitter.addWidget(stats_bottom_hsplitter)
+
+        tab_widget = QTabWidget()
+        tab_widget.addTab(vsplitter, "Overview")
+        tab_widget.addTab(stats_vsplitter, "Statistics")
+
+        cw.addWidget(tab_widget)
         cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
