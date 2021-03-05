@@ -68,7 +68,6 @@ class SpeckleContrastProcessor(QThreadWorker):
 
         self._output_channel_fmt = "MID_DET_AGIPD1M-1/DET/{}CH0:xtdf"
         self._ppt = "image.data"
-        self._ADU_threshold = 65
 
         self._geom = AGIPD_1MGeometry.from_quad_positions(quad_pos=[
             (-543.0, 657.0),
@@ -166,8 +165,8 @@ class SpeckleContrastProcessor(QThreadWorker):
     def bin_photons(self, data, out=None):
         tmp = np.zeros(data.shape, dtype=data.dtype) if out is None else out
 
-        np.add(data, 0.5 * self._ADU_threshold, out=tmp)
-        np.divide(tmp, self._ADU_threshold, out=tmp)
+        np.add(data, 0.5 * self.ADU_threshold, out=tmp)
+        np.divide(tmp, self.ADU_threshold, out=tmp)
         np.floor(tmp, out=tmp)
 
         return tmp
@@ -249,6 +248,8 @@ class SpeckleContrastProcessor(QThreadWorker):
         self._speckle_contrast_trend = []
         self._identity_mask = None
 
+        self.ADU_threshold = 65
+
     def sources(self):
         return [(self._output_channel_fmt.format(i), self._ppt, 1) for i in range(16)]
 
@@ -286,6 +287,8 @@ class SpeckleContrastCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         # Photon binning widgets
         self.photon_binning_chkbox = QCheckBox("Photon binning")
+        self.adu_threshold_widget = SmartLineEdit("65")
+        self.adu_threshold_widget.setValidator(QIntValidator(0, 1000))
 
         # Beam center widgets
         self.find_center_btn = QPushButton("Find beam center")
@@ -304,6 +307,7 @@ class SpeckleContrastCtrlWidget(_BaseAnalysisCtrlWidgetS):
         beam_center_hbox.addStretch(2)
 
         self.layout().addRow(self.photon_binning_chkbox)
+        self.layout().addRow("ADU threshold:", self.adu_threshold_widget)
         self.layout().addRow(beam_center_hbox)
 
     def addRoiCtrl(self, roi):
@@ -392,6 +396,9 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
         self._ctrl_widget_st.circleRoiUpdated.connect(
             self._onCircleRoiUpdated
         )
+        self._ctrl_widget_st.adu_threshold_widget.value_changed_sgn.connect(
+            self._onAduThresholdSet
+        )
 
     @pyqtSlot()
     def _onFindCenterClicked(self):
@@ -420,3 +427,7 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
     def _onCircleRoiUpdated(self, activated, x, y, w, h):
         self._worker_st.circle_roi_geom_st = (x, y, w, h) if activated else None
         self._worker_st._mask_updated = True
+
+    @pyqtSlot(object)
+    def _onAduThresholdSet(self, new_threshold):
+        self._worker_st.ADU_threshold = int(new_threshold)
