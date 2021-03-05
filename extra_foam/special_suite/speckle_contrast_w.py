@@ -64,6 +64,7 @@ class SpeckleContrastProcessor(QThreadWorker):
         super().__init__(*args, **kwargs)
 
         self.photonBinningEnabled = False
+        self.circle_roi_geom_st = None
 
         self._output_channel_fmt = "MID_DET_AGIPD1M-1/DET/{}CH0:xtdf"
         self._ppt = "image.data"
@@ -216,13 +217,26 @@ class SpeckleContrastProcessor(QThreadWorker):
             self._identity_mask = ~np.isnan(image)
 
         # If necessary, apply the user-defined mask
-        if self._roi_geom_st and self._mask_updated:
-            x, y, w, h = self._roi_geom_st
+        if self._mask_updated:
             self._mask = np.zeros(image.shape)
-            self._mask[y : y + h, x : x + w] = 1
+
+            if self._roi_geom_st:
+                x, y, w, h = self._roi_geom_st
+                self._mask[y : y + h, x : x + w] = 1
+            elif self.circle_roi_geom_st:
+                x, y, w, h = self.circle_roi_geom_st
+                radius = w // 2
+                center_x = x + radius
+                center_y = y + radius
+
+                py, px = np.ogrid[0:image.shape[0], 0:image.shape[1]]
+                radius_mask = (px - center_x)**2 + (py - center_y)**2 <= radius**2
+                self._mask[radius_mask] = 1
+
             self._mask *= self._identity_mask
             self._mask_updated = False
-        elif self._roi_geom_st is None or self._mask is None:
+
+        elif (self._roi_geom_st is None and self.circle_roi_geom_st is None) or self._mask is None:
             self._mask = self._identity_mask
 
     def reset(self):
@@ -260,8 +274,15 @@ class ImageView(ImageViewF):
         self.setImage(data["image"])
 
 class SpeckleContrastCtrlWidget(_BaseAnalysisCtrlWidgetS):
+    # Signal to notify that the circle ROI has been updated.
+    # The parameters are: (activated, x, y, w, h)
+    circleRoiUpdated = pyqtSignal(bool, int, int, int, int)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # This control is to be set later with addRoiCtrl()
+        self.circle_roi_ctrl = None
 
         # Photon binning widgets
         self.photon_binning_chkbox = QCheckBox("Photon binning")
@@ -300,9 +321,9 @@ class SpeckleContrastCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.layout().addRow(self.center_circle_roi_btn)
 
     @pyqtSlot(object)
-    def onRoiGeometryChange(self, _):
-        pass
-
+    def onRoiGeometryChange(self, value):
+        if self.sender() is self.circle_roi_ctrl:
+            self.circleRoiUpdated.emit(value[1], value[3], value[4], value[5], value[6])
 
 class SpeckleContrastTrendlineView(PlotWidgetF):
     def __init__(self, *, parent=None):
@@ -368,6 +389,9 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
         self._ctrl_widget_st.center_circle_roi_btn.clicked.connect(
             self._onCenterCircleRoiClicked
         )
+        self._ctrl_widget_st.circleRoiUpdated.connect(
+            self._onCircleRoiUpdated
+        )
 
     @pyqtSlot()
     def _onFindCenterClicked(self):
@@ -391,3 +415,8 @@ class SpeckleContrastWindow(_SpecialAnalysisBase):
         circle_roi = self._avg_image_view.circle_roi
         radius = circle_roi.size()[0] // 2
         circle_roi.setPos((x - radius, y - radius))
+
+    @pyqtSlot(bool, int, int, int, int)
+    def _onCircleRoiUpdated(self, activated, x, y, w, h):
+        self._worker_st.circle_roi_geom_st = (x, y, w, h) if activated else None
+        self._worker_st._mask_updated = True
