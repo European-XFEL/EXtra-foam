@@ -23,6 +23,40 @@ Tests and helper functions that make use of the algorithms implemented in C++.
 ### `extra_foam/gui`
 Contains all of the code for the main GUI.
 
+The `main GUI` is a `QMainWindow` that serves as the aggregator of the GUI
+elements and the pipeline components for receiving data. It also has signals
+that provides control on the running state of the process workers and the
+image and plot windows. This can be found on the toolbar buttons.
+
+The toolbar also gives entry point for the following windows:
+
+- `ImageToolWindow`, which is a second main GUI for image manipulation (e.g.,
+  selecting ROI, masking, normalization).
+
+- Plot windows (which inherits from `_AbstractPlotWindow`):
+  - `PulseOfInterestWindow`
+  - `PumpProbeWindow`
+  - `CorrelationWindow`
+  - `HistogramWindow`
+  - `BinningWindow`
+
+- Satellite windows (which inherits from `_AbstractSatelliteWindow`). These are
+auxiliary windows for additional functionalities and display:
+  - `FileStreamWindow`
+  - `AboutWindow`
+
+On its interface, one can change the run configuration via the control widgets
+(which inherits from `_AbstractCtrlWidget`.). These are for:
+
+- data source management (`DataSourceWidget`)
+- extensions (`ExtensionCtrlWidget`)
+- general analysis
+  - `AnalysisCtrlWidget`
+  - `FomFilterCtrlWidget`
+- utilities
+  - logger
+  - analysis setup manager
+
 ### `extra_foam/special_suite`
 The code for all the special suites live here. There are pairs of files that
 hold the implementations for each app in the suite, e.g. `foobar_w.py` would
