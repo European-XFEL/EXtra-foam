@@ -311,7 +311,7 @@ setup(
         'redis==3.5.2',
         'psutil>=5.6.2',
         'imageio==2.8.0',
-        'Pillow==7.0.0',
+        'Pillow==8.1.1',
         'pyyaml>=5.2',
     ],
     extras_require={
