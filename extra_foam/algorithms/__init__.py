@@ -10,7 +10,7 @@ All rights reserved.
 from .statistics_py import (
     hist_with_stats, nanhist_with_stats, compute_statistics,
     nanmean, nansum, nanstd, nanvar,
-    quick_min_max
+    quick_min_max, welford_update, update_mean
 )
 
 from .miscellaneous import (

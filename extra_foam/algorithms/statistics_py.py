@@ -12,7 +12,7 @@ import numpy as np
 from .imageproc_py import mask_image_data, nanmeanImageArray
 from .statistics import nanmean as _nanmean_cpp
 from .statistics import nansum as _nansum_cpp
-
+from .statistics import welford_update, update_mean
 
 _NAN_CPP_TYPES = (np.float32, np.float64)
 

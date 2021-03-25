@@ -278,8 +278,11 @@ class ImageProcessor(_BaseProcessor):
             geom = self._assembler.geometry
 
             if self._image_mask_in_modules is None:
-                self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
-                    dtype=np.bool)
+                try:
+                    self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
+                        dtype=np.bool)
+                except:
+                    print("Could not dismantle image with", geom)
 
             try:
                 geom.dismantle_all_modules(

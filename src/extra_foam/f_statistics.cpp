@@ -9,6 +9,8 @@
  */
 #include <vector>
 
+#include "xtensor/xnoalias.hpp"
+
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
@@ -17,6 +19,33 @@
 
 namespace py = pybind11;
 
+
+// An implementation of Welford's online algorithm for computing variance. This
+// implementation also calculates the standard deviation.
+template<typename VALUE_TYPE, int N_DIM>
+void welford_update(int k,
+                    xt::pytensor<VALUE_TYPE, N_DIM>& current_values,
+                    xt::pytensor<VALUE_TYPE, N_DIM>& m_values,
+                    xt::pytensor<VALUE_TYPE, N_DIM>& s_values,
+                    xt::pytensor<VALUE_TYPE, N_DIM>& variance,
+                    xt::pytensor<VALUE_TYPE, N_DIM>& std_dev)
+{
+    xt::pytensor<VALUE_TYPE, N_DIM> old_m_values = m_values;
+
+    // We use xt::noalias() here to ensure that the numpy arrays are modified in-place
+    xt::noalias(m_values) += (current_values - m_values) / k;
+    xt::noalias(s_values) += (current_values - old_m_values) * (current_values - m_values);
+    xt::noalias(variance) = s_values / (k - 1);
+    xt::noalias(std_dev) = xt::sqrt(variance);
+}
+
+template<typename VALUE_TYPE, int N_DIM>
+void update_mean(int k,
+                 xt::pytensor<VALUE_TYPE, N_DIM>& current_values,
+                 xt::pytensor<VALUE_TYPE, N_DIM>& running_mean)
+{
+    xt::noalias(running_mean) += (current_values - running_mean) / k;
+}
 
 PYBIND11_MODULE(statistics, m)
 {
@@ -55,4 +84,28 @@ PYBIND11_MODULE(statistics, m)
   FOAM_NAN_REDUCER(nansum)
   FOAM_NAN_REDUCER(nanmean)
 
+
+#define FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, N_DIM)           \
+  m.def("welford_update", welford_update<VALUE_TYPE, N_DIM>, \
+        py::arg("k"),                                        \
+        py::arg("current_values").noconvert(),               \
+        py::arg("m_values").noconvert(),                     \
+        py::arg("s_values").noconvert(),                     \
+        py::arg("variance").noconvert(),                     \
+        py::arg("std_dev").noconvert());
+
+#define FOAM_WELFORD_UPDATE(VALUE_TYPE)  \
+  FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, 1) \
+  FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, 2) \
+  FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, 3) \
+  FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, 4) \
+  FOAM_WELFORD_UPDATE_IMP(VALUE_TYPE, 5)
+
+  FOAM_WELFORD_UPDATE(float)
+  FOAM_WELFORD_UPDATE(double)
+
+  m.def("update_mean", update_mean<float, 4>,
+        py::arg("k"),
+        py::arg("current_values").noconvert(),
+        py::arg("running_mean").noconvert());
 }

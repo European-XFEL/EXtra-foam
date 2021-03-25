@@ -239,6 +239,21 @@ def profiler(info):
     return wrap
 
 
+class BlockTimer:
+    def __init__(self, label="block", enabled=True):
+        self._label = label
+        self._enabled = enabled
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, *_):
+        duration = time.time() - self.start
+        if self._enabled:
+            print(f"Execution of {self._label}: {duration:.3f}s")
+
+
 class _ThreadLogger(QObject):
     """Logging in the thread."""
     # post messages in the main thread
