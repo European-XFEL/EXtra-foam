@@ -101,6 +101,10 @@ class _SingleRoiCtrlWidget(QWidget):
     def setLabel(self, text):
         self._activate_cb.setText(text)
 
+    @property
+    def idx(self):
+        return self._roi.index
+
     @pyqtSlot(int)
     def onToggleRoiActivation(self, state):
         if state == Qt.Checked:
@@ -113,7 +117,7 @@ class _SingleRoiCtrlWidget(QWidget):
         x, y = [int(v) for v in self._roi.pos()]
         w, h = [int(v) for v in self._roi.size()]
         self.roi_geometry_change_sgn.emit(
-            (self._roi.index, state == Qt.Checked, 0, x, y, w, h))
+            (self.idx, state == Qt.Checked, 0, x, y, w, h))
 
     @pyqtSlot(object)
     def onRoiPositionEdited(self, value):
@@ -135,7 +139,7 @@ class _SingleRoiCtrlWidget(QWidget):
 
         state = self._activate_cb.isChecked()
         self.roi_geometry_change_sgn.emit(
-            (self._roi.index, state, 0, x, y, w, h))
+            (self.idx, state, 0, x, y, w, h))
 
     @pyqtSlot(object)
     def onRoiSizeEdited(self, value):
@@ -155,7 +159,7 @@ class _SingleRoiCtrlWidget(QWidget):
         self._roi.stateChanged(finish=False)
 
         self.roi_geometry_change_sgn.emit(
-            (self._roi.index, self._activate_cb.isChecked(), 0, x, y, w, h))
+            (self.idx, self._activate_cb.isChecked(), 0, x, y, w, h))
 
     @pyqtSlot(object)
     def onRoiGeometryChangeFinished(self, roi):
