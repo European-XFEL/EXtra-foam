@@ -172,7 +172,10 @@ Define analysis parameters used globally.
 +----------------------------+--------------------------------------------------------------------+
 | ``Reset``                  | Reset the moving average counts of all registered analysis types.  |
 +----------------------------+--------------------------------------------------------------------+
-
+| ``Restore last session``   | Restore settings from the last EXtra-foam run. Currently this only |
+|                            | supports restoring the ROIs, other settings may be supported in    |
+|                            | the future.                                                        |
++----------------------------+--------------------------------------------------------------------+
 
 .. Warning::
 

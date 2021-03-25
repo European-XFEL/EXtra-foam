@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from enum import IntEnum
+import os
 import os.path as osp
 import shutil
 from collections import abc, namedtuple
@@ -15,6 +16,8 @@ from collections import abc, namedtuple
 import yaml
 from yaml.scanner import ScannerError
 from yaml.parser import ParserError
+
+from PyQt5.QtCore import QObject, QSettings, pyqtSignal
 
 import numpy as np
 
@@ -25,6 +28,64 @@ from .logger import logger
 _MAX_INT32 = np.iinfo(np.int32).max
 _MIN_INT32 = np.iinfo(np.int32).min
 
+
+class Session(QObject):
+    """
+    This class handles session settings using a QSettings object, backed by an
+    INI file. Only restoring from the last session is supported.
+    """
+
+    # Signal to notify objects that they should restore themselves from the
+    # current session object
+    restore_session_sgn = pyqtSignal()
+
+    _last_session_path = f"{ROOT_PATH}/last-session.ini"
+    _current_session_path = f"{ROOT_PATH}/current-session.ini"
+
+    def __init__(self):
+        super().__init__()
+
+        # If the session file from the last session exists, rename it to the
+        # last session file.
+        if osp.isfile(self._current_session_path):
+            # Delete the last-last session file if necessary
+            if osp.isfile(self._last_session_path):
+                os.remove(self._last_session_path)
+
+            os.rename(self._current_session_path, self._last_session_path)
+
+        self._reset()
+
+    def can_restore(self):
+        return osp.isfile(self._last_session_path)
+
+    def trigger_restore(self):
+        # We destroy the QSettings object while touching the files so as not to
+        # mess up any open file descriptors the QSettings object has.
+        self._settings = None
+        os.remove(self._current_session_path)
+        os.rename(self._last_session_path, self._current_session_path)
+        self._reset()
+
+        # Now that the new (old) settings are loaded, signal the widgets to
+        # restore themselves.
+        self.restore_session_sgn.emit()
+
+    def setValue(self, *args, **kwargs):
+        self._settings.setValue(*args, **kwargs)
+        self._settings.sync()
+
+    def value(self, *args, **kwargs):
+        return self._settings.value(*args, **kwargs)
+
+    def contains(self, *args, **kwargs):
+        return self._settings.contains(*args, **kwargs)
+
+    def _reset(self):
+        self._settings = QSettings(self._current_session_path, QSettings.IniFormat)
+
+
+session = Session()
 
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)

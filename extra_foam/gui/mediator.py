@@ -14,6 +14,7 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 
 from ..database import Metadata as mt
 from ..database import MetaProxy
+from ..config import session
 
 
 class Mediator(QObject):
@@ -214,6 +215,8 @@ class Mediator(QObject):
 
     def onRoiGeometryChange(self, value: tuple):
         idx, activated, locked, x, y, w, h = value
+
+        session.setValue(f"roi-{idx}", (x, y, w, h))
         self._meta.hset(mt.ROI_PROC, f'geom{idx}',
                         str((int(activated), int(locked), x, y, w, h)))
 

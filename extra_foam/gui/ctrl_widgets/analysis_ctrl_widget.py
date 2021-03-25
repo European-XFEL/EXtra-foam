@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton, QWidget
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
-from ...config import config
+from ...config import config, session
 from ...database import Metadata as mt
 
 
@@ -43,6 +43,10 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._reset_binning_btn = QPushButton("Reset binning")
         self._reset_histogram_btn = QPushButton("Reset histogram")
 
+        self._restore_session_btn = QPushButton("Restore last session")
+        self._restore_session_btn.setToolTip("Note: this currently only restores ROIs")
+        self._restore_session_btn.setEnabled(session.can_restore())
+
         self.initUI()
         self.initConnections()
 
@@ -70,6 +74,9 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(self._reset_histogram_btn, row + 1, 2)
         layout.addWidget(self._reset_binning_btn, row + 2, 2)
 
+        row += 3
+        layout.addWidget(self._restore_session_btn, row, 0)
+
         self.setLayout(layout)
 
     def initConnections(self):
@@ -94,6 +101,9 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._reset_correlation_btn.clicked.connect(mediator.onCorrelationReset)
         self._reset_binning_btn.clicked.connect(mediator.onBinReset)
         self._reset_histogram_btn.clicked.connect(mediator.onHistReset)
+
+        self._restore_session_btn.clicked.connect(session.trigger_restore)
+        self._restore_session_btn.clicked.connect(lambda: self._restore_session_btn.setEnabled(False))
 
     def updateMetaData(self):
         """Override"""

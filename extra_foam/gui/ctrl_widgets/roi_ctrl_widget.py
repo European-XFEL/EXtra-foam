@@ -17,7 +17,7 @@ from ..plot_widgets import RectROI
 from ..ctrl_widgets import _AbstractCtrlWidget, SmartLineEdit
 from ..misc_widgets import FColor
 from ...database import Metadata as mt
-from ...config import config
+from ...config import config, session
 
 
 class _SingleRoiCtrlWidget(QWidget):
@@ -231,7 +231,7 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
 
     def initConnections(self):
         """Override."""
-        pass
+        session.restore_session_sgn.connect(self._restoreFromSession)
 
     def updateMetaData(self):
         """Override."""
@@ -256,3 +256,10 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
             layout.addWidget(widget)
         layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
+
+    @pyqtSlot()
+    def _restoreFromSession(self):
+        for ctrl in self._roi_ctrls:
+            key = f"roi-{ctrl.idx}"
+            if session.contains(key):
+                ctrl.updateParameters(*session.value(key))
