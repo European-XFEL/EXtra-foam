@@ -22,6 +22,7 @@ from .gotthard_pump_probe_w import GotthardPumpProbeWindow
 from .gotthard_w import GotthardWindow
 from .module_scan_w import ModuleScanWindow
 from .multicam_view_w import MultiCamViewWindow
+from .spot_size.widgets import SpotSizeGrating
 from .trxas_w import TrXasWindow
 from .vector_view import VectorViewWindow
 from .xas_tim_w import XasTimWindow
@@ -139,6 +140,7 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         self.addSpecial(TrXasWindow)
         self.addSpecial(GotthardWindow)
         self.addSpecial(GotthardPumpProbeWindow)
+        self.addSpecial(SpotSizeGrating)
         self.addCommonSpecials()
 
         self.initUI()
