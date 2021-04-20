@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
 from ..gui_helpers import invert_dict
-from ...config import PumpProbeMode, AnalysisType
+from ...config import PumpProbeMode, AnalysisType, get_analysis_types
 from ...database import Metadata as mt
 
 
@@ -33,12 +33,7 @@ class PumpProbeCtrlWidget(_AbstractCtrlWidget):
         "same train": PumpProbeMode.SAME_TRAIN,
     })
 
-    _analysis_types = OrderedDict({
-        "": AnalysisType.UNDEFINED,
-        "ROI FOM": AnalysisType.ROI_FOM,
-        "ROI proj": AnalysisType.ROI_PROJ,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
-    })
+    _analysis_types = get_analysis_types(without=AnalysisType.PUMP_PROBE)
     _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):

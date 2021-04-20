@@ -11,11 +11,13 @@ from concurrent.futures import ThreadPoolExecutor
 import functools
 
 import numpy as np
+from scipy import ndimage
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
+from ..exceptions import ProcessingError
 from .base_processor import _BaseProcessor
-from ..data_model import MovingAverageArray
+from ..data_model import MovingAverageArray, PumpProbeData
 from ...algorithms import slice_curve
 from ...config import AnalysisType, Normalizer
 from ...database import Metadata as mt
@@ -222,6 +224,11 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
     _intensity_on_ma = MovingAverageArray()
     _intensity_off_ma = MovingAverageArray()
 
+    _analysis_types = [AnalysisType.AZIMUTHAL_INTEG,
+                       AnalysisType.AZIMUTHAL_INTEG_PEAK,
+                       AnalysisType.AZIMUTHAL_INTEG_PEAK_Q,
+                       AnalysisType.AZIMUTHAL_INTEG_COM]
+
     def __init__(self):
         super().__init__()
 
@@ -247,6 +254,75 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         if self._ma_window != v:
             self._set_ma_window(v)
 
+    def _process_fom(self, ai):
+        """Helper function to compute the FOM
+
+        This is used for both the main train data and pump-probe data.
+
+        :param AzimuthalIntegrationData ai: The data object to work on. Note
+                                            that PumpProbeData (a subclass) is
+                                            supported too.
+        """
+        if self._find_peaks:
+            peaks, _ = find_peaks_1d(ai.y,
+                                     prominence=self._peak_prominence)
+            peaks = peaks[self._peak_slicer]
+
+            if len(peaks) > self._MAX_N_PEAKS:
+                peaks = None
+            ai.peaks = peaks
+
+        intensity, momentum = slice_curve(ai.y, ai.x, *self._fom_integ_range)
+
+        # If this is for pump-probe data, ensure we respect the abs_difference
+        # setting.
+        is_pump_probe = type(ai) == PumpProbeData
+        if is_pump_probe and ai.abs_difference:
+            intensity = np.abs(intensity)
+
+        def has_analysis(analysis_type):
+            if type(ai) == PumpProbeData:
+                return ai.analysis_type == analysis_type
+            else:
+                return self._meta.has_analysis(analysis_type)
+
+        if has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+            # If we are in pump-probe mode, then the intensity has already been
+            # absolute-valued (if requested).
+            ai.fom = np.sum(intensity if is_pump_probe else np.abs(intensity))
+
+        if has_analysis(AnalysisType.AZIMUTHAL_INTEG_COM):
+            com = ndimage.center_of_mass(intensity)[0]
+            com_index = int(round(com)) if not np.isnan(com) else -1
+
+            # If a dark image has been subtracted, it's possible that many of
+            # the values in the image and thus the I(q) will be negative. This
+            # could cause the calculated CoM to be out-of-bounds, in which case
+            # we simply discard the results. This typically only happens when
+            # the X-ray beam is not in view of the detector, in which case we
+            # don't care about the I(q) anyway.
+            if com_index >= 0 and com_index < len(intensity):
+                ai.center_of_mass = (momentum[com_index], intensity[com_index])
+            else:
+                ai.center_of_mass = (np.nan, np.nan)
+
+        want_peak_fom = has_analysis(AnalysisType.AZIMUTHAL_INTEG_PEAK)
+        want_peak_q_fom = has_analysis(AnalysisType.AZIMUTHAL_INTEG_PEAK_Q)
+        if (want_peak_fom or want_peak_q_fom) and not self._find_peaks:
+            raise ProcessingError("Peak finding must be enabled to use a peak FOM")
+
+        have_peaks = peaks is not None and len(peaks) > 0
+
+        if want_peak_fom:
+            ai.max_peak = max([intensity[peak] for peak in peaks]) if have_peaks else np.nan
+
+        if want_peak_q_fom:
+            if have_peaks:
+                peak_index = max(peaks, key=lambda idx: intensity[idx])
+                ai.max_peak_q = momentum[peak_index]
+            else:
+                ai.max_peak_q = np.nan
+
     @profiler("Azimuthal Integration Processor (Train)")
     def process(self, data):
         processed = data['processed']
@@ -260,7 +336,7 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
                                     unit="q_A^-1")
         integ_points = self._integ_points
 
-        if self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+        if self._meta.has_any_analysis(self._analysis_types):
             mask = processed.image.mask
             mean_ret = integ1d(processed.image.masked_mean, integ_points, mask=mask)
 
@@ -270,29 +346,18 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
                 x=momentum, auc_range=self._auc_range)
             self._intensity_ma = intensity
 
-            fom = slice_curve(self._intensity_ma, momentum, *self._fom_integ_range)[0]
-            fom = np.sum(np.abs(fom))
-
             ai = processed.ai
             ai.x = momentum
             ai.y = self._intensity_ma
-            ai.fom = fom
             ai.q_map = self._q_map
 
-            if self._find_peaks:
-                peaks, _ = find_peaks_1d(self._intensity_ma,
-                                         prominence=self._peak_prominence)
-                peaks = peaks[self._peak_slicer]
-
-                if len(peaks) > self._MAX_N_PEAKS:
-                    peaks = None
-                ai.peaks = peaks
+            self._process_fom(ai)
 
         # ------------------------------------
         # pump-probe azimuthal integration
         # ------------------------------------
 
-        if processed.pp.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+        if processed.pp.analysis_type in self._analysis_types:
             pp = processed.pp
 
             image_on = pp.image_on
@@ -318,17 +383,11 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
                 y_on, y_off = self._normalize_fom_pp(
                     processed, self._intensity_on_ma, self._intensity_off_ma,
                     self._normalizer, x=on_ret.radial, auc_range=self._auc_range)
-
                 vfom = y_on - y_off
-                sliced = slice_curve(vfom, momentum, *self._fom_integ_range)[0]
-
-                if pp.abs_difference:
-                    fom = np.sum(np.abs(sliced))
-                else:
-                    fom = np.sum(sliced)
 
                 pp.y_on = y_on
                 pp.y_off = y_off
                 pp.x = momentum
                 pp.y = vfom
-                pp.fom = fom
+
+                self._process_fom(pp)

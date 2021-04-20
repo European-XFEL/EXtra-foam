@@ -7,7 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import OrderedDict
 import functools
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
@@ -21,7 +20,7 @@ from .curve_fitting_ctrl_widget import _BaseFittingCtrlWidget
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ..gui_helpers import invert_dict
-from ...config import AnalysisType, config
+from ...config import AnalysisType, config, get_analysis_types
 from ...database import Metadata as mt
 from ...database import SourceCatalog
 
@@ -81,14 +80,7 @@ class _FittingCtrlWidget(_BaseFittingCtrlWidget):
 
 class CorrelationCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up correlation analysis parameters."""
-
-    _analysis_types = OrderedDict({
-        "": AnalysisType.UNDEFINED,
-        "pump-probe": AnalysisType.PUMP_PROBE,
-        "ROI FOM": AnalysisType.ROI_FOM,
-        "ROI proj": AnalysisType.ROI_PROJ,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
-    })
+    _analysis_types = get_analysis_types()
     _analysis_types_inv = invert_dict(_analysis_types)
 
     _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]

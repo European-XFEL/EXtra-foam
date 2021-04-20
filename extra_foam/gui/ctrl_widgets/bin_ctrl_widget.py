@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ..gui_helpers import invert_dict
-from ...config import AnalysisType, BinMode, config
+from ...config import AnalysisType, BinMode, config, get_analysis_types
 from ...database import Metadata as mt
 from ...database import SourceCatalog
 
@@ -33,14 +33,7 @@ _MAX_N_BINS = 999
 
 class BinCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up binning analysis parameters."""
-
-    _analysis_types = OrderedDict({
-        "": AnalysisType.UNDEFINED,
-        "pump-probe": AnalysisType.PUMP_PROBE,
-        "ROI FOM": AnalysisType.ROI_FOM,
-        "ROI proj": AnalysisType.ROI_PROJ,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
-    })
+    _analysis_types = get_analysis_types()
     _analysis_types_inv = invert_dict(_analysis_types)
 
     _bin_modes = OrderedDict({

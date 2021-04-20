@@ -3,8 +3,8 @@
 Analysis type
 =============
 
-Each analysis will generate a FOM (figure-of-merit) and possibly also a VFOM (vector figure-of-merit),
-which are typically used in :ref:`statistics analysis`.
+Each analysis will generate at least one FOM (figure-of-merit) and possibly also
+a VFOM (vector figure-of-merit), which are typically used in :ref:`statistics analysis`.
 
 **FOM**
 
@@ -17,7 +17,7 @@ For instance:
 
 **VFOM**
 
-An array of scalars  which is used to characterize the performance of an analysis in a train/pulse.
+An array of scalars which is used to characterize the performance of an analysis in a train/pulse.
 For instance:
 
 - Scattering curve from azimuthal integration;
@@ -49,4 +49,5 @@ For instance:
    * - *azimuthal integ*
      - 1D Azimuthal integration of average (pulse) image(s) in a train.
      - Azimuthal integration scattering curve.
-     - Sum of the scattering curve.
+     - Sum of the scattering curve, the value of the largest peak in the curve,
+       :math:`q` of the largest peak, and the :math:`q` of the center of mass.

@@ -11,10 +11,11 @@ from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtTest import QTest, QSignalSpy
 
 from extra_foam.algorithms import FittingType
-from extra_foam.config import AnalysisType, BinMode, config, PumpProbeMode
+from extra_foam.config import AnalysisType, BinMode, config, PumpProbeMode, get_analysis_types
 from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp
+from extra_foam.gui.gui_helpers import invert_dict
 from extra_foam.gui.windows import (
     BinningWindow, CorrelationWindow, HistogramWindow,
     PulseOfInterestWindow, PumpProbeWindow,
@@ -347,6 +348,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertTrue(pp_proc._reset)
 
         # test loading meta data
+        analysis_names = invert_dict(get_analysis_types())
         mediator = widget._mediator
         mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
         mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
@@ -354,7 +356,7 @@ class TestPlotWindows(unittest.TestCase):
         mediator.onPpOffPulseSlicerChange([1, None, 2])
         mediator.onPpAbsDifferenceChange(True)
         widget.loadMetaData()
-        self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
+        self.assertEqual(analysis_names[AnalysisType.AZIMUTHAL_INTEG], widget._analysis_type_cb.currentText())
         self.assertEqual("odd/even train", widget._mode_cb.currentText())
         self.assertEqual(True, widget._abs_difference_cb.isChecked())
         self.assertEqual("0::2", widget._on_pulse_le.text())
@@ -416,7 +418,7 @@ class TestPlotWindows(unittest.TestCase):
 
         widget = win._ctrl_widget
         analysis_ctrl_widget = self.gui.analysis_ctrl_widget
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
+        analysis_names = invert_dict(get_analysis_types())
 
         for i in range(_N_PARAMS):
             # test category list
@@ -447,7 +449,7 @@ class TestPlotWindows(unittest.TestCase):
                 self.assertFalse(proc._auto_reset_ma)
 
         # set new values
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
+        widget._analysis_type_cb.setCurrentText(analysis_names[AnalysisType.ROI_PROJ])
         widget._auto_reset_ma_cb.setChecked(False)
         for i, proc in enumerate(processors):
             proc._reset = False

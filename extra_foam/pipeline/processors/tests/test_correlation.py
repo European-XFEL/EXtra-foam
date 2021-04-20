@@ -7,16 +7,12 @@ from extra_foam.pipeline.processors.correlation import (
     CorrelationProcessor, SimplePairSequence, OneWayAccuPairSequence
 )
 
-from extra_foam.config import AnalysisType
+from extra_foam.config import AnalysisType, get_analysis_types
 
 from extra_foam.pipeline.tests import _TestDataMixin
 
 
-_analysis_types = [AnalysisType.PUMP_PROBE,
-                   AnalysisType.ROI_FOM,
-                   AnalysisType.ROI_PROJ,
-                   AnalysisType.AZIMUTHAL_INTEG]
-
+_analysis_types = list(get_analysis_types(without=AnalysisType.UNDEFINED).values())
 
 class TestCorrelationProcessor(_TestDataMixin):
 
@@ -29,6 +25,12 @@ class TestCorrelationProcessor(_TestDataMixin):
             processed.roi.proj.fom = fom
         elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             processed.ai.fom = fom
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_PEAK:
+            processed.ai.max_peak = fom
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_PEAK_Q:
+            processed.ai.max_peak_q = fom
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_COM:
+            processed.ai.center_of_mass = (fom, fom)
         else:
             raise NotImplementedError
 

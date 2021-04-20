@@ -61,6 +61,11 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
 
     def setFitted(self, x, y):
         self._fitted.setData(x, y)
+        com_x, com_y = ai.center_of_mass
+        if com_x == np.nan or com_y == np.nan:
+            self._center_of_mass.setData([], [])
+        else:
+            self._center_of_mass.setData([com_x], [com_y])
 
 
 @create_imagetool_view(AzimuthalIntegCtrlWidget)
