@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
@@ -35,6 +36,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         self._peaks = self.plotScatter(
             pen=FColor.mkPen("g"), brush=FColor.mkBrush(None), symbol="o",
             size=18)
+        self._fitted = self.plotCurve(pen=FColor.mkPen("g"))
 
     def updateF(self, data):
         """Override."""
@@ -53,6 +55,12 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         else:
             self._peaks.setData(momentum[peaks], intensity[peaks])
             self.setAnnotationList(momentum[peaks], intensity[peaks])
+
+    def data(self):
+        return self._plot.data()
+
+    def setFitted(self, x, y):
+        self._fitted.setData(x, y)
 
 
 @create_imagetool_view(AzimuthalIntegCtrlWidget)
@@ -106,6 +114,8 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         """Override."""
         self._ctrl_widget.cx_changed_sgn.connect(lambda x: self.onBeamCenterChanged(x, None))
         self._ctrl_widget.cy_changed_sgn.connect(lambda y: self.onBeamCenterChanged(None, y))
+        self._ctrl_widget.fit_curve_sgn.connect(self._onCurveFit)
+        self._ctrl_widget.clear_fitting_sgn.connect(self._onClearFitting)
 
     def onBeamCenterChanged(self, x, y):
         if x is None:
@@ -114,6 +124,15 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
             y = float(self._ctrl_widget._cy_le.text())
 
         self._crosshair.setPos(x, y)
+
+    @pyqtSlot()
+    def _onCurveFit(self):
+        x, y = self._ctrl_widget.fitCurve(*self._azimuthal_integ_1d_curve.data())
+        self._azimuthal_integ_1d_curve.setFitted(x, y)
+
+    @pyqtSlot()
+    def _onClearFitting(self):
+        self._azimuthal_integ_1d_curve.setFitted([], [])
 
     def updateF(self, data, auto_update):
         """Override."""

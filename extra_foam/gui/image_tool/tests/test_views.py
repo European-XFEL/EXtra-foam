@@ -86,6 +86,10 @@ class TestViews(_TestDataMixin, unittest.TestCase):
             view._azimuthal_integ_1d_curve.updateF(data)
             mocked.assert_called_once()
 
+        with patch.object(view._azimuthal_integ_1d_curve, "setFitted") as mocked:
+            view._onCurveFit()
+            mocked.assert_called_once()
+
     @patch("extra_foam.gui.mediator.Mediator.onItTransformTypeChange")
     def testTransformedView(self, mocked):
 
