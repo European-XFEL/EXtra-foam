@@ -77,6 +77,12 @@ class Mediator(QObject):
         else:
             self._meta.remove_data_source(item)
 
+    def onPhotonBinningChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "photon_binning", str(value))
+
+    def onAduThresholdChanged(self, value: int):
+        self._meta.hset(mt.IMAGE_PROC, "adu_count", value)
+
     def onCalGainCorrection(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "correct_gain", str(value))
 

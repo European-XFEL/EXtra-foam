@@ -7,12 +7,26 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
     imageDataNanMask, maskImageDataNan, maskImageDataZero,
-    correctGain, correctOffset, correctDsscOffset, correctGainOffset
+    correctGain, correctOffset, correctDsscOffset, correctGainOffset,
+    binPhotons
 )
 
+
+def bin_photons(data, adu_count, out=None):
+    if data.ndim not in [2, 3]:
+        raise ValueError("Only 2D and 3D arrays are supported")
+
+    if out is None:
+        out = np.empty_like(data)
+
+    binPhotons(data, adu_count, out)
+
+    return out
 
 def nanmean_image_data(data, *, kept=None):
     """Compute nanmean of an array of images of a tuple/list of two images.

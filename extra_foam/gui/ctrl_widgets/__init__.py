@@ -1,4 +1,4 @@
-from .base_ctrl_widgets import _AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
 from .azimuthal_integ_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .bin_ctrl_widget import BinCtrlWidget
@@ -14,6 +14,7 @@ from .histogram_ctrl_widget import HistogramCtrlWidget
 from .filter_ctrl_widget import FomFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .extension_ctrl_widget import ExtensionCtrlWidget
+from .photon_binning_ctrl_widget import PhotonBinningCtrlWidget
 from .smart_widgets import (
     SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit,
     SmartStringLineEdit

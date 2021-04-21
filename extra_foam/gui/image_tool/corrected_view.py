@@ -18,7 +18,7 @@ from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..plot_widgets import HistMixin, ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
     RoiProjCtrlWidget, RoiCtrlWidget, RoiFomCtrlWidget,
-    RoiNormCtrlWidget, RoiHistCtrlWidget
+    RoiNormCtrlWidget, RoiHistCtrlWidget, PhotonBinningCtrlWidget
 )
 from ..misc_widgets import FColor
 from ...config import AnalysisType, MaskState, plot_labels
@@ -81,7 +81,8 @@ class RoiHist(HistMixin, PlotWidgetF):
                        _roi_fom_ctrl_widget=RoiFomCtrlWidget,
                        _roi_hist_ctrl_widget=RoiHistCtrlWidget,
                        _roi_norm_ctrl_widget=RoiNormCtrlWidget,
-                       _roi_proj_ctrl_widget=RoiProjCtrlWidget)
+                       _roi_proj_ctrl_widget=RoiProjCtrlWidget,
+                       _photon_binning_ctrl_widget=PhotonBinningCtrlWidget)
 class CorrectedView(_AbstractImageToolView):
     """CorrectedView class.
 
@@ -113,6 +114,7 @@ class CorrectedView(_AbstractImageToolView):
         ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._photon_binning_ctrl_widget, alignment=AT)
         ctrl_layout.setContentsMargins(1, 1, 1, 1)
         ctrl_widget.setLayout(ctrl_layout)
         ctrl_widget.setFixedHeight(

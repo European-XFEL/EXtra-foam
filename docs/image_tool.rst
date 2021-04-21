@@ -182,6 +182,28 @@ Define the 1D projection of ROI (region of interest) analysis setup.
 |                            | projection.                                                        |
 +----------------------------+--------------------------------------------------------------------+
 
+.. _Photon binning setup:
+
+Photon binning setup
+""""""""""""""""""""
+
+This bins the data from the detector based on an ADU threshold, which
+corresponds to the raw value recorded by a detector for one photon. The binning
+uses the formula:
+
+.. math::
+
+   bin = \left\lfloor \frac{\frac{T}{2} + A_{raw}}{T} \right\rfloor \\
+   A_{binned} = clamp(bin, 0, \infty)
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``ADU threshold``          | The ADU threshold to use for binning. A reasonable value for this  |
+|                            | could be found from the histogram of the image by looking for a    |
+|                            | visible 'step' between the counts of one and two photons.          |
++----------------------------+--------------------------------------------------------------------+
+
 
 Gain / offset
 -------------

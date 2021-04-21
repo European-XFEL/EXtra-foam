@@ -115,6 +115,30 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget.update_image_btn.clicked.emit()
         self.image_tool._updateWidgets.assert_called_once_with(True)
 
+    def testPhotonBinningCtrlWidget(self):
+        widget = self.image_tool._corrected_view._photon_binning_ctrl_widget
+        proxy = widget._mediator._meta
+        adu_count = lambda: proxy.hget(Metadata.IMAGE_PROC, "adu_count")
+        photon_binning_status = lambda: proxy.hget(Metadata.IMAGE_PROC, "photon_binning")
+
+        # Test enabling photon binning
+        QTest.mouseClick(widget._binning_cb, Qt.LeftButton,
+                         pos=QPoint(2, int(widget._binning_cb.height() / 2)))
+        self.assertEqual(photon_binning_status(), "True")
+
+        # And disabling
+        QTest.mouseClick(widget._binning_cb, Qt.LeftButton,
+                         pos=QPoint(2, int(widget._binning_cb.height() / 2)))
+        self.assertEqual(photon_binning_status(), "False")
+
+        # Test setting the ADU count
+        old_adu_count = adu_count()
+        widget._adu_count_le.clear()
+        QTest.keyClicks(widget._adu_count_le, "42")
+        QTest.keyPress(widget._adu_count_le, Qt.Key_Enter)
+        self.assertNotEqual(adu_count(), old_adu_count)
+        self.assertEqual(adu_count(), "42")
+
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
         proc = self.pulse_worker._image_roi

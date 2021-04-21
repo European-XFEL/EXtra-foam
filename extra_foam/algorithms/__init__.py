@@ -29,7 +29,7 @@ from .helpers import intersection
 
 from .imageproc_py import (
     nanmean_image_data, correct_image_data, mask_image_data,
-    movingAvgImageData
+    movingAvgImageData, bin_photons
 )
 
 from .datamodel import (

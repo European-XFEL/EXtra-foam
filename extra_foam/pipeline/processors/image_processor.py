@@ -22,7 +22,7 @@ from ...utils import profiler
 from ...config import config, CalibrationOffsetPolicy, _MAX_INT32
 
 from extra_foam.algorithms import (
-    correct_image_data, mask_image_data, nanmean_image_data
+    correct_image_data, mask_image_data, nanmean_image_data, bin_photons
 )
 
 
@@ -80,6 +80,9 @@ class ImageProcessor(_BaseProcessor):
 
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._require_geom = config['REQUIRE_GEOMETRY']
+
+        self._photon_binning = False
+        self._adu_count = 0
 
         self._set_ma_window(1)
 
@@ -159,6 +162,9 @@ class ImageProcessor(_BaseProcessor):
         self._poi_indices = [
             int(global_cfg['poi1_index']), int(global_cfg['poi2_index'])]
 
+        self._photon_binning = cfg['photon_binning'] == 'True'
+        self._adu_count = int(cfg['adu_count'])
+
     def _set_ma_window(self, v):
         self._ma_window = v
         self.__class__._raw.window = v
@@ -219,6 +225,10 @@ class ImageProcessor(_BaseProcessor):
         image_data.offset_mean = self._offset_mean
 
         self._correct_image_data(assembled)
+
+        if self._photon_binning:
+            bin_photons(assembled, self._adu_count, out=assembled)
+
         self._apply_moving_average(assembled)
 
         # Due to the some calibration policies (e.g. intra-dark offset
