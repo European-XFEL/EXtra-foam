@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
@@ -37,6 +39,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
             pen=FColor.mkPen("g"), brush=FColor.mkBrush(None), symbol="o",
             size=18)
         self._fitted = self.plotCurve(pen=FColor.mkPen("g"))
+        self._center_of_mass = self.plotScatter(pen=FColor.mkPen("r"), symbol="o", size=18)
 
     def updateF(self, data):
         """Override."""
@@ -158,7 +161,9 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
     def onActivated(self):
         """Override."""
         self._mediator.registerAnalysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._mediator.registerAnalysis(AnalysisType.AZIMUTHAL_INTEG_COM)
 
     def onDeactivated(self):
         """Override."""
         self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG_COM)

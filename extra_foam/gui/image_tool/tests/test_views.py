@@ -80,6 +80,7 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         data = self.processed_data(1001, (2, 2))
         data.ai.x = np.arange(10)
         data.ai.y = np.arange(10)
+        data.ai.center_of_mass = (1, 1)
         view.updateF(data, True)
         data.ai.peaks = np.arange(10)
         with patch.object(view._azimuthal_integ_1d_curve, "setAnnotationList") as mocked:
