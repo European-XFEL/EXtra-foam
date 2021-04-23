@@ -45,7 +45,7 @@ class BinCtrlWidget(_AbstractCtrlWidget):
 
     _bin_modes = OrderedDict({
         "average": BinMode. AVERAGE,
-        "accumulcate": BinMode.ACCUMULATE,
+        "accumulate": BinMode.ACCUMULATE,
     })
     _bin_modes_inv = invert_dict(_bin_modes)
 
