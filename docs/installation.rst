@@ -28,7 +28,7 @@ In your Anaconda_ environment, run the following commands:
 
     # install cmake and dependencies
     $ conda install -c anaconda cmake numpy
-    $ conda install -c conda-forge tbb-devel
+    $ conda install -c conda-forge tbb-devel<2021.1
 
 Install **EXtra-foam**
 ----------------------
