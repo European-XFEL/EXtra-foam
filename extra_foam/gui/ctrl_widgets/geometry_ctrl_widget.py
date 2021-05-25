@@ -225,7 +225,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         # TODO: check number of modules for JungFrau
         coordinates = self._getMetaData(cfg, "coordinates")
         if coordinates is not None:
-            coordinates = json.loads(coordinates, encoding='utf8')
+            coordinates = json.loads(coordinates)
             table = self._coordinates_tb
             n_rows = table.rowCount()
             n_cols = table.columnCount()
