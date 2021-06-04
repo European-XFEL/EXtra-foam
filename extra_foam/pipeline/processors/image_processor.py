@@ -64,7 +64,7 @@ class ImageProcessor(_BaseProcessor):
         _image_mask (numpy.ndarray): image mask. For pulse-resolved detectors,
             this image mask is shared by all the pulses in a train. However,
             their overall mask could still be different after applying the
-            threshold mask. Shape = (y, x), dtype = np.bool
+            threshold mask. Shape = (y, x), dtype = bool
         _threshold_mask (tuple):  (lower, upper) of the threshold.
             It should be noted that a pixel with value outside of the boundary
             will be masked as Nan/0, depending on the masking policy.
@@ -279,7 +279,7 @@ class ImageProcessor(_BaseProcessor):
 
             if self._image_mask_in_modules is None:
                 self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
-                    dtype=np.bool)
+                    dtype=bool)
 
             try:
                 geom.dismantle_all_modules(
@@ -292,12 +292,12 @@ class ImageProcessor(_BaseProcessor):
         if image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically
-                image_mask = np.zeros(image_shape, dtype=np.bool)
+                image_mask = np.zeros(image_shape, dtype=bool)
             else:
                 if self._require_geom:
                     # reassemble a mask
                     geom = self._assembler.geometry
-                    image_mask = geom.output_array_for_position_fast(dtype=np.bool)
+                    image_mask = geom.output_array_for_position_fast(dtype=bool)
                     geom.position_all_modules(
                         self._image_mask_in_modules, image_mask)
                 else:

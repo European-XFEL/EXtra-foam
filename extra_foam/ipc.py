@@ -288,7 +288,7 @@ class ImageMaskSub:
         updated = False
 
         if mask is None:
-            mask = np.zeros(shape, dtype=np.bool)
+            mask = np.zeros(shape, dtype=bool)
 
         # process all messages related to mask
         while True:

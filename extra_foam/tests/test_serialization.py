@@ -40,14 +40,14 @@ class TestSerialization(unittest.TestCase):
         self.assertEqual(np.float32, img.dtype)
 
         # test serializing and deserializing a mask
-        orig_mask = np.array([[1, 1, 0], [0, 1, 1]], dtype=np.bool)
+        orig_mask = np.array([[1, 1, 0], [0, 1, 1]], dtype=bool)
 
         mask_bytes = serialize_image(orig_mask, is_mask=True)
         mask = deserialize_image(mask_bytes, is_mask=True)
 
         np.testing.assert_array_equal(orig_mask, mask)
         self.assertEqual(orig_mask.shape, mask.shape)
-        self.assertEqual(np.bool, mask.dtype)
+        self.assertEqual(bool, mask.dtype)
 
         # test casting array into a mask
         orig_mask = np.array([[1., 1., 0], [0, -1., 1.]], dtype=np.float32)
@@ -55,9 +55,9 @@ class TestSerialization(unittest.TestCase):
         mask_bytes = serialize_image(orig_mask, is_mask=True)
         mask = deserialize_image(mask_bytes, is_mask=True)
 
-        np.testing.assert_array_equal(orig_mask.astype(np.bool), mask)
+        np.testing.assert_array_equal(orig_mask.astype(bool), mask)
         self.assertEqual(orig_mask.shape, mask.shape)
-        self.assertEqual(np.bool, mask.dtype)
+        self.assertEqual(bool, mask.dtype)
 
         # test serializing and deserializing a group of images
         orig_imgs = np.array([[[1, 2], [3, 4]],

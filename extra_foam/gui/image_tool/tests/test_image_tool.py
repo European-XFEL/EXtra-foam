@@ -293,7 +293,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # trigger the lazily evaluated subscriber
         proc.process(data)
 
-        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
+        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=bool)
 
         # test default
         np.testing.assert_array_equal(proc._image_mask, mask_gt)
@@ -330,7 +330,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test removing mask
         QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
         proc.process(data)
-        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
+        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=bool), proc._image_mask)
 
         # test set mask
         pub.set(mask_gt)
@@ -338,15 +338,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         np.testing.assert_array_equal(mask_gt, proc._image_mask)
 
         # test set a mask which has a different shape from the image
-        mask_gt = np.ones((2, 2), dtype=np.bool)
+        mask_gt = np.ones((2, 2), dtype=bool)
         pub.set(mask_gt)
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
         # an empty image mask with a different shape will be automatically reset
-        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        mask_gt = np.zeros((2, 2), dtype=bool)
         pub.set(mask_gt)
         proc.process(data)
-        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
+        np.testing.assert_array_equal(np.zeros((10, 10), dtype=bool), proc._image_mask)
 
     def testReferenceCtrlWidget(self):
         view = self.image_tool._reference_view

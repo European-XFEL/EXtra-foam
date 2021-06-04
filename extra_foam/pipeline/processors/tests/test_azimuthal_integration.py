@@ -37,7 +37,7 @@ class TestAzimuthalIntegProcessorTrain(_TestDataMixin):
         proc._integ_method = method
 
         shape = (4, 128, 64)
-        image_mask = np.zeros(shape[-2:], dtype=np.bool)
+        image_mask = np.zeros(shape[-2:], dtype=bool)
         image_mask[:, ::2] = True
         data, processed = self.data_with_assembled(1001, shape,
                                                    image_mask=image_mask,
@@ -73,7 +73,7 @@ class TestAzimuthalIntegProcessorTrain(_TestDataMixin):
         proc = self._proc
 
         shape = (4, 128, 64)
-        image_mask = np.zeros(shape[-2:], dtype=np.bool)
+        image_mask = np.zeros(shape[-2:], dtype=bool)
         image_mask[::2, ::2] = True
         threshold_mask = (0, 0.5)
         data, processed = self.data_with_assembled(1001, shape,

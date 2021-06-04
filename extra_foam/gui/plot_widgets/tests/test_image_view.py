@@ -49,7 +49,7 @@ class TestImageView:
                 getattr(widget, method)()
                 mocked.assert_called_once()
 
-    @pytest.mark.parametrize("dtype", [np.uint8, np.int, np.float32])
+    @pytest.mark.parametrize("dtype", [np.uint8, int, np.float32])
     def testSetImage(self, dtype):
         widget = ImageViewF(has_roi=True)
 
@@ -177,7 +177,7 @@ class TestImageAnalysis(unittest.TestCase):
 
         widget = ImageAnalysis()
         fp = tempfile.NamedTemporaryFile(suffix=".npy")
-        img = np.arange(100, dtype=np.float).reshape(10, 10)
+        img = np.arange(100, dtype=float).reshape(10, 10)
 
         # if image_data is None, it does not raise but only logger.error()
         with self.assertLogs(logger, level="ERROR") as cm:
