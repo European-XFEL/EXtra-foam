@@ -252,6 +252,12 @@ Reference image
 |                              | reference image is used as a stationary off-image in the           |
 |                              | *predefined off* mode in *pump-probe* analysis.                    |
 +------------------------------+--------------------------------------------------------------------+
+| ``Record reference``         | Record the received displayed images and perform a moving average  |
+|                              | until the ``Stop`` (recording) button has been toggled.            |
+|                              | The resulting image will be set as a reference image.              |
++------------------------------+--------------------------------------------------------------------+
+| ``Save reference``           | Saves the reference image to a `NumPy` file.                       |
++------------------------------+--------------------------------------------------------------------+
 | ``Remove reference``         | Remove the reference image.                                        |
 +------------------------------+--------------------------------------------------------------------+
 

@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 import math
 import os
+import shutil
 import tempfile
 import time
 
@@ -39,7 +40,7 @@ def setup_module(module):
 
 
 def teardown_module(module):
-    os.rmdir(_tmp_cfg_dir)
+    shutil.rmtree(_tmp_cfg_dir)
     from extra_foam import config
     config.ROOT_PATH = module._backup_ROOT_PATH
 
@@ -381,6 +382,46 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         updated, ref = proc._ref_sub.update()
         self.assertTrue(updated)
         self.assertIsNone(ref)
+
+        # ------------------------------
+        # test save reference
+        # ------------------------------
+
+        dialog_path = 'extra_foam.gui.image_tool.reference_view.QFileDialog.getSaveFileName'
+        reference_file = f"{_tmp_cfg_dir}/foo.npy"
+        mock_savedialog = patch(dialog_path, return_value=[reference_file])
+        with mock_savedialog:
+            QTest.mouseClick(widget.save_btn, Qt.LeftButton)
+        np.testing.assert_array_equal(corrected.image, np.load(reference_file))
+
+        # ------------------------------
+        # test recording reference
+        # ------------------------------
+
+        # start recording
+        QTest.mouseClick(widget.record_btn, Qt.LeftButton)
+        # Check if the other buttons are disabled
+        self.assertTrue(not widget.save_btn.isEnabled())
+        self.assertTrue(not widget.set_current_btn.isEnabled())
+
+        # receive 5 trains
+        images = [np.random.randint(255, size=(80, 100)).astype(np.float32)
+                  for _ in range(5)]
+        for index, image in enumerate(images, start=1):
+            corrected._image = image
+            # mock view update as it contains the averaging logic
+            view.updateF(ProcessedData(1), False)
+        # stop recording
+        QTest.mouseClick(widget.record_btn, Qt.LeftButton)
+
+        # Check if the other buttons are not enabled
+        self.assertTrue(widget.save_btn.isEnabled())
+        self.assertTrue(widget.set_current_btn.isEnabled())
+        # retrieve reference value and verify it is the average of the trains
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
+        np.testing.assert_allclose(ref, np.mean(images, axis=0),
+                                   rtol=1e-05, atol=1e-08)
 
         # ------------------------------
         # test load and remove reference
