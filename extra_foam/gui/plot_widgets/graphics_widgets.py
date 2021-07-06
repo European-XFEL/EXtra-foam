@@ -16,7 +16,8 @@ from PyQt5.QtGui import QPainter
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QPointF, Qt
 from PyQt5.QtWidgets import (
     QCheckBox, QGraphicsGridLayout, QHBoxLayout, QLabel, QMenu, QSizePolicy,
-    QSlider, QWidget, QWidgetAction
+    QSlider, QWidget, QWidgetAction, QGraphicsItemGroup, QGraphicsLineItem,
+    QGraphicsEllipseItem
 )
 
 from .. import pyqtgraph as pg
@@ -24,6 +25,35 @@ from ..pyqtgraph import Point
 from ..pyqtgraph import functions as fn
 from ..plot_widgets.plot_items import CurvePlotItem
 from ..misc_widgets import FColor
+
+
+class Crosshair(QGraphicsItemGroup):
+    _HALF_LENGTH = 40
+    _HALF_RADIUS = 2 * _HALF_LENGTH
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        crosshair_pen = FColor.mkPen("r", width=3)
+        circle_pen = FColor.mkPen("k", width=2)
+
+        horiz_crosshair = QGraphicsLineItem()
+        vertical_crosshair = QGraphicsLineItem()
+        circle = QGraphicsEllipseItem()
+
+        horiz_crosshair.setPen(crosshair_pen)
+        vertical_crosshair.setPen(crosshair_pen)
+        circle.setPen(circle_pen)
+
+        self.addToGroup(horiz_crosshair)
+        self.addToGroup(vertical_crosshair)
+        self.addToGroup(circle)
+
+        self.setPos(0, 0)
+        horiz_crosshair.setLine(-self._HALF_LENGTH, 0, self._HALF_LENGTH, 0)
+        vertical_crosshair.setLine(0, -self._HALF_LENGTH, 0, self._HALF_LENGTH)
+        circle.setRect(-self._HALF_RADIUS, -self._HALF_RADIUS,
+                       2 * self._HALF_RADIUS, 2 * self._HALF_RADIUS)
 
 
 class HistogramLUTItem(pg.GraphicsWidget):
