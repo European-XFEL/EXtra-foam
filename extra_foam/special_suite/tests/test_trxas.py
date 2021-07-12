@@ -24,14 +24,7 @@ logger.setLevel('INFO')
 
 
 class TestTrXasWindow(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = TrXasWindow('SCS')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = TrXasWindow
 
     @staticmethod
     def data4visualization(n_bins1=6, n_bins2=4):

@@ -27,15 +27,7 @@ logger.setLevel('INFO')
 
 
 class TestXasTimWindow(_SpecialSuiteWindowTestBase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls._win = XasTimWindow("SCS")
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = XasTimWindow
 
     @staticmethod
     def data4visualization(n_trains=10, n_pulses_per_train=10, n_bins=6):
