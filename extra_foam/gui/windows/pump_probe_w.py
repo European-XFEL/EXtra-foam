@@ -7,8 +7,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os
+import os.path as osp
+
+import numpy as np
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QSplitter
+from PyQt5.QtWidgets import QFileDialog, QFrame, QVBoxLayout, QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..ctrl_widgets import PumpProbeCtrlWidget
@@ -138,8 +142,39 @@ class PumpProbeWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.save_btn.clicked.connect(self.saveToFile)
 
     def closeEvent(self, QCloseEvent):
         self._ctrl_widget.resetAnalysisType()
         super().closeEvent(QCloseEvent)
+
+    def saveToFile(self):
+        # Get the current data
+        if not len(self._queue):
+            return
+        data = self._queue[0]
+
+        # Open file dialog
+        suffix = ".npz"
+        filepath = QFileDialog.getSaveFileName(
+            caption="Save image",
+            directory=osp.expanduser("~"),
+            filter=f"NumPy Binary File (*{suffix})")[0]
+
+        # Validate filepath
+        if not filepath:
+            return
+        if not filepath.lower().endswith(suffix):
+            filepath += suffix
+
+        # Copy reference file from tmp folder to desired destination
+        os.makedirs(osp.dirname(filepath), exist_ok=True)
+
+        # Save the data
+        pp = data.pp
+        np.savez(filepath,
+                 trainId=data.tid,
+                 position=pp.x,
+                 intensity_on=pp.y_on,
+                 intensity_off=pp.y_off,
+                 intensity_subtracted=pp.y)
