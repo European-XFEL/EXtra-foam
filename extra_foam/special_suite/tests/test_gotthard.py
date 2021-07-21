@@ -29,14 +29,7 @@ logger.setLevel('INFO')
 
 
 class TestGotthardWindow(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = GotthardWindow('MID')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = GotthardWindow
 
     @staticmethod
     def data4visualization(n_pulses=4):

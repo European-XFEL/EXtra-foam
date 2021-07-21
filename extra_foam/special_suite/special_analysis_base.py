@@ -11,7 +11,7 @@ import abc
 import functools
 from queue import Empty
 import sys
-from threading import Condition
+from threading import Condition, Event
 import time
 import traceback
 from weakref import WeakKeyDictionary
@@ -285,6 +285,7 @@ class QThreadWorker(QObject):
 
         self._input_st = queue
         self._cv_st = condition
+        self._waiting_st = Event()
 
         self._output_st = SimpleQueue(maxsize=1)
         self._running_st = False
@@ -378,6 +379,7 @@ class QThreadWorker(QObject):
 
             except Empty:
                 with self._cv_st:
+                    self._waiting_st.set()
                     self._cv_st.wait()
 
                 if not self._running_st:

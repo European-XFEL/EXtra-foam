@@ -27,6 +27,26 @@ class TestFileStreamWindow(unittest.TestCase):
         from extra_foam.gui.mediator import Mediator
 
         mediator = Mediator()
+
+        # Disconnect all slots connected to this signal. We do this to prevent
+        # any un-GC'ed objects connected to it from previous tests from
+        # executing their slots.
+        #
+        # This came up when TestMainGuiCtrl::testFomFilterCtrlWidget() executed
+        # immediately before testWithParent(). That test happens to create an
+        # entire Foam() instance, which creates a DataSourceWidget somewhere in
+        # the object tree, which connects to this signal. The slot,
+        # DataSourceWidget.updateMetaData(), ends up making a call to Redis. So
+        # when testWithParent() ran and emitted this signal, that slot was
+        # called because the DataSourceWidget hadn't been GC'ed yet. This
+        # particular test case doesn't spin up Redis, so the slot would fail and
+        # raise an exception.
+        try:
+            mediator.file_stream_initialized_sgn.disconnect()
+        except TypeError:
+            # This call fails if there are no connections
+            pass
+
         spy = QSignalSpy(mediator.file_stream_initialized_sgn)
         win = FileStreamWindow(parent=self.gui)
         widget = win._ctrl_widget
@@ -44,8 +64,9 @@ class TestFileStreamWindow(unittest.TestCase):
         self.assertEqual(1234, win._port)
 
         with patch.object(win._ctrl_widget, "close") as mocked_close:
-            win.close()
-            mocked_close.assert_called_once()
+            with patch.object(self.gui, "unregisterSatelliteWindow", create=True):
+                win.close()
+                mocked_close.assert_called_once()
 
     def testStandAlone(self):
         with self.assertRaises(ValueError):
