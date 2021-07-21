@@ -130,7 +130,7 @@ class ImageAnalysis(ImageViewF):
             # We do not use self._mask_in_modules in order to allow users
             # to save mask which has not been applied and send back by the
             # pipeline.
-            modules = geom.output_array_for_dismantle_fast(dtype=np.bool)
+            modules = geom.output_array_for_dismantle_fast(dtype=bool)
             try:
                 geom.dismantle_all_modules(image_mask, out=modules)
             except ValueError as e:

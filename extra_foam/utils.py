@@ -42,6 +42,36 @@ def profiler(info, *, process_time=False):
     return wrap
 
 
+
+class BlockTimer:
+    """A context manager for measuring the execution time of a code block
+
+    For example::
+
+        >>> with BlockTimer("foo"):
+        ...     time.sleep(1)
+        ...
+        Execution of foo: 1.001s
+    """
+    def __init__(self, label="block", enabled=True):
+        """Create the timer object
+
+        :param str label: A name to identify the block being timed.
+        :param bool enabled: Whether or not to enable this timer.
+        """
+        self._label = label
+        self._enabled = enabled
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, *_):
+        duration = time.perf_counter() - self.start
+        if self._enabled:
+            logger.info(f"Execution of {self._label}: {duration:.4f}s")
+
+
 _NOT_FOUND = object()
 
 

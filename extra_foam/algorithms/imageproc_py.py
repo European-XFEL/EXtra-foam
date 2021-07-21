@@ -7,8 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
     imageDataNanMask, maskImageDataNan, maskImageDataZero,
@@ -102,7 +100,7 @@ def mask_image_data(arr, *,
         if arr.ndim == 3:
             raise ValueError("'arr' must be 2D when 'out' is specified!")
 
-        if out.dtype != np.bool:
+        if out.dtype != bool:
             raise ValueError("Type of 'out' must be bool!")
 
         if image_mask is None:

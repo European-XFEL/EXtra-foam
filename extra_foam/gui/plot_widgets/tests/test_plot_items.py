@@ -70,7 +70,7 @@ class TestPlotItems:
         item2.setData(x, y)
         assert QRectF(1., 0., 4., 5.) == item2.boundingRect()
 
-    @pytest.mark.parametrize("dtype", [np.float, np.int64, np.uint16])
+    @pytest.mark.parametrize("dtype", [float, np.int64, np.uint16])
     def testCurvePlotItem(self, dtype):
         x = np.arange(10).astype(dtype)
         y = x * 1.5
@@ -84,7 +84,7 @@ class TestPlotItems:
 
         # x and y are numpy.arrays
         # item.setData(x, y)
-        if dtype == np.float:
+        if dtype == float:
             _display()
 
         # test different lengths
@@ -93,11 +93,11 @@ class TestPlotItems:
 
         # test log mode
         self._widget._plot_area._onLogXChanged(True)
-        if dtype == np.float:
+        if dtype == float:
             _display()
         assert item.boundingRect() == QRectF(0, 0, 1.0, 13.5)
         self._widget._plot_area._onLogYChanged(True)
-        if dtype == np.float:
+        if dtype == float:
             _display()
         assert item.boundingRect().topLeft() == QPointF(0, 0)
         assert item.boundingRect().bottomRight().x() == 1.0
@@ -107,7 +107,7 @@ class TestPlotItems:
         item.setData([], [])
         assert isinstance(item._x, np.ndarray)
         assert isinstance(item._y, np.ndarray)
-        if dtype == np.float:
+        if dtype == float:
             _display()
 
     def testBarGraphItem(self, dtype=np.float32):
@@ -199,7 +199,7 @@ class TestPlotItems:
             self._widget.addLegend()
             _display(interval=0.2)
 
-    def testScatterPlotItem(self, dtype=np.float):
+    def testScatterPlotItem(self, dtype=float):
         x = np.arange(10).astype(dtype)
         y = x * 1.5
 
@@ -212,7 +212,7 @@ class TestPlotItems:
 
         # x and y are numpy.arrays
         item.setData(x, y)
-        if dtype == np.float:
+        if dtype == float:
             _display()
 
         # test different lengths
@@ -221,7 +221,7 @@ class TestPlotItems:
 
         # test log mode
         self._widget._plot_area._onLogXChanged(True)
-        if dtype == np.float:
+        if dtype == float:
             _display()
         assert -0.2 < item.boundingRect().topLeft().x() < 0
         assert -0.22 < item.boundingRect().topLeft().y() < -0.2
@@ -229,7 +229,7 @@ class TestPlotItems:
         assert 13.5 < item.boundingRect().bottomRight().y() < 14.0
 
         self._widget._plot_area._onLogYChanged(True)
-        if dtype == np.float:
+        if dtype == float:
             _display()
         assert -0.1 < item.boundingRect().topLeft().x() < 0
         assert -0.1 < item.boundingRect().topLeft().y() < 0
@@ -240,5 +240,5 @@ class TestPlotItems:
         item.setData([], [])
         assert isinstance(item._x, np.ndarray)
         assert isinstance(item._y, np.ndarray)
-        if dtype == np.float:
+        if dtype == float:
             _display()

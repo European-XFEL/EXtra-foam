@@ -51,7 +51,7 @@ class TestPumpProbeProcessorTr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
 
     def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         shape = (3, 2)
-        image_mask = np.zeros(shape, dtype=np.bool)
+        image_mask = np.zeros(shape, dtype=bool)
         image_mask[1, 1] = True
         return self.data_with_assembled(tid, shape,
                                         image_mask=image_mask,
@@ -206,7 +206,7 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
 
     def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         shape = (3, 2)
-        image_mask = np.zeros(shape, dtype=np.bool)
+        image_mask = np.zeros(shape, dtype=bool)
         image_mask[1, 1] = True
         data, processed = self.data_with_assembled(
             tid, (4, 3, 2),

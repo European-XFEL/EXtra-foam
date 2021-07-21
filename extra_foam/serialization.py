@@ -33,8 +33,8 @@ def serialize_image(img, is_mask=False):
         raise ValueError(f"The shape of image must be (y, x)!")
 
     if is_mask:
-        if img.dtype != np.bool:
-            img = img.astype(np.bool)
+        if img.dtype != bool:
+            img = img.astype(bool)
         return struct.pack('>II', *img.shape) + np.packbits(img).tobytes()
 
     return struct.pack('>II', *img.shape) + img.tobytes()
@@ -55,7 +55,7 @@ def deserialize_image(data, dtype=_DEFAULT_DTYPE, is_mask=False):
 
     if is_mask:
         packed_bits = np.frombuffer(data, dtype=np.uint8, offset=offset)
-        img = np.unpackbits(packed_bits)[:w*h].astype(np.bool, copy=False)
+        img = np.unpackbits(packed_bits)[:w*h].astype(bool, copy=False)
         img.shape = w, h
         return img
 

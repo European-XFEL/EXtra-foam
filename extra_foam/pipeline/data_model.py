@@ -549,7 +549,7 @@ class ImageData:
 
         instance.masked_mean = instance.mean.copy()
         if image_mask is None:
-            image_mask = np.zeros(arr.shape[-2:], dtype=np.bool)
+            image_mask = np.zeros(arr.shape[-2:], dtype=bool)
         instance.image_mask = image_mask
 
         instance.mask = np.zeros_like(image_mask)

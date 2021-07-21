@@ -71,7 +71,7 @@ class _1MGeometryPyMixin:
         Match the EXtra-geom signature.
         """
         shape = extra_shape + tuple(self.assembledShape())
-        if dtype == np.bool:
+        if dtype == bool:
             return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 
@@ -102,7 +102,7 @@ class _1MGeometryPyMixin:
     def output_array_for_dismantle_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
         """Make an array with the shape of data in modules filled with nan."""
         shape = extra_shape + (self.n_modules, *self.module_shape)
-        if dtype == np.bool:
+        if dtype == bool:
             return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 
@@ -237,7 +237,7 @@ class _GeometryPyMixin:
         Match the EXtra-geom signature.
         """
         shape = extra_shape + tuple(self.assembledShape())
-        if dtype == np.bool:
+        if dtype == bool:
             return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 
@@ -267,7 +267,7 @@ class _GeometryPyMixin:
     def output_array_for_dismantle_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
         """Make an array with the shape of data in modules filled with nan."""
         shape = extra_shape + (self.nModules(), *self.module_shape)
-        if dtype == np.bool:
+        if dtype == bool:
             return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 

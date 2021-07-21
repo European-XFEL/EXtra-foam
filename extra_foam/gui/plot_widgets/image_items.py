@@ -278,7 +278,7 @@ class ImageItem(pg.GraphicsObject):
             # step >= 1
             step = np.ceil((ub - lb) / n_bins)
             # len(bins) >= 2
-            bins = np.arange(lb, ub + 0.01 * step, step, dtype=np.int)
+            bins = np.arange(lb, ub + 0.01 * step, step, dtype=int)
         else:
             # for float data, let numpy select the bins.
             bins = np.linspace(lb, ub, n_bins)
