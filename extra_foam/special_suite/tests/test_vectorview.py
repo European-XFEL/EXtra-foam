@@ -21,14 +21,7 @@ logger.setLevel('INFO')
 
 
 class TestCamViewWindow(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = VectorViewWindow('SCS')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = VectorViewWindow
 
     @staticmethod
     def data4visualization():

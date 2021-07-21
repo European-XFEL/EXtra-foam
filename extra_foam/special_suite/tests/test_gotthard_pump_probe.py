@@ -26,14 +26,7 @@ logger.setLevel('INFO')
 
 
 class TestGotthardPpWindow(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = GotthardPumpProbeWindow('SCS')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = GotthardPumpProbeWindow
 
     @staticmethod
     def data4visualization(n_pulses=5, n_on=2, n_off=2):

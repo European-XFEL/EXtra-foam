@@ -257,7 +257,7 @@ class TestImageData(unittest.TestCase):
 
         imgs = np.ones((3, 2, 3))
         imgs[:, 0, :] = 2
-        image_mask = np.zeros((2, 3), dtype=np.bool)
+        image_mask = np.zeros((2, 3), dtype=bool)
         image_mask[::2, ::2] = True
         image_data = ImageData.from_array(imgs,
                                           image_mask=image_mask,

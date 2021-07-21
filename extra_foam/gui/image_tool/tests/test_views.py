@@ -114,7 +114,7 @@ class TestViews(_TestDataMixin, unittest.TestCase):
                 QTest.mouseClick(ctrl_widget.detect_btn, Qt.LeftButton)
 
                 # non-empty data
-                image_data = np.random.randn(2, 2).astype(np.float)
+                image_data = np.random.randn(2, 2).astype(float)
                 data.image.transform_type = ImageTransformType.CONCENTRIC_RINGS
                 data.image.masked_mean = image_data
                 data.image.transformed = None

@@ -24,14 +24,7 @@ logger.setLevel('INFO')
 
 
 class TestMultiCamViewWindow(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = MultiCamViewWindow('SCS')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = MultiCamViewWindow
 
     @staticmethod
     def data4visualization():

@@ -11,6 +11,20 @@ class _SpecialSuiteWindowTestBase(unittest.TestCase):
     def data4visualization():
         raise NotImplementedError
 
+    @classmethod
+    def setUpClass(cls):
+        cls._win = cls._window_type("TEST")
+        # We need to wait until the worker is waiting for notifications before
+        # continuing, otherwise a race condition is possible that would cause
+        # the worker to miss the notification to stop, which would cause the
+        # tests to hang.
+        cls._win._worker_st._waiting_st.wait()
+
+    @classmethod
+    def tearDownClass(cls):
+        # explicitly close the MainGUI to avoid error in GuiLogger
+        cls._win.close()
+
     def _check_update_plots(self):
         win = self._win
         worker = win._worker_st

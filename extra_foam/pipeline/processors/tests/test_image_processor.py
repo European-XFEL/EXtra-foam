@@ -185,7 +185,7 @@ class _ImageProcessorTestBase(_TestDataMixin, unittest.TestCase):
             info.reset_mock()
 
         with patch.object(proc._ref_sub, "update",
-                          return_value=(True, np.zeros((2, 2), dtype=np.bool))):
+                          return_value=(True, np.zeros((2, 2), dtype=bool))):
             proc.process(data)
             self.assertEqual(_IMAGE_DTYPE, proc._reference.dtype)
             np.testing.assert_array_equal(np.zeros((2, 2)), proc._reference)
@@ -221,7 +221,7 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
         self._proc._mask_sub.update = MagicMock(
-            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=bool) if x is None else x))
 
         self._proc._threshold_mask = (-100, 100)
 
@@ -272,7 +272,7 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
 
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
-        proc._image_mask = np.ones((2, 2), dtype=np.bool)
+        proc._image_mask = np.ones((2, 2), dtype=bool)
 
         data, _ = self.data_with_assembled(1, (2, 2))
         proc.process(data)
@@ -283,7 +283,7 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
             proc.process(data)
 
         # image mask remains the same, one needs to clear it by hand
-        np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
+        np.testing.assert_array_equal(np.ones((2, 2), dtype=bool), proc._image_mask)
         proc._image_mask = None
 
 
@@ -304,7 +304,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
         self._proc._mask_sub.update = MagicMock(
-            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=bool) if x is None else x))
 
         del self._proc._dark
         del self._proc._raw
@@ -554,7 +554,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
 
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
-        proc._image_mask = np.ones((2, 2), dtype=np.bool)
+        proc._image_mask = np.ones((2, 2), dtype=bool)
 
         data, _ = self.data_with_assembled(1, (4, 2, 2))
         proc.process(data)
@@ -565,7 +565,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
             proc.process(data)
 
         # image mask remains the same, one needs to clear it by hand
-        np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
+        np.testing.assert_array_equal(np.ones((2, 2), dtype=bool), proc._image_mask)
         proc._image_mask = None
 
         # Number of pulses per train changes, but no exception will be raised

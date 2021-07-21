@@ -20,14 +20,7 @@ logger.setLevel('INFO')
 
 
 class TestModuleScan(_SpecialSuiteWindowTestBase):
-    @classmethod
-    def setUpClass(cls):
-        cls._win = ModuleScanWindow('DET')
-
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
+    _window_type = ModuleScanWindow
 
     def testWindow(self):
         win = self._win
