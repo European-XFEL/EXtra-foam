@@ -4,7 +4,7 @@
 # All rights reserved.                                            #
 ###################################################################
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.17)
 project(extra-foam LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -32,56 +32,10 @@ OPTION(BUILD_FOAM_PYTHON "Build FOAM Python bindings" OFF)
 # dependencies
 # ============
 
-set(thirdparty_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/thirdparty)
-
-function(setup_external_project NAME)
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${thirdparty_BINARY_DIR}/${NAME}-stage
-    )
-    if(result)
-        message(FATAL_ERROR "CMake step for ${NAME} failed: ${result}")
-    endif()
-
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} --build .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${thirdparty_BINARY_DIR}/${NAME}-stage
-    )
-    if(result)
-        message(FATAL_ERROR "Build step for ${NAME} failed: ${result}")
-    endif()
-endfunction()
-
 # tbb
 if(FOAM_USE_TBB OR XTENSOR_USE_TBB)
-    set(TBB_REQUIRED_VERSION 2020.1)
-    string(REPLACE "." "_U" TBB_REQUIRED_VERSION_STR ${TBB_REQUIRED_VERSION})
-
-    add_compile_definitions(TBB_SUPPRESS_DEPRECATED_MESSAGES)
-
-    find_package(TBB QUIET)
-    if(TBB_FOUND AND ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} VERSION_EQUAL TBB_REQUIRED_VERSION)
-        set(TBB_LIBRARY ${TBB_LIBRARIES_RELEASE})
-    else()
-        message(STATUS "Downloading TBB ${TBB_REQUIRED_VERSION_STR}")
-
-        configure_file(cmake/downloadTbb.cmake.in ${thirdparty_BINARY_DIR}/tbb-stage/CMakeLists.txt)
-        setup_external_project( tbb )
-
-        include(${thirdparty_BINARY_DIR}/tbb-src/cmake/TBBBuild.cmake)
-        tbb_build(TBB_ROOT ${thirdparty_BINARY_DIR}/tbb-src
-                  CONFIG_DIR TBB_DIR
-                  MAKE_ARGS tbb_build_dir=${thirdparty_BINARY_DIR}/tbb-build
-                            tbb_build_prefix=tbb_cmake_build)
-        find_package(TBB ${TBB_REQUIRED_VERSION} EXACT CONFIG REQUIRED COMPONENTS tbb tbbmalloc)
-
-        get_target_property(TBB_INCLUDE_DIRS TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
-        get_target_property(TBB_LIBRARY TBB::tbb IMPORTED_LOCATION_RELEASE)
-    endif()
-
-    message(STATUS "TBB FOUND ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR}: ${TBB_INCLUDE_DIRS}, ${TBB_LIBRARY}")
+    find_package(TBB 2021 REQUIRED)
+    message(STATUS "TBB FOUND ${TBB_VERSION}")
 
     if(FOAM_USE_TBB)
         message(STATUS "Build extra-foam with intel TBB")
@@ -91,8 +45,7 @@ endif()
 
 # xsimd
 if(FOAM_USE_XSIMD OR XTENSOR_USE_XSIMD)
-    add_subdirectory(thirdparty/xsimd)
-    set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
+    find_package(xsimd)
 
     if(FOAM_USE_XSIMD)
         message(STATUS "Build extra-foam with XSIMD")
@@ -101,20 +54,15 @@ if(FOAM_USE_XSIMD OR XTENSOR_USE_XSIMD)
 
 endif()
 
-# xtl
-add_subdirectory(thirdparty/xtl)
-set(xtl_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtl)
-
 # xtensor
-add_subdirectory(thirdparty/xtensor)
-set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
+find_package(xtensor REQUIRED)
 
 # xtensor-blas
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 message(STATUS "BLAS VENDOR:    " ${BLA_VENDOR})
 message(STATUS "BLAS LIBRARIES: " ${BLAS_LIBRARIES})
-add_subdirectory(thirdparty/xtensor-blas)
+find_package(xtensor-blas)
 
 # EXtra-foam
 set(FOAM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/extra_foam/include)
@@ -205,14 +153,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
 # ============
 
 if(BUILD_FOAM_PYTHON)
-    # pybind11
-    set(PYBIND11_CPP_STANDARD -std=c++14)
-    add_subdirectory(thirdparty/pybind11)
-    find_package(pybind11 REQUIRED)
-
-    # xtensor-python
-    add_subdirectory(thirdparty/xtensor-python)
-
     # extra-foam Python
     add_subdirectory(src/extra_foam)
 endif()

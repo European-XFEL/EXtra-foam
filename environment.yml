@@ -1,8 +1,19 @@
+name: extra_foam
+
 channels:
   - conda-forge
   - anaconda
   - defaults
+
 dependencies:
-  - cmake>=3.18
+  - gxx_linux-64>=7
+  - libstdcxx-ng
+  - cmake>=3.17
   - numpy>=1.19
-  - tbb-devel<2021.1
+  - tbb-devel>=2021
+  - tbb>=2021
+  - xtensor
+  - xtensor-python
+  - xtensor-blas
+  - xsimd
+  - pybind11
