@@ -77,20 +77,22 @@ struct IsModulesVector<std::vector<xt::xtensor<T, 3, L>>> : std::true_type {};
 template<typename E, template<typename> class C>
 using EnableIf = std::enable_if_t<C<E>::value, bool>;
 
+template<typename E, typename T = void>
+using ValueTypeHelper = std::conditional_t<std::is_same_v<T, void>,
+                                           typename std::decay_t<E>::value_type,
+                                           T>;
+
+template<typename E, typename T, int... axes>
+using ReducedTypeHelper = decltype(xt::eval(xt::cast<ValueTypeHelper<E, T>>(xt::sum(std::declval<E>(), {axes...}))));
+
 template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImage> = false>
-using ReducedVectorType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
-                                                                       typename std::decay_t<E>::value_type,
-                                                                       T>>(std::declval<E>(), {0})));
+using ReducedVectorType = ReducedTypeHelper<E, T, 0>;
 
 template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImageArray> = false>
-using ReducedVectorTypeFromArray = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
-                                                                                typename std::decay_t<E>::value_type,
-                                                                                T>>(std::declval<E>(), {0, 1})));
+using ReducedVectorTypeFromArray = ReducedTypeHelper<E, T, 0, 1>;
 
 template<typename E, typename T = void, EnableIf<std::decay_t<E>, IsImageArray> = false>
-using ReducedImageType = decltype(xt::eval(xt::sum<std::conditional_t<std::is_same<T, void>::value,
-                                                                      typename std::decay_t<E>::value_type,
-                                                                      T>>(std::declval<E>(), {0})));
+using ReducedImageType = ReducedTypeHelper<E, T, 0>;
 
 } // foam
 
