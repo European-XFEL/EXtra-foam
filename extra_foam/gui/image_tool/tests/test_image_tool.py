@@ -147,7 +147,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             self.assertIs(ctrl._roi, roi)
 
             QTest.mouseClick(ctrl._activate_cb, Qt.LeftButton,
-                             pos=QPoint(2, ctrl._activate_cb.height()/2))
+                             pos=QPoint(2, int(ctrl._activate_cb.height() / 2)))
             self.assertTrue(ctrl._activate_cb.isChecked())
             proc.update()
             w_gt, h_gt = int(ctrl._width_le.text()), int(ctrl._height_le.text())
@@ -178,7 +178,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
             # lock ROI ctrl
             QTest.mouseClick(ctrl._lock_cb, Qt.LeftButton,
-                             pos=QPoint(2, ctrl._lock_cb.height()/2))
+                             pos=QPoint(2, int(ctrl._lock_cb.height() / 2)))
             self.assertTrue(ctrl._activate_cb.isChecked())
             self.assertTrue(ctrl._lock_cb.isChecked())
             self.assertFalse(ctrl._width_le.isEnabled())
@@ -188,7 +188,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
             # deactivate ROI ctrl
             QTest.mouseClick(ctrl._activate_cb, Qt.LeftButton,
-                             pos=QPoint(2, ctrl._activate_cb.height()/2))
+                             pos=QPoint(2, int(ctrl._activate_cb.height() / 2)))
             self.assertFalse(ctrl._activate_cb.isChecked())
             self.assertTrue(ctrl._lock_cb.isChecked())
             self.assertFalse(ctrl._width_le.isEnabled())

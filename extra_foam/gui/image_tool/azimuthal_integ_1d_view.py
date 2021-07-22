@@ -92,7 +92,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         view_splitter.setChildrenCollapsible(False)
         view_splitter.addWidget(view_tab)
         view_splitter.addWidget(self._azimuthal_integ_1d_curve)
-        view_splitter.setSizes([1e6, 1e6])
+        view_splitter.setSizes([int(1e6), int(1e6)])
 
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)

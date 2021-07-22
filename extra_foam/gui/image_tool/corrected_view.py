@@ -129,7 +129,7 @@ class CorrectedView(_AbstractImageToolView):
         view_splitter.setChildrenCollapsible(False)
         view_splitter.addWidget(self._corrected)
         view_splitter.addWidget(subview_splitter)
-        view_splitter.setSizes([1e6, 1e6])
+        view_splitter.setSizes([int(1e6), int(1e6)])
 
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)

@@ -319,7 +319,7 @@ class TestPlotWindows(unittest.TestCase):
         # change abs_difference
         pp_proc._reset = False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
-                         pos=QPoint(2, widget._abs_difference_cb.height()/2))
+                         pos=QPoint(2, int(widget._abs_difference_cb.height() / 2)))
         pp_proc.update()
         self.assertFalse(pp_proc._abs_difference)
         self.assertTrue(pp_proc._reset)

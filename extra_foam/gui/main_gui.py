@@ -277,7 +277,7 @@ class MainGUI(QMainWindow):
 
         self._cw.addWidget(self._left_cw_container)
         self._cw.addWidget(self._right_cw_container)
-        self._cw.setSizes([self._WIDTH * 0.6, self._WIDTH * 0.4])
+        self._cw.setSizes([int(self._WIDTH * 0.6), int(self._WIDTH * 0.4)])
 
     def initLeftUI(self):
         self._left_cw.setTabPosition(QTabWidget.TabPosition.West)

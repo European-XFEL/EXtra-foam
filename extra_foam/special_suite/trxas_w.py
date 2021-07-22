@@ -240,7 +240,7 @@ class TrXasWindow(_SpecialAnalysisBase):
         right_panel.addWidget(self._a13_a23)
         right_panel.addWidget(self._a21)
         right_panel.addWidget(self._a21_heatmap)
-        right_panel.setSizes([self._TOTAL_H / 3.0] * 3)
+        right_panel.setSizes([int(self._TOTAL_H / 3)] * 3)
 
         cw = self.centralWidget()
         cw.addWidget(middle_panel)

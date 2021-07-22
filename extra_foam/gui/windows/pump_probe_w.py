@@ -114,7 +114,7 @@ class PumpProbeWindow(_AbstractPlotWindow):
         self.updateMetaData()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
-        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
+        self.setMinimumSize(int(0.6 * self._TOTAL_W), int(0.6 * self._TOTAL_H))
 
         self.update()
 

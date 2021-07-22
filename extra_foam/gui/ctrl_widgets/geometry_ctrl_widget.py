@@ -161,8 +161,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
             header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         header_height = table.horizontalHeader().height()
-        table.setMinimumHeight(header_height * (n_row + 1.5))
-        table.setMaximumHeight(header_height * (n_row + 2.0))
+        table.setMinimumHeight(int(header_height * (n_row + 1.5)))
+        table.setMaximumHeight(int(header_height * (n_row + 2.0)))
 
     def _setGeometryFile(self):
         filepath = QFileDialog.getOpenFileName()[0]

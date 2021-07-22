@@ -117,7 +117,7 @@ class _FileStreamCtrlWidget(QWidget):
 
         self._gui_logger = GuiLogger(parent=self)
         self._gui_logger.widget.setFixedHeight(
-            QFontMetrics(QApplication.font()).lineSpacing() * 1.8)
+            int(QFontMetrics(QApplication.font()).lineSpacing() * 1.8))
         self._gui_logger.widget.setMaximumBlockCount(1)
         logger.addHandler(self._gui_logger)
 

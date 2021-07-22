@@ -87,7 +87,7 @@ class TestXasTimXmcdWindow(_SpecialSuiteWindowTestBase):
 
         # only allow to display the spectra of one channel
         for i, widget in enumerate(ctrl_widget.spectra_displayed.buttons()):
-            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, widget.height()/2))
+            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
             self.assertEqual(i, win._pn_spectra._displayed)
             self.assertEqual(i, win._xas_xmcd_spectra._displayed)
 

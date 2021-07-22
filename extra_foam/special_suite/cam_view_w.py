@@ -138,11 +138,11 @@ class CamViewWindow(_SpecialAnalysisBase):
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._view)
         right_panel.addWidget(self._roi_hist)
-        right_panel.setSizes([3 * self._TOTAL_H / 4, self._TOTAL_H / 4])
+        right_panel.setSizes([int(3 * self._TOTAL_H / 4), int(self._TOTAL_H / 4)])
 
         cw = self.centralWidget()
         cw.addWidget(right_panel)
-        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw.setSizes([int(self._TOTAL_W / 4), int(3 * self._TOTAL_W / 4)])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
