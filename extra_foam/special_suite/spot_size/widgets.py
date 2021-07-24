@@ -694,9 +694,9 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         # control.pulse.returnPressed.emit()
 
         # Analysis type
-        analysis_type_signal = control.analysis_type.currentTextChanged
-        analysis_type_signal.connect(self.onAnalysisTypeChanged)
-        analysis_type_signal.emit(control.analysis_type.currentText())
+        # analysis_type_signal = control.analysis_type.currentTextChanged
+        # analysis_type_signal.connect(self.onAnalysisTypeChanged)
+        # analysis_type_signal.emit(control.analysis_type.currentText())
 
         # Axis
         axis_signal = control.axis.currentTextChanged
