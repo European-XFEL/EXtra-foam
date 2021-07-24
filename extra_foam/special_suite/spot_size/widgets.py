@@ -167,7 +167,7 @@ class ScatterPlot(ScaledPlot):
 class ScanPlot(ScatterPlot):
 
     header = "Bender Scan"
-    x_label = "q - q_r"
+    x_label = "Motor Position"
     y_label = "FWHM"
 
     def updateF(self, data):
