@@ -378,7 +378,7 @@ class AvgWidthPulsePlot(PulsePlot):
 # Control
 
 AXES = ("x", "y")
-DETECTOR = "SCS_DET_DSSC1M-1/DET/1CH0:xtdf"
+DETECTOR = "SCS_CDIDET_MTE3/CAM/CAMERA:output"
 
 
 class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
@@ -445,7 +445,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         # group widgets for run settings
         run_layout = QFormLayout()
-        run_layout.addRow("Pulse slice:", self.pulse_slice)
+        # run_layout.addRow("Pulse slice:", self.pulse_slice)
         run_layout.addRow("Axis:", self.axis)
         run_group = QGroupBox("Run settings")
         run_group.setLayout(run_layout)
@@ -480,7 +480,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.setSpacing(15)
         layout.addWidget(self.init_group)
         layout.addWidget(run_group)
-        layout.addWidget(scan_group)
+        # layout.addWidget(scan_group)
         layout.addWidget(jitter_group)
         layout.addWidget(self.calib_group)
         layout.addStretch(1)
@@ -588,8 +588,8 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         self._std_pos_hist = StdPositionHistogram(parent=self)
         self._std_pos_train = StdPositionTrainPlot(parent=self)
 
-        self._avg_pos_pulse = AvgPositionPulsePlot(parent=self)
-        self._avg_width_pulse = AvgWidthPulsePlot(parent=self)
+        # self._avg_pos_pulse = AvgPositionPulsePlot(parent=self)
+        # self._avg_width_pulse = AvgWidthPulsePlot(parent=self)
 
         self.initUI()
         self.initConnections()
@@ -650,8 +650,8 @@ class SpotSizeGrating(_SpecialAnalysisBase):
 
         layout.addWidget(pos_container, 0, 0, 1, 2)
         layout.addWidget(std_container, 1, 0, 1, 2)
-        layout.addWidget(self._avg_pos_pulse, 2, 0)
-        layout.addWidget(self._avg_width_pulse, 2, 1)
+        # layout.addWidget(self._avg_pos_pulse, 2, 0)
+        # layout.addWidget(self._avg_width_pulse, 2, 1)
 
         # Create a container widget and add the layout
         container = QWidget()
@@ -720,7 +720,7 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         control.calib_group.toggled.connect(self.onCalibToggled)
 
         # TODO: REMOVEME
-        control.axis.setCurrentIndex(1)
+        # control.axis.setCurrentIndex(1)
         control.subtract_dark_checkbox.toggle()
 
     # ----------------------------------------------------------------------

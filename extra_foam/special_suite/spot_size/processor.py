@@ -57,7 +57,7 @@ class SpotSizeProcessor(QThreadWorker):
         super().__init__(*args, **kwargs)
 
         self._detectors = []
-        self._ppt = "image.data"
+        self._ppt = "data.image.data"
         self._device = ''
         self._slice = slice(None, None)
 
@@ -143,21 +143,23 @@ class SpotSizeProcessor(QThreadWorker):
         if len(self._detectors) > 1:
             train_images = self._assemble(data)
         else:
+            # array = data[f"{self._detectors[-1]} {self._ppt}"]
+            # train_images = array.squeeze(axis=1).astype(np.float32)
             array = data[f"{self._detectors[-1]} {self._ppt}"]
-            train_images = array.squeeze(axis=1).astype(np.float32)
+            train_images = array.reshape(1, *array.shape).astype(np.float32)
 
         # 2. Subtract dark image. Has to be done before pulse slicing
         if self._subtract_dark:
             correct_image_data(train_images, offset=self._dark,
                                intradark=True, detector="DSSC")
 
-        # 3. Slice
-        train_images = train_images[self._slice]
-        # Check if number of pulses have been changed
-        num_pulses = len(train_images)
-        if num_pulses != self.trains.num_pulses:
-            self.trains.num_pulses = num_pulses
-            self.trains.reset()
+        # # 3. Slice
+        # train_images = train_images[self._slice]
+        # # Check if number of pulses have been changed
+        # num_pulses = len(train_images)
+        # if num_pulses != self.trains.num_pulses:
+        #     self.trains.num_pulses = num_pulses
+        #     self.trains.reset()
 
         # 3. Calculate pulse-resolved analysis
         pulses = []
