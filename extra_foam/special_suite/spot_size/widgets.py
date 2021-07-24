@@ -690,8 +690,8 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         control.pulse_slice.returnPressed.emit()
 
         # Pulse
-        control.pulse.value_changed_sgn.connect(self.onPulseNumChanged)
-        control.pulse.returnPressed.emit()
+        # control.pulse.value_changed_sgn.connect(self.onPulseNumChanged)
+        # control.pulse.returnPressed.emit()
 
         # Analysis type
         analysis_type_signal = control.analysis_type.currentTextChanged
