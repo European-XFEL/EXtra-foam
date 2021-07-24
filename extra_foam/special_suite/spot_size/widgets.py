@@ -721,7 +721,7 @@ class SpotSizeGrating(_SpecialAnalysisBase):
 
         # TODO: REMOVEME
         # control.axis.setCurrentIndex(1)
-        control.subtract_dark_checkbox.toggle()
+        # control.subtract_dark_checkbox.toggle()
 
     # ----------------------------------------------------------------------
     # Slots

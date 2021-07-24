@@ -67,7 +67,7 @@ class _SharedCtrlWidgetS(QFrame):
         self._with_dark = with_dark
         self._with_levels = with_levels
 
-        self._hostname_le = SmartLineEdit("10.253.0.40")
+        self._hostname_le = SmartLineEdit("10.253.0.140")
         self._hostname_le.setMinimumWidth(100)
         self._port_le = SmartLineEdit("45010")
         self._port_le.setValidator(QIntValidator(0, 65535))
