@@ -78,7 +78,7 @@ class SpotSizeProcessor(QThreadWorker):
 
         # Variables
         self._pulse_num = 0
-        self._analysis_type = None
+        self._analysis_type = "Train"
         self._axis = 0
         self._result = None
 
