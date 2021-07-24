@@ -57,8 +57,9 @@ class SpotSizeProcessor(QThreadWorker):
         super().__init__(*args, **kwargs)
 
         self._detectors = []
-        self._ppt = "data.image.data"
-        self._device = ''
+        self._detector_prop = "data.image.data"
+        self._motor_path = ''
+        self._motor_prop = ''
         self._slice = slice(None, None)
 
         # Load geometry
@@ -92,7 +93,7 @@ class SpotSizeProcessor(QThreadWorker):
     def onSubtractDark(self, subtract):
         self._subtract_dark = subtract
 
-    def onDetectorChanged(self, detector: str):
+    def onDetectorPathChanged(self, detector: str):
         detectors = [detector]
         if '*' in detector:
             detector = detector.replace('*', '{}')
@@ -100,8 +101,14 @@ class SpotSizeProcessor(QThreadWorker):
 
         self._detectors = detectors
 
-    def onDeviceChanged(self, device: str):
-        self._device = device
+    def onDetectorPropertyChanged(self, prop: str):
+        self._detector_prop = prop
+
+    def onMotorPathChanged(self, device: str):
+        self._motor_path = device
+
+    def onMotorPropertyChanged(self, prop: str):
+        self._motor_prop = prop
 
     def onPulseSliceChanged(self, pulse_slice: slice):
         self._slice = pulse_slice
@@ -126,11 +133,11 @@ class SpotSizeProcessor(QThreadWorker):
         sources = []
 
         # Add detectors
-        sources += [(detector, self._ppt, 1) for detector in self._detectors]
+        sources += [(detector, self._detector_prop, 1) for detector in self._detectors]
 
         # Add motor
-        if self._device:
-            sources += [(self._device, "actualPosition", 1)]
+        if self._motor_path:
+            sources += [(self._motor_path, self._motor_prop, 1)]
         return sources
 
     @profiler("Spot size grating Processor")
@@ -145,7 +152,7 @@ class SpotSizeProcessor(QThreadWorker):
         else:
             # array = data[f"{self._detectors[-1]} {self._ppt}"]
             # train_images = array.squeeze(axis=1).astype(np.float32)
-            array = data[f"{self._detectors[-1]} {self._ppt}"]
+            array = data[f"{self._detectors[-1]} {self._detector_prop}"]
             train_images = array.reshape(1, *array.shape).astype(np.float32)
 
         # 2. Subtract dark image. Has to be done before pulse slicing
@@ -177,8 +184,9 @@ class SpotSizeProcessor(QThreadWorker):
             _, view_data = self._process_image(image)
 
         # 5. Get other data
-        device = Device(name=self._device,
-                        value=data[f"{self._device} actualPosition"])
+        device = Device(name=self._motor_path,
+                        value=data[f"{self._motor_path}"
+                                   f" {self._motor_prop}"])
 
         # 6. Record
         train_data = Train(trainId=self.getTrainId(meta),
@@ -208,14 +216,14 @@ class SpotSizeProcessor(QThreadWorker):
         # 0. Get and rearrange the detector data to train dict
         train = {}
         for detector in self._detectors:
-            image = data[f"{detector} {self._ppt}"]
-            train[detector] = {self._ppt: image}
+            image = data[f"{detector} {self._detector_prop}"]
+            train[detector] = {self._detector_prop: image}
         n_pulses = image.shape[0]
 
         # 1. Get virtual data as template
         virtual = self._virtual_array
         if virtual is None or virtual.shape[0] != n_pulses:
-            self._virtual_array = virtual = get_modules_file(train, self._ppt)
+            self._virtual_array = virtual = get_modules_file(train, self._detector_prop)
 
         # 2. (Re)Create assembled array
         assembled = self._assembled_array

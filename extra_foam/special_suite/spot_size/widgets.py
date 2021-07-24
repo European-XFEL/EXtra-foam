@@ -12,9 +12,9 @@ from string import Formatter
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QColor, QIntValidator, QTransform
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QDockWidget, QFileDialog, QFormLayout, QGridLayout,
-    QGroupBox, QHBoxLayout, QLabel, QMainWindow, QPushButton, QStyle, QTabBar,
-    QVBoxLayout, QWidget)
+    QCheckBox, QComboBox, QDockWidget, QFileDialog, QFormLayout, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QLabel, QMainWindow, QPushButton,
+    QStyle, QTabBar, QVBoxLayout, QWidget)
 
 from extra_foam.gui import pyqtgraph as pg
 from extra_foam.gui.ctrl_widgets import (
@@ -378,7 +378,15 @@ class AvgWidthPulsePlot(PulsePlot):
 # Control
 
 AXES = ("x", "y")
-DETECTOR = "SCS_CDIDET_MTE3/CAM/CAMERA:output"
+DETECTOR = ("SCS_CDIDET_MTE3/CAM/CAMERA:output", "data.image.data")
+MOTOR = ("SCS_KBS_HFM/MOTOR/BENDERB", "actualPosition")
+
+
+def create_line():
+    line = QFrame()
+    line.setFrameShape(QFrame.HLine)
+    line.setFrameShadow(QFrame.Sunken)
+    return line
 
 
 class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
@@ -387,8 +395,16 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.detector = SmartStringLineEdit(DETECTOR)
-        self.motor = SmartStringLineEdit("SCS_KBS_HFM/MOTOR/BENDERB")
+        detector, prop = DETECTOR
+        self.detector_path = SmartStringLineEdit(detector)
+        self.detector_path.setPlaceholderText(detector)
+        self.detector_property = SmartStringLineEdit(prop)
+        self.detector_property.setPlaceholderText(prop)
+        motor, prop = MOTOR
+        self.motor_path = SmartStringLineEdit(motor)
+        self.motor_path.setPlaceholderText(motor)
+        self.motor_property = SmartStringLineEdit(prop)
+        self.motor_property.setPlaceholderText(prop)
         self.load_dark_run_button = QPushButton("Load dark run")
         self.subtract_dark_checkbox = QCheckBox("Subtract")
         self.init_group = QGroupBox("Initialize run")
@@ -438,8 +454,12 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
         # group widgets for run initialization
         init_layout = QFormLayout()
-        init_layout.addRow("Detector:", self.detector)
-        init_layout.addRow("Motor:", self.motor)
+        init_layout.addRow("Detector:", self.detector_path)
+        init_layout.addRow("", self.detector_property)
+        init_layout.addRow(create_line())
+        init_layout.addRow("Motor:", self.motor_path)
+        init_layout.addRow("", self.motor_property)
+        init_layout.addRow(create_line())
         init_layout.addRow(dark_widget)
         self.init_group.setLayout(init_layout)
 
@@ -678,12 +698,19 @@ class SpotSizeGrating(_SpecialAnalysisBase):
             self.onRoiGeometryChange)
 
         # Detector
-        control.detector.value_changed_sgn.connect(self.onDetectorChanged)
-        control.detector.returnPressed.emit()
+        det_path = control.detector_path
+        det_path.value_changed_sgn.connect(self.onDetectorPathChanged)
+        det_path.returnPressed.emit()
+        det_prop = control.detector_property
+        det_prop.value_changed_sgn.connect(self.onDetectorPropertyChanged)
+        det_prop.returnPressed.emit()
 
         # Motor
-        control.motor.value_changed_sgn.connect(self.onDeviceChanged)
-        control.motor.returnPressed.emit()
+        control.motor_path.value_changed_sgn.connect(self.onMotorPathChanged)
+        control.motor_path.returnPressed.emit()
+        motor_prop = control.motor_property
+        motor_prop.value_changed_sgn.connect(self.onMotorPropertyChanged)
+        motor_prop.returnPressed.emit()
 
         # Pulse slice
         control.pulse_slice.value_changed_sgn.connect(self.onPulseSliceChanged)
@@ -727,13 +754,23 @@ class SpotSizeGrating(_SpecialAnalysisBase):
     # Slots
 
     @pyqtSlot(object)
-    def onDetectorChanged(self, detector):
-        self._worker_st.onDetectorChanged(detector)
+    def onDetectorPathChanged(self, detector):
+        self._worker_st.onDetectorPathChanged(detector)
         self._onResetST()
 
     @pyqtSlot(object)
-    def onDeviceChanged(self, device):
-        self._worker_st.onDeviceChanged(device)
+    def onDetectorPropertyChanged(self, prop):
+        self._worker_st.onDetectorPropertyChanged(prop)
+        self._onResetST()
+
+    @pyqtSlot(object)
+    def onMotorPathChanged(self, device):
+        self._worker_st.onMotorPathChanged(device)
+        self._onResetST()
+
+    @pyqtSlot(object)
+    def onMotorPropertyChanged(self, prop):
+        self._worker_st.onMotorPropertyChanged(prop)
         self._onResetST()
 
     @pyqtSlot()
