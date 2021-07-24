@@ -488,8 +488,8 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initConnections(self):
         """Override."""
-        disable_pulse_num = lambda x: self.pulse.setDisabled(not bool(x))
-        self.analysis_type.currentIndexChanged.connect(disable_pulse_num)
+        # disable_pulse_num = lambda x: self.pulse.setDisabled(not bool(x))
+        # self.analysis_type.currentIndexChanged.connect(disable_pulse_num)
 
         self.calib_group.toggled.connect(self.enable_calibration)
 
