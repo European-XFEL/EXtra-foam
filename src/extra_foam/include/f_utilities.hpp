@@ -13,9 +13,15 @@
 
 #include <string>
 #include <algorithm>
+#include <functional>
 
 #include "xtensor/xadapt.hpp"
 #include "xtensor/xio.hpp"
+
+#if defined(FOAM_USE_TBB)
+#include "tbb/blocked_range2d.h"
+#include "tbb/blocked_range3d.h"
+#endif
 
 
 namespace foam
@@ -52,6 +58,49 @@ inline void checkEven(T a, std::string&& header)
     ss << header << ": " << a;
     throw std::invalid_argument(ss.str());
   }
+}
+
+template<typename shape_t>
+inline void applyFunctor2d(const std::array<shape_t, 2>& shape, std::function<void(size_t, size_t)> functor)
+{
+#if defined(FOAM_USE_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<size_t>(0, shape[0], 0, shape[1]),
+    [&functor] (const tbb::blocked_range2d<size_t> &block) {
+      for (size_t i = block.rows().begin(); i != block.rows().end(); ++i) {
+        for (size_t j = block.cols().begin(); j != block.cols().end(); ++j) {
+#else
+      for (size_t i = 0; i < shape[0]; ++i) {
+        for (size_t j = 0; j < shape[1]; ++j) {
+#endif
+          functor(i, j);
+        }
+      }
+#if defined(FOAM_USE_TBB)
+    });
+#endif
+}
+
+template<typename shape_t>
+inline void applyFunctor3d(const std::array<shape_t, 3>& shape, std::function<void(size_t, size_t, size_t)> functor)
+{
+#if defined(FOAM_USE_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<size_t>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&functor] (const tbb::blocked_range3d<size_t> &block) {
+      for (size_t i = block.pages().begin(); i != block.pages().end(); ++i) {
+        for (size_t j = block.rows().begin(); j != block.rows().end(); ++j) {
+          for (size_t k = block.cols().begin(); k != block.cols().end(); ++k) {
+#else
+      for (size_t i = 0; i < shape[0]; ++i) {
+        for (size_t j = 0; j < shape[1]; ++j) {
+          for (size_t k = 0; k < shape[2]; ++k) {
+#endif
+            functor(i, j, k);
+          }
+        }
+      }
+#if defined(FOAM_USE_TBB)
+    });
+#endif
 }
 
 } //utils
