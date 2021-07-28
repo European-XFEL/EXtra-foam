@@ -9,7 +9,7 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel
@@ -47,6 +47,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         "ROI": Normalizer.ROI,
     })
     _available_norms_inv = invert_dict(_available_norms)
+
+    cx_changed_sgn = pyqtSignal(float)
+    cy_changed_sgn = pyqtSignal(float)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -193,6 +196,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             lambda x: mediator.onAiIntegCenterXChange(float(x)))
         self._cy_le.value_changed_sgn.connect(
             lambda x: mediator.onAiIntegCenterYChange(float(x)))
+        self._cx_le.value_changed_sgn.connect(lambda x: self.cx_changed_sgn.emit(float(x)))
+        self._cy_le.value_changed_sgn.connect(lambda y: self.cy_changed_sgn.emit(float(y)))
 
         self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)

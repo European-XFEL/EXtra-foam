@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
-from ..plot_widgets import ImageViewF, PlotWidgetF
+from ..plot_widgets import ImageViewF, PlotWidgetF, Crosshair
 from ...algorithms import find_peaks_1d
 from ...config import AnalysisType, plot_labels
 
@@ -75,6 +75,9 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
 
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
+        self._crosshair = Crosshair()
+        self._crosshair.hide()
+
         self.initUI()
         self.initConnections()
 
@@ -97,9 +100,20 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
+        self._corrected._plot_widget.addItem(self._crosshair)
+
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.cx_changed_sgn.connect(lambda x: self.onBeamCenterChanged(x, None))
+        self._ctrl_widget.cy_changed_sgn.connect(lambda y: self.onBeamCenterChanged(None, y))
+
+    def onBeamCenterChanged(self, x, y):
+        if x is None:
+            x = float(self._ctrl_widget._cx_le.text())
+        if y is None:
+            y = float(self._ctrl_widget._cy_le.text())
+
+        self._crosshair.setPos(x, y)
 
     def updateF(self, data, auto_update):
         """Override."""
@@ -107,6 +121,15 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
             self._corrected.setImage(data.image.masked_mean)
             self._q_view.setImage(data.ai.q_map, auto_levels=True)
             self._azimuthal_integ_1d_curve.updateF(data)
+
+            # The crosshair is hidden on start-up, but once an image is
+            # processed we set reasonable defaults for the beam center and
+            # enable it.
+            if not self._crosshair.isVisible() and data.image.masked_mean is not None:
+                height, width = data.image.masked_mean.shape
+                self._ctrl_widget._cx_le.setText(str(width / 2))
+                self._ctrl_widget._cy_le.setText(str(height / 2))
+                self._crosshair.show()
 
     def onActivated(self):
         """Override."""
