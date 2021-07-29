@@ -68,14 +68,13 @@ foreach(pathname IN LISTS _FOAM_UNITTESTS)
     add_executable(${targetname} main.cpp ${filename})
     target_include_directories(${targetname}
         PRIVATE
-            $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_INCLUDE_DIRS}>
             ${GTEST_INCLUDE_DIRS}
             ${GMOCK_INCLUDE_DIRS}
     )
     target_link_libraries(${targetname}
         PRIVATE
             extra-foam
-            $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_LIBRARY}>
+            $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:TBB::tbb>
             gtest
             pthread)
 
@@ -96,7 +95,6 @@ add_executable(test_foam_cpp main.cpp ${_FOAM_UNITTESTS})
 
 target_include_directories(test_foam_cpp
     PRIVATE
-        $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_INCLUDE_DIRS}>
         ${GTEST_INCLUDE_DIRS}
         ${GMOCK_INCLUDE_DIRS})
 
@@ -105,7 +103,7 @@ target_link_libraries(test_foam_cpp
         gtest
         pthread
         extra-foam
-        $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:${TBB_LIBRARY}>
+        $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:TBB::tbb>
         ${BLAS_LIBRARIES}
         ${LAPACK_LIBRARIES})
 

@@ -92,7 +92,7 @@ class ModuleScanWindow(_SpecialAnalysisBase):
 
         cw = self.centralWidget()
         cw.addWidget(right_panel)
-        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw.setSizes([int(self._TOTAL_W / 4), int(3 * self._TOTAL_W / 4)])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 

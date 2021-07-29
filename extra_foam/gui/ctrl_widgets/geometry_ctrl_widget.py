@@ -161,8 +161,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
             header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         header_height = table.horizontalHeader().height()
-        table.setMinimumHeight(header_height * (n_row + 1.5))
-        table.setMaximumHeight(header_height * (n_row + 2.0))
+        table.setMinimumHeight(int(header_height * (n_row + 1.5)))
+        table.setMaximumHeight(int(header_height * (n_row + 2.0)))
 
     def _setGeometryFile(self):
         filepath = QFileDialog.getOpenFileName()[0]
@@ -225,7 +225,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         # TODO: check number of modules for JungFrau
         coordinates = self._getMetaData(cfg, "coordinates")
         if coordinates is not None:
-            coordinates = json.loads(coordinates, encoding='utf8')
+            coordinates = json.loads(coordinates)
             table = self._coordinates_tb
             n_rows = table.rowCount()
             n_cols = table.columnCount()

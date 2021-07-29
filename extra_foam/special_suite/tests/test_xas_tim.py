@@ -100,11 +100,11 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
             mask_gt = [True] * 4
             for i, widget in enumerate(ctrl_widget.digitizer_channels.buttons()):
                 mask_gt[i] = False
-                QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, widget.height()/2))
+                QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
                 self.assertEqual(mask_gt, proc._digitizer_channels)
             # test "reset" is only called when new digitizer channel is checked
             mocked_reset.assert_not_called()
-            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, widget.height()/2))
+            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
             mocked_reset.assert_called_once()
 
         widget = ctrl_widget.n_pulses_per_train_le
@@ -146,7 +146,7 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
         displayed_gt = [True] * 4
         for i, widget in enumerate(ctrl_widget.spectra_displayed.buttons()):
             displayed_gt[i] = False
-            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, widget.height()/2))
+            QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
             self.assertEqual(displayed_gt, win._spectra._displayed)
 
 

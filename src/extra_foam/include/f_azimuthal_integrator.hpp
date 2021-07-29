@@ -12,10 +12,10 @@
 #define EXTRA_FOAM_F_AZIMUTHAL_INTEGRATOR_H
 
 #include <cmath>
+#include <mutex>
 
 #if defined(FOAM_USE_TBB)
 #include "tbb/parallel_for.h"
-#include "tbb/mutex.h"
 #endif
 
 #include <xtensor/xmath.hpp>
@@ -394,7 +394,7 @@ std::array<float, 2> ConcentricRingsFinder::search(E&& src, float cx0, float cy0
 
   int initial_space = 10;
 #if defined(FOAM_USE_TBB)
-  tbb::mutex mtx;
+  std::mutex mtx;
   tbb::parallel_for(tbb::blocked_range<int>(-initial_space, initial_space),
     [&src, cx0, cy0, npt, min_count, &cx_max, &cy_max, &max_s, initial_space, &mtx, this]
     (const tbb::blocked_range<int> &block)
@@ -419,7 +419,7 @@ std::array<float, 2> ConcentricRingsFinder::search(E&& src, float cx0, float cy0
 
 #if defined(FOAM_USE_TBB)
           {
-            tbb::mutex::scoped_lock lock(mtx);
+            std::scoped_lock lock(mtx);
 #endif
             if (curr_max > max_s)
             {

@@ -135,7 +135,7 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
-        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
+        self.setMinimumSize(int(0.6 * self._TOTAL_W), int(0.6 * self._TOTAL_H))
 
         self.update()
 
@@ -154,7 +154,7 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
             w.addWidget(img)
             w.addWidget(rw)
 
-            w.setSizes([self._TOTAL_W / 2, self._TOTAL_W / 2])
+            w.setSizes([int(self._TOTAL_W / 2), int(self._TOTAL_W / 2)])
             self._cw.addWidget(w)
 
         self.setCentralWidget(self._cw)

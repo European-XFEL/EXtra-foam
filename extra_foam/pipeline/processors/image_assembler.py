@@ -173,7 +173,7 @@ class ImageAssemblerFactory(ABC):
             assembler_type = GeomAssembler(int(cfg["assembler"]))
             stack_only = cfg["stack_only"] == 'True'
             geom_file = cfg["geometry_file"]
-            coordinates = json.loads(cfg["coordinates"], encoding='utf8')
+            coordinates = json.loads(cfg["coordinates"])
 
             # reload geometry if any of the following 4 fields changed
             if stack_only != self._stack_only or \

@@ -8,27 +8,6 @@ If you want to use **EXtra-foam** on the online or `Maxwell` cluster, please che
 To install **EXtra-foam** in your own environment, you are encouraged to use Anaconda_ to run
 and build **EXtra-foam**.
 
-Dependencies
-------------
-
-- Python >= 3.6
-- cmake >= 3.8
-- gcc >= 5.4 (support c++14)
-
-In your Anaconda_ environment, run the following commands:
-
-.. code-block:: bash
-
-    # install gcc-6.1
-    $ conda install -c omgarcia gcc-6
-    $ conda install -c anaconda libstdcxx-ng
-
-    # install gcc-7.5 (experimenting)
-    # $ conda install -c conda-forge compilers
-
-    # install cmake and dependencies
-    $ conda install -c anaconda cmake numpy
-    $ conda install -c conda-forge "tbb-devel<2021.1"
 
 Install **EXtra-foam**
 ----------------------
@@ -41,6 +20,13 @@ Install **EXtra-foam**
     $ git submodule update --init
 
     $ cd EXtra-foam
+
+    # Create an Anaconda_ environment, by default it's named 'extra_foam'. If
+    # you want to install into an existing environment, use `conda env update` instead.
+    $ conda env create -f environment.yml
+
+    # Install
+    $ conda activate extra_foam
     $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
     $ pip install .
 
@@ -56,8 +42,6 @@ accelerate your analysis, please feel free to dig into the code and ask question
 
     # ssh to the Maxwell cluster and then
     $ module load anaconda3
-    $ conda create --name extra-foam-offline -y
-    $ conda activate extra-foam-offline
 
     # follow the previous steps to install EXtra-foam
 

@@ -799,7 +799,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
         h = splitter.sizeHint().height()
-        splitter.setSizes([0.1 * h, 0.6 * h, 0.3 * h])
+        splitter.setSizes([int(0.1 * h), int(0.6 * h), int(0.3 * h)])
 
         layout = QVBoxLayout()
         layout.addWidget(splitter)
@@ -808,7 +808,7 @@ class DataSourceWidget(_AbstractCtrlWidget):
         self._con_view.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch)
 
-        self._src_view.setIndentation(self._src_view.indentation()/2)
+        self._src_view.setIndentation(int(self._src_view.indentation() / 2))
         self._src_view.expandToDepth(1)
         for i in range(4):
             self._src_view.resizeColumnToContents(i)

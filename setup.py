@@ -302,6 +302,7 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.17.0',
         'PyQt5==5.13.2',
+        'PyQt5-sip>=12.9.0',
         'EXtra-data>=1.0.0',
         'EXtra-geom>=0.8.0',
         'karabo-bridge>=0.5.0',

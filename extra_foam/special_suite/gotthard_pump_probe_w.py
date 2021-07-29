@@ -260,15 +260,15 @@ class GotthardPumpProbeWindow(_SpecialAnalysisBase):
         sub_right_down_panel.addWidget(self._dark_poi_plot)
         right_down_panel.addWidget(self._heatmap)
         right_down_panel.addWidget(sub_right_down_panel)
-        right_down_panel.setSizes([self._TOTAL_W / 3, self._TOTAL_W / 3])
+        right_down_panel.setSizes([int(self._TOTAL_W / 3), int(self._TOTAL_W / 3)])
 
         right_panel.addWidget(right_up_panel)
         right_panel.addWidget(right_down_panel)
-        right_panel.setSizes([self._TOTAL_H / 2, self._TOTAL_H / 2])
+        right_panel.setSizes([int(self._TOTAL_H / 2), int(self._TOTAL_H / 2)])
 
         cw = self.centralWidget()
         cw.addWidget(right_panel)
-        cw.setSizes([self._TOTAL_W / 3, 2 * self._TOTAL_W / 3])
+        cw.setSizes([int(self._TOTAL_W / 3), int(2 * self._TOTAL_W / 3)])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
