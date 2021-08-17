@@ -9,11 +9,11 @@ All rights reserved.
 """
 import abc
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QPushButton, QSpinBox, QTabWidget, QWidget
+    QCheckBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QVBoxLayout,
+    QLabel, QPushButton, QSpinBox, QTabWidget, QWidget, QComboBox
 )
 
 from .smart_widgets import SmartLineEdit, SmartBoundaryLineEdit
@@ -166,6 +166,64 @@ class _EdgeDetectionCtrlWidget(_FeatureExtractionMixIn, QWidget):
         self.setLayout(layout)
 
 
+class _BraggPeakCtrlWidget(_FeatureExtractionMixIn, QWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.add_roi_btn = QPushButton("Add ROI")
+        self.window_size_le = SmartLineEdit("10")
+        self.window_size_le.setValidator(QIntValidator())
+        self.delete_roi_btn = QPushButton("Delete ROI")
+        self._roi_cb = QComboBox()
+
+        self.initUI()
+        self.initConnections()
+
+    def initUI(self):
+        hbox_layout = QHBoxLayout()
+        layout = QVBoxLayout()
+
+        window_size_layout = QHBoxLayout()
+        window_size_label = QLabel("Rolling window size:")
+        window_size_layout.addWidget(window_size_label)
+        window_size_layout.addWidget(self.window_size_le)
+
+        delete_roi_layout = QHBoxLayout()
+        delete_roi_layout.addWidget(self.delete_roi_btn)
+        delete_roi_layout.addWidget(self._roi_cb)
+        self._roi_cb.addItem("")
+        self.delete_roi_btn.setEnabled(False)
+
+        layout.addWidget(self.add_roi_btn)
+        layout.addLayout(window_size_layout)
+        layout.addLayout(delete_roi_layout)
+        layout.addStretch()
+
+        hbox_layout.addLayout(layout)
+        hbox_layout.addStretch(10)
+        self.setLayout(hbox_layout)
+
+    def initConnections(self):
+        self._roi_cb.currentTextChanged.connect(
+            self._onSelectedRoiChanged
+        )
+
+    @pyqtSlot(str)
+    def _onSelectedRoiChanged(self, label):
+        self.delete_roi_btn.setEnabled(label != "")
+
+    @pyqtSlot(object)
+    def roiAdded(self, roi):
+        self._roi_cb.addItem(roi.label())
+
+    @property
+    def selectedRoi(self):
+        return self._roi_cb.currentText()
+
+    def onRoiDeleted(self, label):
+        index = self._roi_cb.findText(label)
+        self._roi_cb.removeItem(index)
+
 class ImageTransformCtrlWidget(_AbstractCtrlWidget):
     """Control widget for image transform in the ImageTool."""
 
@@ -173,17 +231,22 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
 
     transform_type_changed_sgn = pyqtSignal(int)
 
+    roi_requested_sgn = pyqtSignal()
+    delete_roi_sgn = pyqtSignal(str)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._concentric_rings = _ConcentricRingsCtrlWidget()
         self._fourier_transform = _FourierTransformCtrlWidget()
         self._edge_detection = _EdgeDetectionCtrlWidget()
+        self._bragg_peak = _BraggPeakCtrlWidget()
 
         self._opt_tab = QTabWidget()
         self._opt_tab.addTab(self._concentric_rings, "Concentric rings")
         self._opt_tab.addTab(self._fourier_transform, "Fourier transform")
         self._opt_tab.addTab(self._edge_detection, "Edge detection")
+        self._opt_tab.addTab(self._bragg_peak, "Bragg peak analysis")
 
         self._non_reconfigurable_widgets = [
             self._concentric_rings.detect_btn,
@@ -228,6 +291,17 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         ed.threshold_le.value_changed_sgn.connect(
             mediator.onItEdThresholdChange)
 
+        self._bragg_peak.add_roi_btn.clicked.connect(self.roi_requested_sgn)
+        self._bragg_peak.delete_roi_btn.clicked.connect(
+            lambda: self.delete_roi_sgn.emit(self._bragg_peak.selectedRoi)
+        )
+        self._bragg_peak.window_size_le.value_changed_sgn.connect(
+            mediator.onItBraggPeakWindowSizeChange)
+
+    @pyqtSlot(object)
+    def onRoiAdded(self, roi):
+        self._bragg_peak.roiAdded(roi)
+
     def updateMetaData(self):
         """Override."""
         if self.isVisible():
@@ -249,6 +323,9 @@ class ImageTransformCtrlWidget(_AbstractCtrlWidget):
         ed.kernel_size_sp.valueChanged.emit(ed.kernel_size_sp.value())
         ed.sigma_sp.valueChanged.emit(ed.sigma_sp.value())
         ed.threshold_le.returnPressed.emit()
+
+        bp = self._bragg_peak
+        bp.window_size_le.value_changed_sgn.emit(bp.window_size_le.value())
 
         return True
 

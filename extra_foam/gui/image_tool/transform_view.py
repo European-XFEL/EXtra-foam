@@ -13,8 +13,45 @@ from PyQt5.QtWidgets import QVBoxLayout, QSplitter
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..misc_widgets import FColor
 from ..ctrl_widgets import ImageTransformCtrlWidget
-from ..plot_widgets import ImageViewF, RingItem
+from ..plot_widgets import ImageViewF, RingItem, RectROI
 from ...config import ImageTransformType
+
+
+class DynamicRoiImageView(ImageViewF):
+    roi_added_sgn = pyqtSignal(object)
+
+    def __init__(self, *args, **kwargs):
+        """Initialization."""
+        super().__init__(*args, **kwargs)
+
+        self._rois = { }
+        self.new_roi_requested = False
+
+        self._image_item.draw_started_sgn.connect(self.addRoi)
+
+    def addRoi(self, x, y):
+        if self.new_roi_requested:
+            # Create and add new ROI
+            idx = len(self.rois) + 1
+            roi = RectROI(idx,
+                          size=(100, 100),
+                          pos=(x, y),
+                          label=f"B{idx}",
+                          pen=FColor.mkPen("r", width=2))
+            roi.setLocked(False)
+            self.rois[roi.label()] = roi
+            self.addItem(roi)
+
+            # Cleanup
+            self.new_roi_requested = False
+            self._image_item.drawing = False
+            self.setCursor(Qt.ArrowCursor)
+            self.roi_added_sgn.emit(roi)
+
+    def removeRoi(self, label):
+        roi = self._rois.pop(label)
+        self.removeItem(roi)
+        return roi
 
 
 @create_imagetool_view(ImageTransformCtrlWidget)
@@ -29,7 +66,7 @@ class TransformView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageViewF(hide_axis=False)
+        self._corrected = DynamicRoiImageView(hide_axis=False)
         self._corrected.setTitle("Original")
         self._transformed = ImageViewF(hide_axis=False)
         self._transformed.setTitle("Transformed")
@@ -60,6 +97,19 @@ class TransformView(_AbstractImageToolView):
             self._extractConcentricRings)
         self._ctrl_widget.transform_type_changed_sgn.connect(
             self._onTransformTypeChanged)
+        self._ctrl_widget.roi_requested_sgn.connect(
+            self._onRoiRequested
+        )
+        self._ctrl_widget.delete_roi_sgn.connect(
+            self._onDeleteRoi
+        )
+
+        self._corrected.roi_added_sgn.connect(
+            self._onRoiAdded
+        )
+        self._corrected.roi_added_sgn.connect(
+            self._ctrl_widget.onRoiAdded
+        )
 
     def updateF(self, data, auto_update):
         """Override."""
@@ -95,9 +145,40 @@ class TransformView(_AbstractImageToolView):
     def _onTransformTypeChanged(self, tp):
         self._transform_type = ImageTransformType(tp)
 
-        if self._transform_type == ImageTransformType.CONCENTRIC_RINGS:
-            self._ring_item.show()
-        else:
-            self._ring_item.hide()
+        bragg_peak_analysis = self._transform_type == ImageTransformType.BRAGG_PEAK_ANALYSIS
+
+        self._ring_item.setVisible(self._transform_type == ImageTransformType.CONCENTRIC_RINGS)
+        self._transformed.setVisible(not bragg_peak_analysis)
+
+        for roi in self._corrected.rois.values():
+            roi.setVisible(bragg_peak_analysis)
 
         self.transform_type_changed_sgn.emit(tp)
+
+    @pyqtSlot()
+    def _onRoiRequested(self):
+        self._ctrl_widget._bragg_peak.add_roi_btn.setEnabled(False)
+        self._corrected.new_roi_requested = True
+        self._corrected._image_item.drawing = True
+        self._corrected.setCursor(Qt.CrossCursor)
+
+    @pyqtSlot(object)
+    def _onRoiAdded(self, roi):
+        self._ctrl_widget._bragg_peak.add_roi_btn.setEnabled(True)
+
+        roi.sigRegionChangeFinished.connect(self._onRoiChanged)
+        self._onRoiChanged(roi)
+
+    @pyqtSlot(str)
+    def _onDeleteRoi(self, label):
+        roi = self._corrected.removeRoi(label)
+        self._mediator.onItBraggPeakRoiDeletion(roi.label())
+        self._ctrl_widget._bragg_peak.onRoiDeleted(roi.label())
+
+    @pyqtSlot(object)
+    def _onRoiChanged(self, roi):
+        x = int(roi.x())
+        y = int(roi.y())
+        width, height = int(roi.size().x()), int(roi.size().y())
+
+        self._mediator.onItBraggPeakRoiChange(roi.label(), (x, y, width, height))

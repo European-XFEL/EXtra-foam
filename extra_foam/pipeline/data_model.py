@@ -106,6 +106,12 @@ class MovingAverageArray:
         return self._data
 
     def __set__(self, instance, data):
+        self.update(data)
+
+    def __delete__(self, instance):
+        self.clear()
+
+    def update(self, data):
         if data is None:
             self._data = None
             self._count = 0
@@ -129,9 +135,13 @@ class MovingAverageArray:
             self._data = data.copy() if self._copy_first else data
             self._count = 1
 
-    def __delete__(self, instance):
+    def clear(self):
         self._data = None
         self._count = 0
+
+    @property
+    def data(self):
+        return self._data
 
     @property
     def window(self):
@@ -877,6 +887,22 @@ class DigitizerData(_DigitizerChannelData):
         self.ch_normalizer = self._CHANNEL_NAMES[0]
 
 
+class BraggPeakData:
+    __slots__ = ["roi", "roi_dims", "roi_intensity", "pulses",
+                 "center_of_mass", "center_of_mass_stddev",
+                 "pulse_intensity", "lineout_x", "lineout_y"]
+
+    def __init__(self):
+        self.roi = { }
+        self.roi_dims = { }
+        self.roi_intensity = { }
+        self.pulses = { }
+        self.center_of_mass = { }
+        self.center_of_mass_stddev = { }
+        self.pulse_intensity = { }
+        self.lineout_x = { }
+        self.lineout_y = { }
+
 class ProcessedData:
     """A class which stores the processed data.
 
@@ -896,7 +922,7 @@ class ProcessedData:
         """Container for pulse-resolved data."""
 
         __slots__ = ['ai', 'roi', 'xgm', 'digitizer',
-                     'hist']
+                     'hist', 'bragg_peaks']
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
@@ -904,6 +930,7 @@ class ProcessedData:
             self.xgm = XgmData()
             self.digitizer = DigitizerData()
             self.hist = HistogramDataPulse()
+            self.bragg_peaks = BraggPeakData()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',

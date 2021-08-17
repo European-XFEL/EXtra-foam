@@ -107,6 +107,7 @@ class ImageTransformType(IntEnum):
     CONCENTRIC_RINGS = 0
     FOURIER_TRANSFORM = 1
     EDGE_DETECTION = 2
+    BRAGG_PEAK_ANALYSIS = 3
     UNDEFINED = 255
 
 

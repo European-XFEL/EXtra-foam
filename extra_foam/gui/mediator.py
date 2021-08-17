@@ -369,3 +369,12 @@ class Mediator(QObject):
 
     def onItEdThresholdChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_TRANSFORM_PROC, "ed:threshold", str(value))
+
+    def onItBraggPeakRoiChange(self, label: str, value: tuple):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, f"bp:roi_{label}", str(value))
+
+    def onItBraggPeakWindowSizeChange(self, value: int):
+        self._meta.hset(mt.IMAGE_TRANSFORM_PROC, f"bp:window_size", value)
+
+    def onItBraggPeakRoiDeletion(self, value: str):
+        self._meta.hdel(mt.IMAGE_TRANSFORM_PROC, f"bp:roi_{value}")
