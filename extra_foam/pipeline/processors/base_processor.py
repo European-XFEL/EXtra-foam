@@ -104,7 +104,7 @@ class _RedisParserMixin:
             str2tuple('(1, 2)') -> (1.0, 2.0)
         """
         splitted = text[1:-1].split(delimiter)
-        return handler(splitted[0]), handler(splitted[1])
+        return tuple(handler(v) for v in splitted)
 
     @staticmethod
     def str2list(text, delimiter=",", handler=float):
