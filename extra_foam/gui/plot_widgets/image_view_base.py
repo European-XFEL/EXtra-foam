@@ -134,6 +134,9 @@ class ImageViewF(QWidget):
     def reset(self):
         self.clear()
 
+    def addMenuItem(self, item):
+        self._plot_widget.addMenuItem(item)
+
     def updateF(self, data):
         """This method is called by the parent window.
 
