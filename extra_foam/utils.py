@@ -7,14 +7,18 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import re
 import os
 import psutil
 import socket
 import multiprocessing as mp
 import functools
 import subprocess
+from collections import namedtuple
 from threading import RLock, Thread
 import time
+
+import xarray as xr
 
 from .logger import logger
 
@@ -277,3 +281,96 @@ def get_available_port(default_port):
                 break
 
     return port
+
+
+#: A helper object to store information for a single series.
+#:
+#: :param float/np.ndarray data: The series data for the current train.
+#: :param str name: The name of the series, to be displayed in a legend (optional).
+#: :param float/np.ndarray error: The error of :code:`data`, shown as ± :code:`error` (optional).
+Series = namedtuple("Series", ["data", "name", "error"], defaults=[None, None])
+
+
+def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs):
+    """
+    A helper function to wrap scalars and arrays in :code:`DataArray`'s, with
+    metadata for plotting.
+
+    There are two ways of using this function:
+
+    1. If a single value is passed, e.g. :code:`rich_output(scalar1)` or
+       :code:`rich_output(vector1)`, that value will be treated as data for the Y
+       axis and the X axis coordinates will automatically be generated.
+    2. If other Y axis data is passed with keyword arguments, then the first
+       (positional) argument will be treated as the X axis coordinates and the Y
+       axis data will be plotted against it. For example,
+       :code:`rich_output(scalar1, y1=y1_scalar, y2=y2_scalar)` or
+       :code:`rich_output(vector1, y1=y1_vector)`.
+
+    Examples:
+
+    .. code-block:: python3
+
+       from extra_foam.utils import rich_output, Series as S
+
+       # Single series
+       rich_output(42)
+
+       # Multiple series
+       rich_output(42, y1=2.81, y2=3.14)
+
+       # Multiple series with all the metadata
+       rich_output(42, y1=S(2.81, name="e", error=0.1), y2=S(3.14, "Pi", 0.2),
+                   title="Foo",
+                   xlabel="Bar",
+                   ylabel="Baz",
+                   max_points=100)
+
+    :param float/np.ndarray x: Only required argument, treated as either an X or
+                               Y coordinate depending on whether any other
+                               series are passed.
+    :param str xlabel:         Label for the X axis (optional).
+    :param str ylabel:         Label for the Y axis (optional).
+    :param str title:          Plot title. (optional)
+    :param int max_points:     Maximum number of points to display on the plot (optional).
+    :param dict kwargs:        Extra keyword arguments, these can be used for
+                               plotting multiple series. The rule is that any
+                               keyword argument :code:`y{digits}` is treated as a
+                               series. The value can either be a scalar/ndarray
+                               (in which case the series label will be the
+                               keyword argument name), or a :code:`Series` object. For
+                               example, :code:`y1=42` will create a series with the
+                               name 'y1', and :code:`y42=Series(1, name='foo')` will
+                               create a series named 'foo' (optional).
+    :return:                   A :code:`DataArray` containing the data and
+                               metadata for plotting.
+    """
+    xr_attrs = {
+        "xlabel": xlabel,
+        "ylabel": ylabel,
+        "y_series_labels": [],
+        "series_errors": { },
+    }
+
+    # Copy optional arguments without a default value
+    if title is not None:
+        xr_attrs["title"] = title
+    if max_points is not None:
+        xr_attrs["max_points"] = max_points
+
+    full_data = [x]
+    y_series_labels = xr_attrs["y_series_labels"]
+    for key, data in kwargs.items():
+        if re.fullmatch(r"y(\d+)?", key):
+            if isinstance(data, Series):
+                label = data.name if data.name else key
+                y_series_labels.append(label)
+                full_data.append(data.data)
+
+                if data.error is not None:
+                    xr_attrs["series_errors"][label] = data.error
+            else:
+                y_series_labels.append(key)
+                full_data.append(data)
+
+    return xr.DataArray(full_data, attrs=xr_attrs)

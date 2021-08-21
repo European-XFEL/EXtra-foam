@@ -919,13 +919,11 @@ class _SpecialAnalysisBase(QMainWindow):
         Set the client to use, to read data from either EXtra-foam or a Karabo
         bridge.
         """
-        catalog = SourceCatalog()
-
         if client_type == ClientType.EXTRA_FOAM:
-            self._client_st = QThreadFoamClient(self._queue, self._cv, catalog)
+            self._client_st = QThreadFoamClient(self._queue, self._cv)
             self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
         elif client_type == ClientType.KARABO_BRIDGE:
-            self._client_st = QThreadKbClient(self._queue, self._cv, catalog)
+            self._client_st = QThreadKbClient(self._queue, self._cv)
             self._com_ctrl_st.updateDefaultPort(config["DEFAULT_CLIENT_PORT"])
 
         self._client_st.log.logOnMainThread(self)
