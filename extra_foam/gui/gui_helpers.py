@@ -246,6 +246,6 @@ def center_window(window, resize=True):
         max_width = screen_size.width()
         max_height = screen_size.height()
 
-        window.resize(max_width * 0.8, max_height * 0.8)
+        window.resize(int(max_width * 0.8), int(max_height * 0.8))
 
     window.move(screen.geometry().center() - window.frameGeometry().center())

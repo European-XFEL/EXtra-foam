@@ -27,6 +27,7 @@ from .vector_view import VectorViewWindow
 from .xas_tim_w import XasTimWindow
 from .xas_tim_xmcd_w import XasTimXmcdWindow
 from .xes_timing_w import XesTimingWindow
+from .correlator_w import CorrelatorWindow
 
 
 class SpecialSuiteController:
@@ -106,6 +107,7 @@ class _SpecialSuiteFacadeBase(QMainWindow):
         self.addSpecial(CamViewWindow)
         self.addSpecial(VectorViewWindow)
         self.addSpecial(MultiCamViewWindow)
+        self.addSpecial(CorrelatorWindow)
 
 
 class SpbSpecialSuiteFacade(_SpecialSuiteFacadeBase):
