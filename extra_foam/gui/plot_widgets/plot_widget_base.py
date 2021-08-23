@@ -147,7 +147,7 @@ class PlotWidgetF(pg.GraphicsView):
         self._plot_area.setAnnotationList(*args, **kwargs)
 
     def addLegend(self, *args, **kwargs):
-        self._plot_area.addLegend(*args, **kwargs)
+        return self._plot_area.addLegend(*args, **kwargs)
 
     def invertX(self, *args, **kargs):
         self._plot_area.invertX(*args, **kargs)
