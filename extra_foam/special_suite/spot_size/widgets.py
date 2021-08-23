@@ -35,7 +35,10 @@ from ..special_analysis_base import (
 
 class ImageView(ImageViewF):
     def updateF(self, data):
-        self.setImage(data["view"]["image"])
+        image = data["view"]["image"]
+        if image.size == 0:
+            image = None
+        self.setImage(image)
 
 
 # -----------------------------------------------------------------------------
@@ -345,6 +348,9 @@ class AvgPositionPulsePlot(PulsePlot):
     header = "Beam position averaged over all trains"
 
     def updateF(self, data):
+        if not self.isVisible():
+            return
+
         x = data["pulses"]
 
         pos = data["pos_pulse"]
@@ -362,6 +368,9 @@ class AvgWidthPulsePlot(PulsePlot):
     header = "Beam FWHM averaged over all trains"
 
     def updateF(self, data):
+        if not self.isVisible():
+            return
+
         x = data["pulses"]
 
         width = data["width_pulse"]
@@ -378,7 +387,10 @@ class AvgWidthPulsePlot(PulsePlot):
 # Control
 
 AXES = ("x", "y")
-DETECTOR = ("SCS_CDIDET_MTE3/CAM/CAMERA:output", "data.image.data")
+SOURCES = {
+    "Detector": ("SCS_DET_DSSC1M-1/DET/1CH0:xtdf", "image.data"),
+    "Camera": ("SCS_CDIDET_MTE3/CAM/CAMERA:output", "data.image.data")
+}
 MOTOR = ("SCS_KBS_HFM/MOTOR/BENDERB", "actualPosition")
 
 
@@ -395,11 +407,17 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        detector, prop = DETECTOR
-        self.detector_path = SmartStringLineEdit(detector)
-        self.detector_path.setPlaceholderText(detector)
-        self.detector_property = SmartStringLineEdit(prop)
-        self.detector_property.setPlaceholderText(prop)
+        # Source
+        self.source_type = QComboBox()
+        for item in SOURCES.keys():
+            self.source_type.addItem(item)
+        source, prop = SOURCES[self.source_type.currentText()]
+        self.source_path = SmartStringLineEdit(source)
+        self.source_path.setPlaceholderText(source)
+        self.source_property = SmartStringLineEdit(prop)
+        self.source_property.setPlaceholderText(prop)
+
+        # Motor
         motor, prop = MOTOR
         self.motor_path = SmartStringLineEdit(motor)
         self.motor_path.setPlaceholderText(motor)
@@ -410,6 +428,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.init_group = QGroupBox("Initialize run")
 
         # Run settings
+        self.pulse_slice_label = QLabel("Pulse slice:")
         self.pulse_slice = SmartSliceLineEdit("::4")
         # Project on axis
         self.axis = QComboBox()
@@ -417,6 +436,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
             self.axis.addItem(item)
 
         # Bender scan settings
+        self.scan_group = QGroupBox("Bender scan settings")
         # Train- or pulse-resolved combobox
         self.analysis_type = QComboBox()
         for item in ("Train", "Pulse"):
@@ -452,20 +472,28 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         dark_widget = QWidget()
         dark_widget.setLayout(dark_layout)
 
+        # Source widgets
+        source_layout = QHBoxLayout()
+        source_layout.addWidget(self.source_type)
+        source_layout.addWidget(self.source_path)
+
         # group widgets for run initialization
-        init_layout = QFormLayout()
-        init_layout.addRow("Detector:", self.detector_path)
-        init_layout.addRow("", self.detector_property)
-        init_layout.addRow(create_line())
-        init_layout.addRow("Motor:", self.motor_path)
-        init_layout.addRow("", self.motor_property)
-        init_layout.addRow(create_line())
-        init_layout.addRow(dark_widget)
+        init_layout = QGridLayout()
+        # init_layout.addRow(self.source_path, self.source_path)
+        init_layout.addWidget(self.source_type, 0, 0)
+        init_layout.addWidget(self.source_path, 0, 1)
+        init_layout.addWidget(self.source_property, 1, 1)
+        init_layout.addWidget(create_line(), 2, 0, 1, 2)
+        init_layout.addWidget(QLabel("Motor:"), 3, 0)
+        init_layout.addWidget(self.motor_path, 3, 1)
+        init_layout.addWidget(self.motor_property, 4, 1)
+        init_layout.addWidget(create_line(), 5, 0, 1, 2)
+        init_layout.addWidget(dark_widget, 6, 0, 1, 2)
         self.init_group.setLayout(init_layout)
 
         # group widgets for run settings
         run_layout = QFormLayout()
-        # run_layout.addRow("Pulse slice:", self.pulse_slice)
+        run_layout.addRow(self.pulse_slice_label, self.pulse_slice)
         run_layout.addRow("Axis:", self.axis)
         run_group = QGroupBox("Run settings")
         run_group.setLayout(run_layout)
@@ -475,8 +503,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         scan_layout = QFormLayout()
         scan_layout.addRow("Analysis Type:", self.analysis_type)
         scan_layout.addRow("Pulse:", self.pulse)
-        scan_group = QGroupBox("Bender scan settings")
-        scan_group.setLayout(scan_layout)
+        self.scan_group.setLayout(scan_layout)
 
         # group widgets for positional jitter settings
         jitter_layout = QFormLayout()
@@ -500,7 +527,7 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.setSpacing(15)
         layout.addWidget(self.init_group)
         layout.addWidget(run_group)
-        # layout.addWidget(scan_group)
+        layout.addWidget(self.scan_group)
         layout.addWidget(jitter_group)
         layout.addWidget(self.calib_group)
         layout.addStretch(1)
@@ -508,9 +535,8 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initConnections(self):
         """Override."""
-        # disable_pulse_num = lambda x: self.pulse.setDisabled(not bool(x))
-        # self.analysis_type.currentIndexChanged.connect(disable_pulse_num)
-
+        disable_pulse_num = lambda x: self.pulse.setDisabled(not bool(x))
+        self.analysis_type.currentIndexChanged.connect(disable_pulse_num)
         self.calib_group.toggled.connect(self.enable_calibration)
 
     def onStartST(self):
@@ -526,6 +552,11 @@ class SpotSizeCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.calib_value_lineedit.setDisabled(not enabled)
         self.calib_unit_lineedit.setDisabled(not enabled)
 
+    def enable_pulse_resolved(self, enabled):
+        # Hide pulse selection
+        self.pulse_slice_label.setVisible(enabled)
+        self.pulse_slice.setVisible(enabled)
+        self.scan_group.setVisible(enabled)
 
 # -----------------------------------------------------------------------------
 # Window
@@ -607,9 +638,10 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         self._avg_pos_train = AvgPositionTrainPlot(parent=self)
         self._std_pos_hist = StdPositionHistogram(parent=self)
         self._std_pos_train = StdPositionTrainPlot(parent=self)
-
-        # self._avg_pos_pulse = AvgPositionPulsePlot(parent=self)
-        # self._avg_width_pulse = AvgWidthPulsePlot(parent=self)
+        # Pulse-resolved jitter views
+        self._avg_pos_pulse = AvgPositionPulsePlot(parent=self)
+        self._avg_width_pulse = AvgWidthPulsePlot(parent=self)
+        self._detector_plots = (self._avg_pos_pulse, self._avg_width_pulse)
 
         self.initUI()
         self.initConnections()
@@ -670,8 +702,8 @@ class SpotSizeGrating(_SpecialAnalysisBase):
 
         layout.addWidget(pos_container, 0, 0, 1, 2)
         layout.addWidget(std_container, 1, 0, 1, 2)
-        # layout.addWidget(self._avg_pos_pulse, 2, 0)
-        # layout.addWidget(self._avg_width_pulse, 2, 1)
+        layout.addWidget(self._avg_pos_pulse, 2, 0)
+        layout.addWidget(self._avg_width_pulse, 2, 1)
 
         # Create a container widget and add the layout
         container = QWidget()
@@ -697,13 +729,16 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         self._com_ctrl_st.roi_geometry_change_sgn.connect(
             self.onRoiGeometryChange)
 
-        # Detector
-        det_path = control.detector_path
-        det_path.value_changed_sgn.connect(self.onDetectorPathChanged)
-        det_path.returnPressed.emit()
-        det_prop = control.detector_property
-        det_prop.value_changed_sgn.connect(self.onDetectorPropertyChanged)
-        det_prop.returnPressed.emit()
+        # Source
+        source_type_signal = control.source_type.currentTextChanged
+        source_type_signal.connect(self.onSourceTypeChanged)
+        source_type_signal.emit(control.source_type.currentText())
+        source_path = control.source_path
+        source_path.value_changed_sgn.connect(self.onSourcePathChanged)
+        source_path.returnPressed.emit()
+        source_prop = control.source_property
+        source_prop.value_changed_sgn.connect(self.onSourcePropertyChanged)
+        source_prop.returnPressed.emit()
 
         # Motor
         control.motor_path.value_changed_sgn.connect(self.onMotorPathChanged)
@@ -717,13 +752,13 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         control.pulse_slice.returnPressed.emit()
 
         # Pulse
-        # control.pulse.value_changed_sgn.connect(self.onPulseNumChanged)
-        # control.pulse.returnPressed.emit()
+        control.pulse.value_changed_sgn.connect(self.onPulseNumChanged)
+        control.pulse.returnPressed.emit()
 
         # Analysis type
-        # analysis_type_signal = control.analysis_type.currentTextChanged
-        # analysis_type_signal.connect(self.onAnalysisTypeChanged)
-        # analysis_type_signal.emit(control.analysis_type.currentText())
+        analysis_type_signal = control.analysis_type.currentTextChanged
+        analysis_type_signal.connect(self.onAnalysisTypeChanged)
+        analysis_type_signal.emit(control.analysis_type.currentText())
 
         # Axis
         axis_signal = control.axis.currentTextChanged
@@ -747,25 +782,35 @@ class SpotSizeGrating(_SpecialAnalysisBase):
         control.calib_group.toggled.connect(self.onCalibToggled)
 
         # TODO: REMOVEME
-        # control.axis.setCurrentIndex(1)
+        control.axis.setCurrentIndex(1)
         # control.subtract_dark_checkbox.toggle()
 
     # ----------------------------------------------------------------------
     # Slots
 
-    @pyqtSlot(object)
-    def onDetectorPathChanged(self, detector):
-        self._worker_st.onDetectorPathChanged(detector)
+    @pyqtSlot(str)
+    def onSourceTypeChanged(self, source_type):
+        is_detector = source_type == 'Detector'
+        self._ctrl_widget_st.enable_pulse_resolved(is_detector)
+        for plot in self._detector_plots:
+            plot.setVisible(is_detector)
+
+        self._worker_st.onSourceTypeChanged(source_type)
         self._onResetST()
 
     @pyqtSlot(object)
-    def onDetectorPropertyChanged(self, prop):
-        self._worker_st.onDetectorPropertyChanged(prop)
+    def onSourcePathChanged(self, path):
+        self._worker_st.onSourcePathChanged(path)
         self._onResetST()
 
     @pyqtSlot(object)
-    def onMotorPathChanged(self, device):
-        self._worker_st.onMotorPathChanged(device)
+    def onSourcePropertyChanged(self, prop):
+        self._worker_st.onSourcePropertyChanged(prop)
+        self._onResetST()
+
+    @pyqtSlot(object)
+    def onMotorPathChanged(self, path):
+        self._worker_st.onMotorPathChanged(path)
         self._onResetST()
 
     @pyqtSlot(object)

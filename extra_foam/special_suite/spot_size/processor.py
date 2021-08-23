@@ -56,8 +56,9 @@ class SpotSizeProcessor(QThreadWorker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._detectors = []
-        self._detector_prop = "data.image.data"
+        self._source_paths = []
+        self._source_type = ''
+        self._source_prop = ''
         self._motor_path = ''
         self._motor_prop = ''
         self._slice = slice(None, None)
@@ -93,16 +94,19 @@ class SpotSizeProcessor(QThreadWorker):
     def onSubtractDark(self, subtract):
         self._subtract_dark = subtract
 
-    def onDetectorPathChanged(self, detector: str):
-        detectors = [detector]
-        if '*' in detector:
-            detector = detector.replace('*', '{}')
-            detectors = [detector.format(i) for i in range(2)]
+    def onSourceTypeChanged(self, source_type: str):
+        self._source_type = source_type
 
-        self._detectors = detectors
+    def onSourcePathChanged(self, source: str):
+        sources = [source]
+        if '*' in source:
+            source = source.replace('*', '{}')
+            sources = [source.format(i) for i in range(2)]
 
-    def onDetectorPropertyChanged(self, prop: str):
-        self._detector_prop = prop
+        self._source_paths = sources
+
+    def onSourcePropertyChanged(self, prop: str):
+        self._source_prop = prop
 
     def onMotorPathChanged(self, device: str):
         self._motor_path = device
@@ -130,10 +134,9 @@ class SpotSizeProcessor(QThreadWorker):
 
     def sources(self):
         """Override."""
-        sources = []
-
-        # Add detectors
-        sources += [(detector, self._detector_prop, 1) for detector in self._detectors]
+        # Add sources
+        sources = [(source, self._source_prop, 1)
+                   for source in self._source_paths]
 
         # Add motor
         if self._motor_path:
@@ -147,57 +150,68 @@ class SpotSizeProcessor(QThreadWorker):
         view_data = ViewData()
 
         # 1. Assemble data
-        if len(self._detectors) > 1:
-            train_images = self._assemble(data)
+        if self.detector_source:
+            if len(self._source_paths) > 1:
+                # Source is presumably a multi-module detector.
+                # Assembling is done to get the train images
+                train_images = self._assemble(data)
+            else:
+                # Source is presumably a single-module detector
+                array = data[f"{self._source_paths[-1]} {self._source_prop}"]
+                train_images = array.squeeze(axis=1).astype(np.float32)
         else:
-            # array = data[f"{self._detectors[-1]} {self._ppt}"]
-            # train_images = array.squeeze(axis=1).astype(np.float32)
-            array = data[f"{self._detectors[-1]} {self._detector_prop}"]
+            # Source is assumed to be a camera.
+            # We only get the last (and presumably the only) source path
+            array = data[f"{self._source_paths[-1]} {self._source_prop}"]
             train_images = array.reshape(1, *array.shape).astype(np.float32)
 
         # 2. Subtract dark image. Has to be done before pulse slicing
         if self._subtract_dark:
+            detector = "DSSC" if self.detector_source else ''
             correct_image_data(train_images, offset=self._dark,
-                               intradark=True, detector="DSSC")
+                               intradark=True, detector=detector)
 
-        # # 3. Slice
-        # train_images = train_images[self._slice]
-        # # Check if number of pulses have been changed
-        # num_pulses = len(train_images)
-        # if num_pulses != self.trains.num_pulses:
-        #     self.trains.num_pulses = num_pulses
-        #     self.trains.reset()
+        # 3. Slice to get the pulses of interest.
+        # Only do it with detector source.
+        if self.detector_source:
+            train_images = train_images[self._slice]
+            # Check if number of pulses have been changed
+            num_pulses = len(train_images)
+            if num_pulses != self.trains.num_pulses:
+                self.trains.num_pulses = num_pulses
+                self.trains.reset()
 
-        # 3. Calculate pulse-resolved analysis
-        pulses = []
-        for pulse_num, pulse_image in enumerate(train_images):
-            pulse, view = self._process_image(pulse_image)
-            pulses.append(pulse)
-            # Save the view
-            if self._analysis_type == "Pulse" and pulse_num == self._pulse_num:
-                view_data = view
+        # 4. Calculate pulse-resolved analysis
+        if self.detector_source:
+            pulses = []
+            for pulse_num, pulse_image in enumerate(train_images):
+                pulse, view = self._process_image(pulse_image)
+                pulses.append(pulse)
+                # Save the view
+                if self.pulse_resolved and pulse_num == self._pulse_num:
+                    view_data = view
 
-        # 4. Calculate train-resolved analysis
-        if self._analysis_type == "Train":
+        # 5. Calculate train-resolved analysis
+        if self.train_resolved:
             # Calculate train values
             image = nanmean_image_data(train_images)
             _, view_data = self._process_image(image)
 
-        # 5. Get other data
+        # 6. Get other data
         device = Device(name=self._motor_path,
                         value=data[f"{self._motor_path}"
                                    f" {self._motor_prop}"])
 
-        # 6. Record
+        # 7. Record
         train_data = Train(trainId=self.getTrainId(meta),
                            device=device,
                            pulses=pulses)
 
-        # 7. Update train
+        # 8. Update train
         trains = self.trains
         trains.add(train_data)
 
-        # 8. Add more bender scan view data
+        # 9. Add more bender scan view data
         widths = trains.width_train.mean
         if self._analysis_type == "Pulse":
             widths = trains.width_pulse.get_values(self._pulse_num)
@@ -213,17 +227,18 @@ class SpotSizeProcessor(QThreadWorker):
     # Helper methods
 
     def _assemble(self, data):
-        # 0. Get and rearrange the detector data to train dict
+        # 0. Get and rearrange the source data to train dict
         train = {}
-        for detector in self._detectors:
-            image = data[f"{detector} {self._detector_prop}"]
-            train[detector] = {self._detector_prop: image}
+        for source in self._source_paths:
+            image = data[f"{source} {self._source_prop}"]
+            train[source] = {self._source_prop: image}
         n_pulses = image.shape[0]
 
         # 1. Get virtual data as template
         virtual = self._virtual_array
         if virtual is None or virtual.shape[0] != n_pulses:
-            self._virtual_array = virtual = get_modules_file(train, self._detector_prop)
+            virtual = get_modules_file(train, self._source_prop)
+            self._virtual_array = virtual
 
         # 2. (Re)Create assembled array
         assembled = self._assembled_array
@@ -267,6 +282,18 @@ class SpotSizeProcessor(QThreadWorker):
         view = ViewData(image=image,
                         proj=Projection(x, y, fit, pos, width),)
         return pulse, view
+
+    @property
+    def detector_source(self):
+        return self._source_type == "Detector"
+
+    @property
+    def pulse_resolved(self):
+        return self._analysis_type == "Pulse"
+
+    @property
+    def train_resolved(self):
+        return not self.detector_source or not self.pulse_resolved
 
 
 # Assembling logic
