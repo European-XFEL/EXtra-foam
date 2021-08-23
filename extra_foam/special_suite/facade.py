@@ -93,6 +93,7 @@ class _SpecialSuiteFacadeBase(QMainWindow):
         btn = create_icon_button(instance_type.icon, self._ICON_WIDTH)
         btn.clicked.connect(lambda: self.open_analysis_sgn.emit(
             instance_type, self._topic))
+        btn.clicked.connect(lambda: btn.setEnabled(False))
 
         title = instance_type._title
         if title in self._buttons:
