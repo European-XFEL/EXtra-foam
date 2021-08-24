@@ -44,7 +44,8 @@ def _maybe_squeeze_to_image(arr):
 
 
 def _stack_detector_modules(data, src, modules, *,
-                            pulse_resolved=True, memory_cell_last=False):
+                            pulse_resolved=True,
+                            preprocess_func=None):
     """Stack detector modules.
 
     It should be used for detectors like, JungFrau, ePix100, etc. For
@@ -82,9 +83,9 @@ def _stack_detector_modules(data, src, modules, *,
             # single-module train-resolved detector data may have the
             # shape (1, y, x), (y, x, 1)
             array = _maybe_squeeze_to_image(array)
-        elif memory_cell_last:
+        elif preprocess_func is not None:
             # (y, x, memory cells) -> (memory cells, y x)
-            array = np.moveaxis(array, -1, 0)
+            array = preprocess_func(array)
 
         dtypes.add(array.dtype)
         shapes.add(array.shape)
@@ -173,7 +174,7 @@ class ImageAssemblerFactory(ABC):
             assembler_type = GeomAssembler(int(cfg["assembler"]))
             stack_only = cfg["stack_only"] == 'True'
             geom_file = cfg["geometry_file"]
-            coordinates = json.loads(cfg["coordinates"])
+            coordinates = json.loads(cfg["coordinates"], encoding='utf8')
 
             # reload geometry if any of the following 4 fields changed
             if stack_only != self._stack_only or \
@@ -442,7 +443,24 @@ class ImageAssemblerFactory(ABC):
             - raw, "image.data", (modules, x, y, memory cells)
             -> (memory cells, modules, y, x)
             """
-            return np.moveaxis(np.moveaxis(data[src], 3, 0), 3, 2)
+
+            def preprocess(arr):
+                return np.swapaxes(arr, 0, 2).astype(np.float32)
+
+            # TODO: deal with modules received separately
+            modules_data = data[src]
+
+            if self._n_modules == 1:
+                #   (x, y, memory cells) -> (memory cells, 1, y, x)
+                return np.expand_dims(preprocess(modules_data), axis=1)
+
+            if isinstance(modules_data, np.ndarray):
+                if modules_data.ndim == 4:
+                    return np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
+
+            # modules data arrives without being stacked
+            return _stack_detector_modules(modules_data, src, modules,
+                                           preprocess_func=preprocess)
 
         def _get_modules_file(self, data, src, modules):
             """Override.
@@ -478,12 +496,17 @@ class ImageAssemblerFactory(ABC):
 
             -> (memory cells, modules, y, x)
             """
+
+            def preprocess(arr):
+                # Move the last axis to the first
+                return np.moveaxis(arr, -1, 0)
+
             # TODO: deal with modules received separately
             modules_data = data[src]
 
             if self._n_modules == 1:
                 #   (y, x, memory cells) -> (memory cells, 1, y, x)
-                return np.expand_dims(np.moveaxis(modules_data, -1, 0), axis=1)
+                return np.expand_dims(preprocess(modules_data), axis=1)
 
             if isinstance(modules_data, np.ndarray):
                 if modules_data.shape[1] == self._module_shape[0]:
@@ -491,13 +514,13 @@ class ImageAssemblerFactory(ABC):
                     # at the PipeToZeroMQ device), if not:
                     #   (modules, y, x, memory cells) ->
                     #   (memory cells, modules, y, x)
-                    modules_data = np.moveaxis(modules_data, -1, 0)
+                    modules_data = preprocess(modules_data)
                 # (memory cells, modules, y, x)
                 return modules_data
 
             # modules data arrives without being stacked
             return _stack_detector_modules(modules_data, src, modules,
-                                           memory_cell_last=True)
+                                           preprocess_func=preprocess)
 
         def _get_modules_file(self, data, src, modules):
             """Override.
