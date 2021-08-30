@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QGridLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 )
 
-from extra_foam.gui.gui_helpers import create_icon_button
+from extra_foam.gui.gui_helpers import create_icon_button, center_window
 
 from . import __version__
 from .cam_view_w import CamViewWindow
@@ -69,6 +69,8 @@ class _SpecialSuiteFacadeBase(QMainWindow):
 
         self._cw = QWidget()
         self.setCentralWidget(self._cw)
+
+        center_window(self, False)
 
     def initUI(self):
         layout = QVBoxLayout()
