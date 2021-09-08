@@ -53,6 +53,7 @@ class _TestDataMixin:
                             histogram=False,
                             correlation=False,
                             binning=False,
+                            with_fast_data=[],
                             **kwargs):
         imgs = cls._gen_images(gen, shape, dtype)
         processed = cls.processed_data(tid, shape, gen=gen, dtype=dtype,
@@ -90,6 +91,11 @@ class _TestDataMixin:
             for ch in digitizer:
                 digitizer[ch].pulse_integral = np.random.rand(n_pulses)
 
+        raw_data = { "META timestamp.tid": tid }
+        if with_fast_data:
+            for pipeline, pipeline_property in with_fast_data:
+                raw_data[f"{pipeline} {pipeline_property}"] = np.random.rand(100)
+
         data = {
             'processed': processed,
             'catalog': catalog,
@@ -99,9 +105,7 @@ class _TestDataMixin:
                     'source_type': src_type,
                 }
             },
-            'raw': {
-                src: dict()
-            },
+            'raw': raw_data,
             'assembled': {
                 'data': imgs,
             }
