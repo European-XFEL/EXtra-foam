@@ -9,6 +9,7 @@ All rights reserved.
 """
 import os
 import psutil
+import socket
 import multiprocessing as mp
 import functools
 import subprocess
@@ -261,3 +262,18 @@ def run_in_thread(daemon=False):
             return t
         return threaded_f
     return wrap
+
+
+def get_available_port(default_port):
+    """Find an available port to bind to."""
+    port = default_port
+    with socket.socket() as s:
+        while True:
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                port += 1
+            else:
+                break
+
+    return port

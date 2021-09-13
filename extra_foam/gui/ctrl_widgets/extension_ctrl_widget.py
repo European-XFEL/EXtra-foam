@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QGridLayout, QLabel
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ...config import config
+from ...utils import get_available_port
 
 
 class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -24,7 +25,7 @@ class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._host_le = SmartLineEdit('*')
         self._host_le.setEnabled(False)
-        self._port_le = SmartLineEdit(str(config["EXTENSION_PORT"]))
+        self._port_le = SmartLineEdit(str(get_available_port(config["EXTENSION_PORT"])))
         self._port_le.setValidator(QIntValidator(0, 65535))
 
         self._non_reconfigurable_widgets = [
