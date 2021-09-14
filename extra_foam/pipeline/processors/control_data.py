@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .base_processor import _BaseProcessor
-from ...config import config
+from ...config import config, KaraboType
 
 
 class CtrlDataProcessor(_BaseProcessor):
@@ -39,6 +39,11 @@ class CtrlDataProcessor(_BaseProcessor):
 
             # process control data
             for src in srcs:
+                # Double-check that the source is control data, this is
+                # particularly needed for the user-defined keys.
+                if not catalog.get_type(src) == KaraboType.CONTROL_DATA:
+                    continue
+
                 v = raw[src]
                 self.filter_train_by_vrange(
                     v, catalog.get_vrange(src), src)

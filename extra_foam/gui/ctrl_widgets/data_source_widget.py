@@ -439,8 +439,9 @@ class DataSourceItemModel(QAbstractItemModel):
                                       parent=self._root)
         self._root.appendChild(ctg_item)
         for i in range(n_user_defined):
+            dtype = KaraboType.PIPELINE_DATA if i < n_user_defined / 2 else KaraboType.CONTROL_DATA
             ctg_item.appendChild(DataSourceTreeItem(
-                [False, 0, f"Device-ID-{i+1}", f"Property-{i+1}",
+                [False, dtype, f"Device-ID-{i+1}", f"Property-{i+1}",
                  "", '-inf, inf'],
                 exclusive=False,
                 parent=ctg_item))
