@@ -37,11 +37,12 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
                 proc.process(data)
 
         catalog.clear()
-        for ctg in ['XGM', 'DSSC', 'JungFrau']:
+        for ctg in ['XGM', 'DSSC', 'JungFrau', config["SOURCE_USER_DEFINED_CATEGORY"]]:
             item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), KaraboType.PIPELINE_DATA)
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'train_id': 12346}
             raw[src] = 2
-            # it will not raise for other sources
+            # It will not raise for other sources, even the user-defined
+            # category, which may be pipeline data.
             proc.process(data)
