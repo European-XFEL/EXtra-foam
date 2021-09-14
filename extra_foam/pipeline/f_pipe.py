@@ -13,10 +13,10 @@ from queue import Empty, Full
 import time
 
 from .f_transformer import DataTransformer
-from .f_zmq import BridgeProxy, FoamZmqServer
+from .f_zmq import BridgeProxy, FoamZmqServer, KaraboBridgeServer
 from .f_queue import SimpleQueue
 from .processors.base_processor import _RedisParserMixin
-from ..config import config, DataSource
+from ..config import config, DataSource, ExtensionType
 from ..utils import profiler, run_in_thread
 from ..ipc import process_logger as logger
 from ..database import (
@@ -337,17 +337,19 @@ class MpOutQueue(_PipeOutBase):
 
 class ZmqOutQueue(_PipeOutBase):
     """A pipe which uses ZeroMQ to dispatch data."""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ext_type, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._server = None
+        self._ext_type = ext_type
 
     def _update_server(self):
         if self._server is None:
-            self._server = FoamZmqServer()
+            is_foam_server = self._ext_type == ExtensionType.ALL_OUTPUT
+            self._server = FoamZmqServer() if is_foam_server else KaraboBridgeServer()
 
         cfg = self._meta.hget_all(mt.EXTENSION)
-        endpoint = cfg["endpoint"]
+        endpoint = cfg[self._ext_type.value]
 
         self._server.stop()
         self._server.bind(endpoint)

@@ -30,7 +30,7 @@ from .processors import (
     PumpProbeProcessor,
     XgmProcessor,
 )
-from ..config import config, PipelineSlowPolicy
+from ..config import config, PipelineSlowPolicy, ExtensionType
 from ..ipc import RedisConnection
 from ..ipc import process_logger as logger
 from ..processes import register_foam_process
@@ -56,6 +56,8 @@ class ProcessWorker(mp.Process):
         # pipeline extension for special suite, jupyter notebook and
         # other plugins
         self._extension = None
+        # Extension for detector output over a KaraboBridge
+        self._detector_extension = None
 
         self._tasks = []
 
@@ -102,6 +104,8 @@ class ProcessWorker(mp.Process):
         self._output.start()
         if self._extension is not None:
             self._extension.start()
+        if self._detector_extension is not None:
+            self._detector_extension.start()
 
         data_out = None
         while not self.closing:
@@ -149,6 +153,26 @@ class ProcessWorker(mp.Process):
                 if self._extension is not None and sent:
                     try:
                         self._extension.put(data_out)
+                    except Full:
+                        pass
+
+                if self._detector_extension is not None and sent:
+                    processed = data_out["processed"]
+                    detector, key = data_out["catalog"].main_detector.split()
+
+                    now = time.time()
+                    bridge_data = {
+                        f"EF_{detector}" : {
+                            key: processed.image.masked_mean,
+                            "metadata": {
+                                "timestamp": now,
+                                "timestamp.sec": int(now),
+                                "timestamp.frac": 0,
+                                "timestamp.tid": processed.tid
+                            } } }
+
+                    try:
+                        self._detector_extension.put(bridge_data)
                     except Full:
                         pass
 
@@ -231,8 +255,12 @@ class TrainWorker(ProcessWorker):
         self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
         self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev,
                                   final=True)
-        self._extension = ZmqOutQueue(
-            self._extension_update_ev, pause_ev, close_ev)
+        self._extension = ZmqOutQueue(ExtensionType.ALL_OUTPUT,
+                                      self._extension_update_ev,
+                                      pause_ev, close_ev)
+        self._detector_extension = ZmqOutQueue(ExtensionType.DETECTOR_OUTPUT,
+                                               self._extension_update_ev,
+                                               pause_ev, close_ev)
 
         self._set_processors([
             ('image_roi', ImageRoiTrain),

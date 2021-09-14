@@ -4,7 +4,9 @@ from threading import Thread
 import zmq
 import msgpack
 
-from extra_foam.pipeline.f_zmq import BridgeProxy
+from extra_foam.pipeline.f_zmq import BridgeProxy, KaraboBridgeServer
+
+from karabo_bridge import Client
 
 
 def _simple_data_in_karabo(src):
@@ -77,3 +79,39 @@ class TestZmq(unittest.TestCase):
             self.assertIsNone(proxy._client)
 
         ctx.destroy(linger=0)
+
+    def testKaraboBridge(self):
+        endpoint = "ipc://karabo-bridge"
+
+        # Create server and client
+        server = KaraboBridgeServer()
+        server.bind(endpoint)
+        client = Client(endpoint, timeout=5)
+
+        # Generate fake data
+        data = []
+        for src in ["foo", "bar", "baz"]:
+            meta, d = _simple_data_in_karabo(src)
+            for key in d:
+                d[key] = {
+                    "value": d[key],
+                    "metadata": meta
+                }
+            data.append(d)
+
+        # Helper function to stream data in order
+        def run_server():
+            for d in data:
+                server.send(d)
+            server.stop()
+
+        # Test server
+        server_thread = Thread(target=run_server)
+        server_thread.start()
+
+        # Check we receive the right data
+        for d in data:
+            received, _ = client.next()
+            self.assertEqual(received, d)
+
+        server_thread.join(timeout=1)

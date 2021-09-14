@@ -12,6 +12,7 @@ import json
 
 from PyQt5.QtCore import pyqtSignal,  QObject
 
+from ..config import ExtensionType
 from ..database import Metadata as mt
 from ..database import MetaProxy
 
@@ -60,7 +61,10 @@ class Mediator(QObject):
         self._meta.unregister_analysis(analysis_type)
 
     def onExtensionEndpointChange(self, endpoint: str):
-        self._meta.hset(mt.EXTENSION, "endpoint", endpoint)
+        self._meta.hset(mt.EXTENSION, ExtensionType.ALL_OUTPUT.value, endpoint)
+
+    def onDetectorExtensionEndpointChange(self, endpoint: str):
+        self._meta.hset(mt.EXTENSION, ExtensionType.DETECTOR_OUTPUT.value, endpoint)
 
     def onBridgeConnectionsChange(self, connections: dict):
         # key = endpoint, value = source type
