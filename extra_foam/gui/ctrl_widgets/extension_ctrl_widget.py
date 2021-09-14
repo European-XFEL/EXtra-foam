@@ -23,13 +23,18 @@ class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Extension setup", *args, **kwargs)
 
+        extension_port = get_available_port(config["EXTENSION_PORT"])
+
         self._host_le = SmartLineEdit('*')
         self._host_le.setEnabled(False)
-        self._port_le = SmartLineEdit(str(get_available_port(config["EXTENSION_PORT"])))
+        self._port_le = SmartLineEdit(str(extension_port))
         self._port_le.setValidator(QIntValidator(0, 65535))
+
+        self._detector_port_le = SmartLineEdit(str(get_available_port(extension_port + 1)))
 
         self._non_reconfigurable_widgets = [
             self._port_le,
+            self._detector_port_le
         ]
 
         self.initUI()
@@ -44,8 +49,10 @@ class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         layout.addWidget(QLabel("IP address"), 0, 0, AR)
         layout.addWidget(self._host_le, 0, 1)
-        layout.addWidget(QLabel("Port"), 0, 2, AR)
+        layout.addWidget(QLabel("Special suite port"), 0, 2, AR)
         layout.addWidget(self._port_le, 0, 3)
+        layout.addWidget(QLabel("Detector streaming port"), 1, 2, AR)
+        layout.addWidget(self._detector_port_le, 1, 3)
 
         self.setLayout(layout)
 
@@ -53,6 +60,7 @@ class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Overload."""
         self._host_le.returnPressed.connect(self._onEndpointChange)
         self._port_le.returnPressed.connect(self._onEndpointChange)
+        self._detector_port_le.returnPressed.connect(self._onEndpointChange)
 
     def updateMetaData(self):
         """Overload."""
@@ -67,3 +75,5 @@ class ExtensionCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def _onEndpointChange(self):
         self._mediator.onExtensionEndpointChange(
             f"tcp://{self._host_le.text()}:{self._port_le.text()}")
+        self._mediator.onDetectorExtensionEndpointChange(
+            f"tcp://{self._host_le.text()}:{self._detector_port_le.text()}")

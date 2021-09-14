@@ -144,3 +144,7 @@ class SourceCatalog(abc.Collection):
     def __repr__(self):
         return f'SourceCatalog(main_detector={self._main_detector}, ' \
                f'n_items={self.__len__()})'
+
+    def __eq__(self, other):
+        return self._items == other._items and \
+            self.main_detector == other.main_detector

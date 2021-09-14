@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from enum import IntEnum
+from enum import Enum, IntEnum
 import os.path as osp
 import shutil
 from collections import abc, namedtuple, OrderedDict
@@ -24,6 +24,11 @@ from .logger import logger
 
 _MAX_INT32 = np.iinfo(np.int32).max
 _MIN_INT32 = np.iinfo(np.int32).min
+
+
+class ExtensionType(Enum):
+    ALL_OUTPUT = "endpoint"
+    DETECTOR_OUTPUT = "detector_endpoint"
 
 
 class DataSource(IntEnum):

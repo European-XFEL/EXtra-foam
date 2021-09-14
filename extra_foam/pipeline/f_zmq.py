@@ -18,7 +18,7 @@ from time import time, sleep
 import zmq
 import msgpack
 
-from karabo_bridge import Client, deserialize
+from karabo_bridge import Client, serialize, deserialize
 
 from ..config import config
 from ..utils import run_in_thread
@@ -136,34 +136,54 @@ class BridgeProxy:
             self._stopped.wait()
 
 
-class FoamZmqServer:
+class AbstractZmqServer:
     """Internal zmq server for EXtra-foam."""
     def __init__(self):
 
         self._ctx = None
-        self._socket = None
+        self.socket = None
 
     def bind(self, endpoint):
         self._ctx = zmq.Context()
-        self._socket = self._ctx.socket(zmq.REP)
-        self._socket.bind(endpoint)
-        self._socket.setsockopt(zmq.RCVTIMEO, 100)
+        self.socket = self._ctx.socket(zmq.REP)
+        self.socket.bind(endpoint)
+        self.socket.setsockopt(zmq.RCVTIMEO, 100)
 
     def stop(self):
-        if self._socket is not None:
-            self._socket.setsockopt(zmq.LINGER, 0)
-            self._socket = None
+        if self.socket is not None:
+            self.socket.setsockopt(zmq.LINGER, 0)
+            self.socket = None
 
         if self._ctx is not None:
             self._ctx.destroy(linger=0)
             self._ctx = None
 
     def send(self, data):
+        raise NotImplementedError("send() not implemented")
+
+
+class FoamZmqServer(AbstractZmqServer):
+    def send(self, data):
         try:
-            self._socket.recv()
+            self.socket.recv()
         except zmq.error.Again:
             raise TimeoutError
-        self._socket.send(pickle.dumps(data), copy=False)
+        self.socket.send(pickle.dumps(data), copy=False)
+
+
+class KaraboBridgeServer(AbstractZmqServer):
+    def send(self, data):
+        try:
+            msg = self.socket.recv()
+        except zmq.error.Again:
+            raise TimeoutError()
+
+        if msg != b"next":
+            self.socket.send(b"Error: bad request %b" % msg)
+            return
+
+        payload = serialize(data)
+        self.socket.send_multipart(payload, copy=False)
 
 
 class FoamZmqClient:
