@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
+from .curve_fitting_ctrl_widget import _BaseFittingCtrlWidget
 from .smart_widgets import (
     SmartBoundaryLineEdit, SmartSliceLineEdit, SmartLineEdit
 )
@@ -36,6 +37,35 @@ def _estimate_q_range():
     return f'0, {max_q:.4f}'
 
 
+class _AzimuthalIntegFittingCtrlWidget(_BaseFittingCtrlWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.initUI()
+        self.initConnections()
+
+    def initUI(self):
+        layout = QGridLayout()
+
+        layout.addWidget(QLabel("Fit type: "), 0, 0)
+        layout.addWidget(self.fit_type_cb, 0, 1)
+
+        layout.addWidget(self.fit_btn, 0, 2, 1, 1)
+        layout.addWidget(self.clear_btn, 0, 3, 1, 1)
+
+        layout.addWidget(QLabel("Param a0 = "), 1, 0)
+        layout.addWidget(self._params[0], 1, 1)
+        layout.addWidget(QLabel("Param b0 = "), 1, 2)
+        layout.addWidget(self._params[1], 1, 3)
+        layout.addWidget(QLabel("Param c0 = "), 2, 0)
+        layout.addWidget(self._params[2], 2, 1)
+        layout.addWidget(QLabel("Param d0 = "), 2, 2)
+        layout.addWidget(self._params[3], 2, 3)
+        layout.addWidget(self._output, 3, 0, 1, 4)
+
+        self.setLayout(layout)
+
+
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up azimuthal integration parameters."""
 
@@ -50,6 +80,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
 
     cx_changed_sgn = pyqtSignal(float)
     cy_changed_sgn = pyqtSignal(float)
+    fit_curve_sgn = pyqtSignal()
+    clear_fitting_sgn = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -168,18 +200,29 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         algo_layout.addWidget(self._peak_slicer_le, 2, 1)
         algo_widget.setLayout(algo_layout)
 
+        fitting_widget = QFrame()
+        fitting_layout = QHBoxLayout()
+        self._fitter = _AzimuthalIntegFittingCtrlWidget()
+        fitting_layout.addWidget(self._fitter)
+        fitting_widget.setLayout(fitting_layout)
+
         layout.addWidget(param_widget)
         layout.addWidget(algo_widget)
+        layout.addWidget(fitting_widget)
         layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(layout)
 
         self.setFrameStyle(QFrame.NoFrame)
         param_widget.setFrameStyle(QFrame.StyledPanel)
         algo_widget.setFrameStyle(QFrame.StyledPanel)
+        fitting_widget.setFrameStyle(QFrame.StyledPanel)
 
     def initConnections(self):
         """Override."""
         mediator = self._mediator
+
+        self._fitter.fit_btn.clicked.connect(self.fit_curve_sgn)
+        self._fitter.clear_btn.clicked.connect(self.clear_fitting_sgn)
 
         self._photon_energy_le.value_changed_sgn.connect(
             lambda x: mediator.onPhotonEnergyChange(float(x)))
@@ -280,3 +323,6 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._updateWidgetValue(
             self._peak_prominence_le, cfg, "peak_prominence")
         self._updateWidgetValue(self._peak_slicer_le, cfg, "peak_slicer")
+
+    def fitCurve(self, x, y):
+        return self._fitter.fit(x, y)

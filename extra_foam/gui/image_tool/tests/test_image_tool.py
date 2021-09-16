@@ -718,6 +718,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("20", widget._peak_prominence_le.text())
         self.assertEqual("0::2", widget._peak_slicer_le.text())
 
+        # test curve fitting controls
+        spy = QSignalSpy(widget.fit_curve_sgn)
+        QTest.mouseClick(widget._fitter.fit_btn, Qt.LeftButton)
+        self.assertEqual(1, len(spy))
+
+        spy = QSignalSpy(widget.clear_fitting_sgn)
+        QTest.mouseClick(widget._fitter.clear_btn, Qt.LeftButton)
+        self.assertEqual(1, len(spy))
+
     def testRoiFomCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_fom_ctrl_widget
         avail_norms = {value: key for key, value in widget._available_norms.items()}
