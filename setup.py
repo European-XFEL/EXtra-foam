@@ -299,7 +299,7 @@ setup(
         'scipy>=1.2.1',
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
-        'pyzmq>=17.1.2',
+        'pyzmq>=22.3.0',
         'pyFAI>=0.17.0',
         'PyQt5==5.13.2',
         'PyQt5-sip>=12.9.0',
