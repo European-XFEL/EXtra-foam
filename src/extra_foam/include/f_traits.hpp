@@ -11,6 +11,8 @@
 #ifndef EXTRA_FOAM_FOAM_TRAITS_H
 #define EXTRA_FOAM_FOAM_TRAITS_H
 
+#include <type_traits>
+
 #include "xtensor/xexpression.hpp"
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xarray.hpp"
@@ -76,6 +78,9 @@ struct IsModulesVector<std::vector<xt::xtensor<T, 3, L>>> : std::true_type {};
 
 template<typename E, template<typename> class C>
 using EnableIf = std::enable_if_t<C<E>::value, bool>;
+
+template<typename T, template<typename> typename Test1, template<typename> typename Test2>
+using EnableIfEither = std::enable_if_t<std::disjunction_v<Test1<T>, Test2<T>>, bool>;
 
 template<typename E, typename T = void>
 using ValueTypeHelper = std::conditional_t<std::is_same_v<T, void>,

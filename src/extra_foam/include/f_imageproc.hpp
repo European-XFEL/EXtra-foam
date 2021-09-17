@@ -10,6 +10,7 @@
 #ifndef EXTRA_FOAM_IMAGE_PROC_H
 #define EXTRA_FOAM_IMAGE_PROC_H
 
+#include <cmath>
 #include <type_traits>
 
 #include "xtensor/xview.hpp"
@@ -28,10 +29,10 @@
 namespace foam
 {
 
-#if defined(FOAM_USE_TBB)
 namespace detail
 {
 
+#if defined(FOAM_USE_TBB)
 template<typename E>
 inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
 {
@@ -84,9 +85,22 @@ inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
 
   return mean;
 }
+#endif
+
+template<typename E, typename value_type, typename... T>
+inline void binPhotonsImp(E const& data, E& out, size_t adu_count, value_type limit, T... indices)
+{
+  if (std::isnan(data(indices...))) {
+    out(indices...) = NAN;
+  } else {
+    // Bin value
+    value_type bin = std::floor((0.5 * adu_count + data(indices...)) / adu_count);
+    // Clamp between 0 and infinity
+    out(indices...) = std::max(static_cast<value_type>(0), std::min(bin, limit));
+  }
+}
 
 } // detail
-#endif
 
 /**
  * Calculate the nanmean of the selected images from an array of images.
@@ -892,6 +906,24 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
     }
   );
 #endif
+}
+
+template<typename E, EnableIfEither<E, IsImage, IsImageArray> = false>
+inline void binPhotons(const E& data, size_t adu_count, E& out)
+{
+  using value_type = typename std::decay_t<E>::value_type;
+  value_type limit = std::numeric_limits<value_type>::infinity();
+  auto shape = data.shape();
+
+  if constexpr (data.rank == 2) {
+    utils::applyFunctor2d(shape, [&] (size_t i, size_t j) {
+      detail::binPhotonsImp(data, out, adu_count, limit, i, j);
+    });
+  } else if (data.rank == 3) {
+    utils::applyFunctor3d(shape, [&] (size_t i, size_t j, size_t k) {
+      detail::binPhotonsImp(data, out, adu_count, limit, i, j, k);
+    });
+  }
 }
 
 /**

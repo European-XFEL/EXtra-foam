@@ -133,7 +133,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._peak_finding_cb = QCheckBox("Peak finding")
         self._peak_finding_cb.setChecked(True)
         self._peak_prominence_le = SmartLineEdit(str(_DEFAULT_PEAK_PROMINENCE))
-        self._peak_prominence_le.setValidator(QIntValidator())
+        self._peak_prominence_le.setValidator(QDoubleValidator())
         self._peak_slicer_le = SmartSliceLineEdit(":")
 
         self._non_reconfigurable_widgets = [

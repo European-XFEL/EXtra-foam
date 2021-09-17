@@ -5,11 +5,46 @@ import pytest
 import numpy as np
 
 from extra_foam.algorithms import (
-    correct_image_data, mask_image_data, movingAvgImageData, nanmean_image_data
+    correct_image_data, mask_image_data, movingAvgImageData, nanmean_image_data, bin_photons
 )
 
 
 class TestImageProc(unittest.TestCase):
+    def testPhotonBinning(self):
+        arr1d = np.full((2,), 100, dtype=float)
+        arr2d = np.full((2, 2), 100, dtype=float)
+        arr3d = np.full((2, 2, 2), 100, dtype=float)
+
+        # Test invalid inputs
+        with self.assertRaises(ValueError):
+            bin_photons(arr1d, 2)
+
+        with self.assertRaises(TypeError):
+            bin_photons(arr2d, 2, out=arr1d)
+
+        # Ensure that the out parameter is respected
+        arr3d_copy = arr3d.copy()
+        result = bin_photons(arr3d, 2)
+        np.testing.assert_array_equal(arr3d, arr3d_copy)
+
+        result = bin_photons(arr3d, 2, out=arr3d)
+        self.assertIs(arr3d, result)
+        self.assertFalse(np.array_equal(arr3d, arr3d_copy))
+
+        # Test for contiguous arrays
+        data = np.array([[-2, -1, 5, 0], [1.5, 2.5, 3, np.nan]])
+        expected_results = np.array([[0, 0, 3, 0], [1, 1, 2, np.nan]])
+        self.assertTrue(data.data.c_contiguous)
+        self.assertTrue(expected_results.data.c_contiguous)
+        np.testing.assert_array_equal(bin_photons(data, 2), expected_results)
+
+        # Test for non-contiguous arrays
+        data = data.swapaxes(0, 1)
+        expected_results = expected_results.swapaxes(0, 1)
+        self.assertFalse(data.data.c_contiguous)
+        self.assertFalse(expected_results.data.c_contiguous)
+        np.testing.assert_array_equal(bin_photons(data, 2), expected_results)
+
     def testNanmeanImageData(self):
         arr1d = np.ones(2, dtype=np.float32)
         arr2d = np.ones((2, 2), dtype=np.float32)

@@ -31,6 +31,13 @@ static constexpr auto nan = std::numeric_limits<float>::quiet_NaN();
 static const auto zero_mt = NanSensitiveFloatEq(0.f);
 static const auto nan_mt = NanSensitiveFloatEq(nan);
 
+TEST(TestPhotonBinning, TestGeneral)
+{
+    xt::xtensor<float, 2> data {{-2, -1, 0}, {1, 2, nan}};
+    binPhotons(data, 1, data);
+    EXPECT_THAT(data, ElementsAre(0, 0, 0, 1, 2, nan_mt));
+}
+
 TEST(TestNanmeanImageArray, TestGeneral)
 {
   auto inf = std::numeric_limits<float>::infinity();

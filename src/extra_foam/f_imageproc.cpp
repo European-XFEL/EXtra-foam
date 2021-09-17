@@ -58,6 +58,16 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_MOVING_AVG_IMAGE_DATA_IMPL(double, 3)
   FOAM_MOVING_AVG_IMAGE_DATA_IMPL(float, 3)
 
+#define FOAM_BIN_PHOTONS(VALUE_TYPE, N_DIM)                                                    \
+  m.def("binPhotons",                                                                          \
+    &binPhotons<xt::pytensor<VALUE_TYPE, N_DIM>>,                                              \
+    py::arg("data").noconvert(), py::arg("adu_count"), py::arg("out").noconvert());
+
+  FOAM_BIN_PHOTONS(double, 2)
+  FOAM_BIN_PHOTONS(double, 3)
+  FOAM_BIN_PHOTONS(float, 2)
+  FOAM_BIN_PHOTONS(float, 3)
+
   //
   // mask
   //
