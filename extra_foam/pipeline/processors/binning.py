@@ -12,8 +12,8 @@ import math
 import numpy as np
 from scipy import stats
 
-from .base_processor import _BaseProcessor
-from ..exceptions import ProcessingError, UnknownParameterError
+from .base_processor import _FomProcessor
+from ..exceptions import ProcessingError
 from ...algorithms import SimpleSequence, SimpleVectorSequence
 from ...database import Metadata as mt
 from ...config import AnalysisType, BinMode
@@ -85,7 +85,7 @@ class _BinMixin:
         return v_min, v_max
 
 
-class BinningProcessor(_BaseProcessor, _BinMixin):
+class BinningProcessor(_FomProcessor, _BinMixin):
     """BinningProcessor class.
 
     Bin data based on 1 or 2 slow (control) data. For 1D binning, only the
@@ -138,10 +138,9 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
     _MAX_POINTS = 18000
 
     def __init__(self):
-        super().__init__()
+        super().__init__("Binning")
 
         self.analysis_type = AnalysisType.UNDEFINED
-        self._pp_analysis_type = AnalysisType.UNDEFINED
 
         self._mode = None
 
@@ -174,9 +173,6 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         self._stats2 = None
         self._heat = None
         self._heat_count = None
-
-        # used to check whether pump-probe FOM is available
-        self._pp_fail_flag = 0
 
         self._has_param1 = False
         self._has_param2 = False
@@ -277,7 +273,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
             fom, vfom, vfom_x, s1, s2 = self._update_data_point(
                 processed, raw)
         except ProcessingError as e:
-            logger.error(f"[Binning] {str(e)}!")
+            logger.error(f"[{self._name}] {str(e)}!")
 
         actual_range1 = self.get_actual_range(
             self._slow1.data(), self._bin_range1, self._auto_range1)
@@ -325,35 +321,9 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         bin.heat_count = self._heat_count
 
     def _update_data_point(self, processed, raw):
-        analysis_type = self.analysis_type
-        if analysis_type == AnalysisType.PUMP_PROBE:
-            ret = processed.pp
-            if ret.fom is None:
-                self._pp_fail_flag += 1
-                # if on/off pulses are in different trains, pump-probe FOM is
-                # only calculated every other train.
-                if self._pp_fail_flag == 2:
-                    self._pp_fail_flag = 0
-                    raise ProcessingError("Pump-probe FOM is not available")
-                return None, None, None, None, None
-            else:
-                self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI_FOM:
-            ret = processed.roi
-            if ret.fom is None:
-                raise ProcessingError("ROI FOM is not available")
-        elif analysis_type == AnalysisType.ROI_PROJ:
-            ret = processed.roi.proj
-            if ret.fom is None:
-                raise ProcessingError("ROI projection FOM is not available")
-        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            ret = processed.ai
-            if ret.fom is None:
-                raise ProcessingError(
-                    "Azimuthal integration FOM is not available")
-        else:
-            raise UnknownParameterError(
-                f"[Binning] Unknown analysis type: {self.analysis_type}")
+        ret, fom, _ = self._extract_fom(processed)
+        if fom is None:
+            return None, None, None, None, None
 
         tid = processed.tid
 
@@ -368,7 +338,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         if err:
             raise ProcessingError(err)
 
-        fom, vfom, vfom_x = ret.fom, ret.y, ret.x
+        vfom, vfom_x = ret.y, ret.x
 
         if vfom is not None:
             if self._vfom is None:

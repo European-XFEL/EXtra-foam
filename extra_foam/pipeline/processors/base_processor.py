@@ -389,3 +389,93 @@ class _BaseProcessor(_BaseProcessorMixin, _RedisParserMixin,
         :param dict data: data which contains raw and processed data, etc.
         """
         raise NotImplementedError
+
+
+class _FomProcessor(_BaseProcessor):
+    """Wrapper over _BaseProcessor for processors that need to use FOMs"""
+
+    _ai_analysis_types = [AnalysisType.AZIMUTHAL_INTEG,
+                          AnalysisType.AZIMUTHAL_INTEG_PEAK,
+                          AnalysisType.AZIMUTHAL_INTEG_PEAK_Q,
+                          AnalysisType.AZIMUTHAL_INTEG_COM]
+
+    def __init__(self, name):
+        """Create a _FomProcessor
+
+        :param str name: Name of the processor, to use in logs.
+        """
+        super().__init__()
+
+        self._name = name
+        # used to check whether pump-probe FOM is available
+        self._pp_fail_flag = 0
+        self._pp_analysis_type = AnalysisType.UNDEFINED
+
+    def _extract_ai_fom(self, ai, analysis_type):
+        """Extract a azimuthal integration FOM
+
+        :param AzimuthalIntegrationData ai: The data object to get the FOM from.
+        :param AnalysisType analysis_type: The type of analysis.
+
+        :return: A numeric value (i.e. float)
+        """
+        if analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            return ai.fom
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_PEAK:
+            return ai.max_peak
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_PEAK_Q:
+            return ai.max_peak_q
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG_COM:
+            # For the center-of-mass, we use the q value as the FOM
+            return ai.center_of_mass[0] if ai.center_of_mass is not None else None
+        else:
+            raise ProcessingError("Unrecognized azimuthal integration FOM")
+
+    def _extract_fom(self, processed):
+        """Extract a figure-of-merit from the current train
+
+        :param ProcessedData processed: the processed data with an FOM.
+
+        :return: A tuple of (ret, fom, fom_slave), where `ret` is a DataItem,
+                 `fom` is its FOM (e.g. float), and fom_slave is a boolean.
+        """
+        analysis_type = self.analysis_type
+        fom_slave = None
+        ret = None
+
+        if analysis_type == AnalysisType.PUMP_PROBE:
+            ret = processed.pp
+            fom = ret.fom
+            if fom is None:
+                self._pp_fail_flag += 1
+                # if on/off pulses are in different trains, pump-probe FOM is
+                # only calculated every other train.
+                if self._pp_fail_flag == 2:
+                    self._pp_fail_flag = 0
+                    raise ProcessingError("Pump-probe FOM is not available")
+                return None, None, None
+            else:
+                self._pp_fail_flag = 0
+        elif analysis_type == AnalysisType.ROI_FOM:
+            ret = processed.roi
+            fom = ret.fom
+            fom_slave = ret.fom_slave
+            if fom is None:
+                raise ProcessingError("ROI FOM is not available")
+        elif analysis_type == AnalysisType.ROI_PROJ:
+            ret = processed.roi.proj
+            fom = ret.fom
+            if fom is None:
+                raise ProcessingError("ROI projection FOM is not available")
+        elif analysis_type in self._ai_analysis_types:
+            ret = processed.ai
+            fom = self._extract_ai_fom(ret, analysis_type)
+
+            if fom is None:
+                raise ProcessingError(
+                    "Azimuthal integration FOM is not available")
+        else:
+            raise UnknownParameterError(
+                f"[{self._name}] Unknown analysis type: {self.analysis_type}")
+
+        return ret, fom, fom_slave

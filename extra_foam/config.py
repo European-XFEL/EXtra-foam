@@ -10,7 +10,7 @@ All rights reserved.
 from enum import IntEnum
 import os.path as osp
 import shutil
-from collections import abc, namedtuple
+from collections import abc, namedtuple, OrderedDict
 
 import yaml
 from yaml.scanner import ScannerError
@@ -77,6 +77,9 @@ class AnalysisType(IntEnum):
     ROI_NORM = 12
     ROI_PROJ = 21
     AZIMUTHAL_INTEG = 41
+    AZIMUTHAL_INTEG_PEAK = 42
+    AZIMUTHAL_INTEG_PEAK_Q = 43
+    AZIMUTHAL_INTEG_COM = 44
     PULSE = 2700
     PUMP_PROBE_PULSE = 2701
     ROI_FOM_PULSE = 2711
@@ -105,6 +108,26 @@ class PipelineSlowPolicy(IntEnum):
 class CalibrationOffsetPolicy(IntEnum):
     UNDEFINED = 0
     INTRA_DARK = 1
+
+
+_user_analysis_types = OrderedDict({
+    "": AnalysisType.UNDEFINED,
+    "pump-probe": AnalysisType.PUMP_PROBE,
+    "ROI FOM": AnalysisType.ROI_FOM,
+    "ROI proj": AnalysisType.ROI_PROJ,
+    "azimuthal integ (sum)": AnalysisType.AZIMUTHAL_INTEG,
+    "azimuthal integ (peak)": AnalysisType.AZIMUTHAL_INTEG_PEAK,
+    "azimuthal integ (peak q)": AnalysisType.AZIMUTHAL_INTEG_PEAK_Q,
+    "azimuthal integ (CoM)": AnalysisType.AZIMUTHAL_INTEG_COM
+})
+
+
+def get_analysis_types(without=None):
+    if without is not None:
+        return { k: v for k, v in _user_analysis_types.items()
+                 if v != without }
+    else:
+        return _user_analysis_types
 
 
 def list_azimuthal_integ_methods(detector):

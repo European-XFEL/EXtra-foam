@@ -188,12 +188,15 @@ class DataItem:
 
 class AzimuthalIntegrationData(DataItem):
     """Azimuthal integration data item."""
-    __slots__ = ['x', 'y', 'fom', 'q_map', 'peaks']
+    __slots__ = ['q_map', 'peaks', 'max_peak', 'max_peak_q', 'center_of_mass']
 
     def __init__(self):
         super().__init__()
         self.q_map = None
         self.peaks = None
+        self.max_peak = None
+        self.max_peak_q = None
+        self.center_of_mass = None
 
 
 class _RoiGeomBase(ABC):
@@ -358,7 +361,7 @@ class RoiDataTrain(DataItem):
         self.hist = _HistogramDataItem()
 
 
-class PumpProbeData(DataItem):
+class PumpProbeData(AzimuthalIntegrationData):
     """Pump-probe data."""
 
     class OnOff:

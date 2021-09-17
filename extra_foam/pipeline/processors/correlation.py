@@ -7,8 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import _BaseProcessor
-from ..exceptions import ProcessingError, UnknownParameterError
+from .base_processor import _FomProcessor
+from ..exceptions import ProcessingError
 from ...ipc import process_logger as logger
 from ...algorithms import SimplePairSequence, OneWayAccuPairSequence
 from ...config import AnalysisType
@@ -16,7 +16,7 @@ from ...database import Metadata as mt
 from ...utils import profiler
 
 
-class CorrelationProcessor(_BaseProcessor):
+class CorrelationProcessor(_FomProcessor):
     """Add correlation information into processed data.
 
     Attributes:
@@ -46,12 +46,11 @@ class CorrelationProcessor(_BaseProcessor):
     _MAX_POINTS = 10 * 60 * 5
 
     def __init__(self, index):
-        super().__init__()
+        super().__init__("Correlation")
 
         self._idx = index
 
         self.analysis_type = AnalysisType.UNDEFINED
-        self._pp_analysis_type = AnalysisType.UNDEFINED
 
         self._raw = SimplePairSequence(max_len=self._MAX_POINTS)
         self._raw_slave = SimplePairSequence(max_len=self._MAX_POINTS)
@@ -66,7 +65,6 @@ class CorrelationProcessor(_BaseProcessor):
         self._prepare_reset_ma = False
 
         self._corr_pp = SimplePairSequence(max_len=self._MAX_POINTS)
-        self._pp_fail_flag = 0
 
     def update(self):
         """Override."""
@@ -145,7 +143,7 @@ class CorrelationProcessor(_BaseProcessor):
                 data['reset_ma'] = reset_ma
 
         except ProcessingError as e:
-            logger.error(f"[Correlation] {str(e)}!")
+            logger.error(f"[{self._name}] {str(e)}!")
 
         out = processed.corr[self._idx - 1]
         out.x, out.y = self._corr.data()
@@ -169,42 +167,16 @@ class CorrelationProcessor(_BaseProcessor):
 
         if pp.fom is not None:
             self._corr_pp.append((tid, pp.fom))
+        elif pp.analysis_type in self._ai_analysis_types:
+            self._corr_pp.append((tid, self._extract_ai_fom(pp, pp.analysis_type)))
 
         c = processed.corr.pp
         c.x, c.y = self._corr_pp.data()
 
     def _update_data_point(self, processed, raw):
-        analysis_type = self.analysis_type
-        fom_slave = None
-        if analysis_type == AnalysisType.PUMP_PROBE:
-            fom = processed.pp.fom
-            if fom is None:
-                self._pp_fail_flag += 1
-                # if on/off pulses are in different trains, pump-probe FOM is
-                # only calculated every other train.
-                if self._pp_fail_flag == 2:
-                    self._pp_fail_flag = 0
-                    raise ProcessingError("Pump-probe FOM is not available")
-                return
-            else:
-                self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI_FOM:
-            fom = processed.roi.fom
-            fom_slave = processed.roi.fom_slave
-            if fom is None:
-                raise ProcessingError("ROI FOM is not available")
-        elif analysis_type == AnalysisType.ROI_PROJ:
-            fom = processed.roi.proj.fom
-            if fom is None:
-                raise ProcessingError("ROI projection FOM is not available")
-        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            fom = processed.ai.fom
-            if fom is None:
-                raise ProcessingError(
-                    "Azimuthal integration FOM is not available")
-        else:
-            raise UnknownParameterError(
-                f"[Correlation] Unknown analysis type: {self.analysis_type}")
+        _, fom, fom_slave = self._extract_fom(processed)
+        if fom is None:
+            return
 
         v, err = self._fetch_property_data(processed.tid, raw, self._source)
 
