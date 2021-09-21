@@ -12,6 +12,9 @@ class TestDataTransformer(_RawDataMixin, unittest.TestCase):
         src_type = DataSource.BRIDGE
 
         catalog = self._create_catalog({'ABC': [('abc', 'ppt', 0)]})
+        # Add a module source to ensure that the transformer can properly handle
+        # trains that don't include all module data.
+        catalog.add_item(SourceItem('XYZ', 'xyz_*:xtdf', [1, 2], 'ppt', slice(None, None), [0, 100], 1))
 
         # no data is available
         data = (dict(), dict())  # raw, meta
