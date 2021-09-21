@@ -70,8 +70,7 @@ class DataTransformer:
 
             if modules:
                 prefix, suffix = src_name.split("*")
-                new_raw[src] = dict()
-                module_data = new_raw[src]
+                module_data = dict()
                 n_found = 0
                 for idx in modules:
                     module_name = f"{prefix}{idx}{suffix}"
@@ -83,6 +82,7 @@ class DataTransformer:
                     # there is no module data
                     continue
                 else:
+                    new_raw[src] = module_data
                     new_meta[src] = {
                         'train_id': tid, 'source_type': source_type,
                     }
