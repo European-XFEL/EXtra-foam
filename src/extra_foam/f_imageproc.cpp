@@ -232,4 +232,46 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(float, 2)
   FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(double, 3)
   FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(float, 3)
+
+  m.def("assembleDetectorData",                                                                     \
+    &assembleDetectorData<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<size_t, 1>>, \
+    py::arg("modules").noconvert(), py::arg("assembled").noconvert(), py::arg("lut").noconvert(), py::arg("j"));
+
+  m.def("assembleDetectorData2",                                                                    \
+    &assembleDetectorData2<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<size_t, 2>>, \
+    py::arg("modules").noconvert(), py::arg("assembled").noconvert(), \
+    py::arg("flat_lut").noconvert(), py::arg("lut_rows").noconvert(), py::arg("lut_cols").noconvert(), \
+    py::arg("tile_rows"), py::arg("tile_cols"));
+
+#define FOAM_GENERATE_ASSEMBLY_LUT(N_DIM) \
+  m.def("generateAssemblyLUT",                                          \
+    [] (size_t data_size, xt::pytensor<double, N_DIM> assembled) { return generateAssemblyLUT(data_size, assembled); }, \
+    py::arg("data_size"), py::arg("assembled").noconvert());
+
+  FOAM_GENERATE_ASSEMBLY_LUT(1)
+  FOAM_GENERATE_ASSEMBLY_LUT(2)
+  FOAM_GENERATE_ASSEMBLY_LUT(3)
+  FOAM_GENERATE_ASSEMBLY_LUT(4)
+
+  m.def("assembleDetectorData3",                                                                    \
+    &assembleDetectorData3<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<size_t, 2>>, \
+    py::arg("src").noconvert(), py::arg("dest").noconvert(), \
+    py::arg("flat_lut").noconvert(), py::arg("lut_rows").noconvert(), py::arg("lut_cols").noconvert(), \
+    py::arg("tile_rows"), py::arg("tile_cols"));
+
+  m.def("assembleDetectorData4",                                        \
+        &assembleDetectorData4<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<uint32_t, 1>>, \
+        py::arg("modules").noconvert(), py::arg("assembled").noconvert(), py::arg("lut").noconvert(), py::arg("j"));
+
+  m.def("generateAssemblyLUT2",                                          \
+        [] (size_t data_size, xt::pytensor<double, 2> assembled) { return generateAssemblyLUT2(data_size, assembled); }, \
+        py::arg("data_size"), py::arg("assembled").noconvert());
+
+  m.def("assembleDetectorData5",                                        \
+        &assembleDetectorData5<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<uint8_t, 1>>, \
+        py::arg("modules").noconvert(), py::arg("assembled").noconvert(), py::arg("lut").noconvert(), py::arg("j"));
+
+ m.def("assembleDetectorData6",                                        \
+        &assembleDetectorData6<xt::pytensor<float, 4>, xt::pytensor<float, 3>, xt::pytensor<uint8_t, 1>>, \
+        py::arg("modules").noconvert(), py::arg("assembled").noconvert(), py::arg("lut").noconvert());
 }
