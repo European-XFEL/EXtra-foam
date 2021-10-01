@@ -13,7 +13,7 @@ from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.control_data import CtrlDataProcessor
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import SkipTrainError
-from extra_foam.config import config
+from extra_foam.config import config, KaraboType
 
 
 class TestCtrlData(_TestDataMixin, unittest.TestCase):
@@ -26,7 +26,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
         catalog = data['catalog']
 
         for ctg in ['Motor', 'Monochromator', 'Magnet', config["SOURCE_USER_DEFINED_CATEGORY"]]:
-            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), 0)
+            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), KaraboType.CONTROL_DATA)
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'train_id': 12346}
@@ -38,7 +38,7 @@ class TestCtrlData(_TestDataMixin, unittest.TestCase):
 
         catalog.clear()
         for ctg in ['XGM', 'DSSC', 'JungFrau']:
-            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), 1)
+            item = SourceItem(ctg, 'device1', [], 'property1', None, (-1, 1), KaraboType.PIPELINE_DATA)
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'train_id': 12346}

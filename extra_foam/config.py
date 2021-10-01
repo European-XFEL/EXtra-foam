@@ -32,6 +32,11 @@ class DataSource(IntEnum):
     UNKNOWN = 2  # not specified
 
 
+class KaraboType(IntEnum):
+    CONTROL_DATA = 0
+    PIPELINE_DATA = 1
+
+
 class PumpProbeMode(IntEnum):
     UNDEFINED = 0
     REFERENCE_AS_OFF = 1  # use pre-defined reference image

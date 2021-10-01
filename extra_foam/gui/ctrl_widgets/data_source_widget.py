@@ -26,7 +26,7 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..misc_widgets import FColor
 from ..mediator import Mediator
 from ...database import MonProxy
-from ...config import config, DataSource
+from ...config import config, DataSource, KaraboType
 from ...geometries import module_indices
 from ...processes import list_foam_processes
 from ...logger import logger
@@ -395,7 +395,7 @@ class DataSourceItemModel(QAbstractItemModel):
                 for ppt in ppts:
                     # For now, all pipeline data are exclusive
                     src_item = DataSourceTreeItem(
-                        [False, 1, src, ppt, default_slicer, default_v_range],
+                        [False, KaraboType.PIPELINE_DATA, src, ppt, default_slicer, default_v_range],
                         exclusive=True,
                         parent=ctg_item)
                     ctg_item.appendChild(src_item)
@@ -416,7 +416,7 @@ class DataSourceItemModel(QAbstractItemModel):
             for src, ppts in srcs.items():
                 for ppt in ppts:
                     ctg_item.appendChild(DataSourceTreeItem(
-                        [False, 0, src, ppt, default_slicer, default_v_range],
+                        [False, KaraboType.CONTROL_DATA, src, ppt, default_slicer, default_v_range],
                         exclusive=False,
                         parent=ctg_item))
 
@@ -701,10 +701,9 @@ class DataSourceWidget(_AbstractCtrlWidget):
             if isinstance(v, int):
                 painter.setPen(Qt.NoPen)
 
-                if v == 0:
-                    # control data
+                if v == KaraboType.CONTROL_DATA:
                     painter.setBrush(self._c_brush)
-                elif v == 1:
+                elif v == KaraboType.PIPELINE_DATA:
                     # pipeline data
                     painter.setBrush(self._p_brush)
                 else:
