@@ -19,7 +19,7 @@ from ..config import config
 # modules: a list of module indices
 # slicer: pulse slicer for pulse-resolved data
 # vrange: value range
-# ktype: Karabo data type, 1 for pipeline data and 0 for control data
+# ktype: KaraboType
 SourceItem = namedtuple(
     'SourceItem',
     ['category', 'name', 'modules', 'property', 'slicer', 'vrange', 'ktype'])
