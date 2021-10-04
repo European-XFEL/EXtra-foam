@@ -36,7 +36,7 @@ class InTrainFomPlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        foms = data.pulse.hist.pulse_foms
+        foms = data["processed"].pulse.hist.pulse_foms
         if foms is None:
             self.reset()
         else:
@@ -62,7 +62,7 @@ class FomHist(HistMixin, TimedPlotWidgetF):
 
     def refresh(self):
         """Override."""
-        hist = self._data.hist
+        hist = self._data["processed"].hist
         bin_centers = hist.bin_centers
         if bin_centers is None:
             self.reset()

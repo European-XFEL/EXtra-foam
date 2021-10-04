@@ -233,12 +233,14 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     def _updateWidgets(self, auto_update):
         if len(self._queue) == 0:
             return
+
         data = self._queue[0]
+        processed = data["processed"]
 
         # update bulletin
-        self._bulletin_view.updateF(data, auto_update)
+        self._bulletin_view.updateF(processed, auto_update)
         # update other ImageView/PlotWidget in the activated tab
-        self._views_tab.currentWidget().updateF(data, auto_update)
+        self._views_tab.currentWidget().updateF(processed, auto_update)
 
     @pyqtSlot(int)
     def onViewsTabClicked(self, idx):

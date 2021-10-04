@@ -331,8 +331,8 @@ class MainGUI(QMainWindow):
             return
 
         try:
-            processed = self._input.get()
-            self._queue.append(processed)
+            data = self._input.get()
+            self._queue.append(data)
         except Empty:
             return
 
@@ -340,7 +340,7 @@ class MainGUI(QMainWindow):
         # for w in self._plot_windows.keys():
         #     w.reset()
 
-        data = self._queue[0]
+        processed = self._queue[0]["processed"]
 
         self._image_tool.updateWidgetsF()
         for w in itertools.chain(self._plot_windows):
@@ -352,7 +352,7 @@ class MainGUI(QMainWindow):
                              + repr(e))
                 logger.error(f"[Update plots] {repr(e)}")
 
-        logger.debug(f"Plot train with ID: {data.tid}")
+        logger.debug(f"Plot train with ID: {processed.tid}")
 
     def pingRedisServer(self):
         try:

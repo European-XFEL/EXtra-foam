@@ -47,7 +47,7 @@ class PumpProbeVFomPlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        pp = data.pp
+        pp = data["processed"].pp
         x, y = pp.x, pp.y
 
         if self._analysis_type != pp.analysis_type:
@@ -86,7 +86,7 @@ class PumpProbeFomPlot(TimedPlotWidgetF):
 
     def refresh(self):
         """Override."""
-        pp = self._data.corr.pp
+        pp = self._data["processed"].corr.pp
         x, y = pp.x, pp.y
         self._plot.setData(x, y)
 

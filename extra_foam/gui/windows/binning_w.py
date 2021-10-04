@@ -42,7 +42,7 @@ class Bin1dHist(TimedPlotWidgetF):
 
     def refresh(self):
         """Override."""
-        item = self._data.bin[0]
+        item = self._data["processed"].bin[0]
 
         src = item.source
         if src != self._source:
@@ -89,7 +89,7 @@ class Bin1dHeatmap(TimedImageViewF):
 
     def refresh(self):
         """Override."""
-        item = self._data.bin[0]
+        item = self._data["processed"].bin[0]
 
         src = item.source
         if src != self._source:
@@ -163,7 +163,7 @@ class Bin2dHeatmap(TimedImageViewF):
 
     def refresh(self):
         """Override."""
-        bin = self._data.bin
+        bin = self._data["processed"].bin
 
         src_x = bin[0].source
         if src_x != self._source_x:

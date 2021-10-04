@@ -31,14 +31,16 @@ class PoiImageView(ImageViewF):
 
     def updateF(self, data):
         """Override."""
+        processed = data["processed"]
+
         try:
-            img = data.image.images[self._index]
+            img = processed.image.images[self._index]
             self.setImage(img, auto_levels=(not self._is_initialized))
         except (IndexError, TypeError):
             self.clear()
             return
 
-        self.updateROI(data)
+        self.updateROI(processed)
 
         if not self._is_initialized:
             self._is_initialized = True
@@ -69,7 +71,7 @@ class PoiFomHist(HistMixin, TimedPlotWidgetF):
     def refresh(self):
         """Override."""
         try:
-            hist = self._data.pulse.hist[self._index]
+            hist = self._data["processed"].pulse.hist[self._index]
         except KeyError:
             self.reset()
         else:
@@ -102,7 +104,7 @@ class PoiRoiHist(HistMixin, PlotWidgetF):
     def updateF(self, data):
         """Override."""
         try:
-            hist = data.pulse.roi.hist[self._index]
+            hist = data["processed"].pulse.roi.hist[self._index]
         except KeyError:
             self.reset()
         else:

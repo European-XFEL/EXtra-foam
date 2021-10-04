@@ -37,6 +37,8 @@ class TestViews(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = cls.MockedImageToolWindow()
+        cls._empty_data = cls.empty_data()
+        cls._data, _ = cls.data_with_assembled(1001, (2, 2), roi_histogram=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -49,23 +51,19 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         view = CorrectedView(pulse_resolved=True, parent=self.gui)
 
         # empty data
-        data = ProcessedData(1)
-        view.updateF(data, True)
+        view.updateF(self._empty_data, True)
 
         # non-empty data
-        data = self.processed_data(1001, (2, 2), roi_histogram=True)
-        view.updateF(data, True)
+        view.updateF(self._data, True)
 
         # train-resolved
 
         view = CorrectedView(pulse_resolved=False, parent=self.gui)
         # empty data
-        data = ProcessedData(1)
-        view.updateF(data, True)
+        view.updateF(self._empty_data, True)
 
         # non-empty data
-        data = self.processed_data(1001, (2, 2), roi_histogram=True)
-        view.updateF(data, True)
+        view.updateF(self._data, True)
 
     def testAzimuthalIntegrationView(self):
 

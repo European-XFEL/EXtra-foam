@@ -476,13 +476,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 self.assertIsNone(ref)
 
     def testBulletinView(self):
-        processed = ProcessedData(1357)
+        data = self.empty_data(1357)
+        processed = data["processed"]
 
         processed.image = ImageData.from_array(np.ones((10, 4, 4), np.float32))
         processed.image.dark_count = 99
         processed.image.n_dark_pulses = 10
         processed.pidx.mask_by_index([1, 3, 5, 6])
-        self.gui._queue.append(processed)
+        self.gui._queue.append(data)
         self.image_tool.updateWidgetsF()
 
         view = self.image_tool._bulletin_view
