@@ -47,7 +47,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def refresh(self):
         """Override."""
-        item = self._data.corr[self._idx]
+        item = self._data["processed"].corr[self._idx]
 
         src = item.source
         if src != self._source:

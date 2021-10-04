@@ -297,24 +297,24 @@ class MpOutQueue(_PipeOutBase):
 
             if data_out is None:
                 try:
-                    data = self._cache.get_nowait()
+                    data_out = self._cache.get_nowait()
 
                     if self._final:
-                        data_out = data['processed']
+                        processed = data_out['processed']
 
-                        tid = data_out.tid
-                        n_pulses = data_out.pidx.n_kept(data_out.n_pulses)
+                        tid = processed.tid
+                        n_pulses = processed.pidx.n_kept(processed.n_pulses)
                         self._mon.add_tid_with_timestamp(
                             tid, n_pulses=n_pulses)
 
                         logger.info(f"Train {tid} processed!")
 
-                        if data.get("reset_ma", False):
+                        if data_out.get("reset_ma", False):
                             self._meta.hset(mt.GLOBAL_PROC, "reset_ma", 1)
                         else:
                             self._meta.hdel(mt.GLOBAL_PROC, "reset_ma")
                     else:
-                        data_out = {key: data[key] for key
+                        data_out = {key: data_out[key] for key
                                     in self._pipeline_dtype}
                 except Empty:
                     pass

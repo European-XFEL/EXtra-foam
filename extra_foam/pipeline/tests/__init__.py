@@ -26,6 +26,10 @@ class _TestDataMixin:
         return imgs
 
     @classmethod
+    def empty_data(cls, tid=1):
+        return cls.simple_data(tid, (10, 10))[0]
+
+    @classmethod
     def simple_data(cls, tid, shape, *,
                     src_type=DataSource.BRIDGE,
                     dtype=config['SOURCE_PROC_IMAGE_DTYPE'],
@@ -45,12 +49,16 @@ class _TestDataMixin:
                             slicer=None,
                             with_xgm=False,
                             with_digitizer=False,
+                            roi_histogram=False,
+                            histogram=False,
+                            correlation=False,
+                            binning=False,
                             **kwargs):
         imgs = cls._gen_images(gen, shape, dtype)
-
-        processed = ProcessedData(tid)
-
-        processed.image = ImageData.from_array(imgs, **kwargs)
+        processed = cls.processed_data(tid, shape, gen=gen, dtype=dtype,
+                                       roi_histogram=roi_histogram, histogram=histogram,
+                                       correlation=correlation, binning=binning,
+                                       **kwargs)
 
         if imgs.ndim == 2:
             slicer = None
