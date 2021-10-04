@@ -142,7 +142,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
         proc = self.pulse_worker._image_roi
-        self.assertEqual(4, len(roi_ctrls))
+        self.assertEqual(2, len(roi_ctrls))
 
         # test default
 
@@ -840,17 +840,23 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(RoiFom.SUM, proc._norm_type)
 
         # test setting new values
+        raw_detector_name = "Foo"
+        widget.updateOptions([raw_detector_name])
+        widget._source_cb.setCurrentText(raw_detector_name)
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI3_ADD_ROI4])
         widget._type_cb.setCurrentText(avail_types[RoiFom.MEDIAN])
         proc.update()
         self.assertEqual(RoiCombo.ROI3_ADD_ROI4, proc._norm_combo)
         self.assertEqual(RoiFom.MEDIAN, proc._norm_type)
+        self.assertEqual(raw_detector_name, proc._norm_source)
 
         # test loading meta data
         mediator = widget._mediator
+        mediator.onRoiNormSourceChange(config["DETECTOR"])
         mediator.onRoiNormComboChange(RoiCombo.ROI3_SUB_ROI4)
         mediator.onRoiNormTypeChange(RoiProjType.SUM)
         widget.loadMetaData()
+        self.assertEqual(config["DETECTOR"], widget._source_cb.currentText())
         self.assertEqual("ROI3 - ROI4", widget._combo_cb.currentText())
         self.assertEqual("SUM", widget._type_cb.currentText())
 

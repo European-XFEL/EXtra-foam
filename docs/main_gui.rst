@@ -1,5 +1,3 @@
-
-
 MAIN GUI
 ========
 
@@ -261,3 +259,39 @@ When right-clicking the name of a snapshot, a context menu will show up:
 
     *Analysis setup manager* is still in the testing phase and we are collecting feedbacks from users.
     It should be noted that there is no backup recovery mechanism for now.
+
+
+Extensions
+-----------
+
+On the left hand side there is a tab bar, one for the main GUI and the second
+for the extensions settings:
+
+.. image:: images/extensions.png
+
+EXtra-foam supports streaming the processed data in two ways:
+
+1. All processed data may be streamed to a :ref:`Special analysis suite`.
+2. Just the processed and averaged detector image may be streamed over a Karabo
+   bridge. This is could be helpful if, for example, an experiment requires using
+   two detectors simultaneously. In this case EXtra-foam could be set up to read
+   data from both a trainmatcher/Karabo bridge hosted in Karabo and another
+   EXtra-foam instance. To get the detector data from a Karabo bridge client,
+   use the key ``EF_<source_name>``, where ``source_name`` is the source name of the
+   main detector. For example, if streaming ePix data from the device
+   ``MID_EXP_EPIX-2/DET/RECEIVER:output`` with property ``data.image``, use
+   ``EF_MID_EXP_EPIX-2/DET/RECEIVER:output`` and ``data.image`` at the client.
+
+.. warning::
+
+    There are limited use-cases for streaming detector data to another
+    EXtra-foam instance, contact da-support@xfel.eu if you would like to do
+    this.
+
++-----------------------------+--------------------------------------------------------------------+
+| Input                       | Description                                                        |
++=============================+====================================================================+
+| ``Special suite port``      | Port to use for streaming data for the special suites.             |
++-----------------------------+--------------------------------------------------------------------+
+| ``Detector streaming port`` | Port to use for streaming the processed 2D detector image.         |
++-----------------------------+--------------------------------------------------------------------+

@@ -1,3 +1,5 @@
+.. _special analysis suite:
+
 SPECIAL ANALYSIS SUITE
 ======================
 

@@ -248,6 +248,9 @@ class Mediator(QObject):
     def onRoiHistBinRangeChange(self, value: tuple):
         self._meta.hset(mt.ROI_PROC, "hist:bin_range", str(value))
 
+    def onRoiNormSourceChange(self, value: str):
+        self._meta.hset(mt.ROI_PROC, "norm:source", value)
+
     def onRoiNormTypeChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'norm:type', int(value))
 

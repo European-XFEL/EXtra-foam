@@ -151,9 +151,18 @@ ROI histogram setup
 ROI normalizer setup
 """"""""""""""""""""
 
+The settings for this are on the *ROI normalizer settings* tab. The
+normalization source can either be the main detector, or some other 2D source
+image. To use a different source, such as a camera, add it as a pipeline source
+(purple square) in the :ref:`Data source tree` under the *User-defined* section,
+and if it is a 2D image it will be displayed as an option in the *ROI source*
+list.
+
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
+| ``ROI source``             | Source to compute the normalization factor from.                   |
++----------------------------+--------------------------------------------------------------------+
 | ``Combo``                  | ROI combination, e.g. *ROI3*, *ROI4*, *ROI3 + ROI4*, *ROI3 - ROI4*.|
 +----------------------------+--------------------------------------------------------------------+
 | ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |

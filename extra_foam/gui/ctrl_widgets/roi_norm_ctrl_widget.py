@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from ..gui_helpers import invert_dict
-from ...config import RoiCombo, RoiFom
+from ...config import RoiCombo, RoiFom, config
 from ...database import Metadata as mt
 
 
@@ -41,6 +41,10 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("ROI normalizer setup", *args, **kwargs)
 
+        self._source_cb = QComboBox()
+        self._source_cb.addItem(config["DETECTOR"])
+        self._current_options = []
+
         self._combo_cb = QComboBox()
         for v in self._available_combos:
             self._combo_cb.addItem(v)
@@ -60,6 +64,10 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
         AR = Qt.AlignRight
 
         row = 0
+        layout.addWidget(QLabel("ROI source: "), row, 0, AR)
+        layout.addWidget(self._source_cb, row, 1)
+
+        row += 1
         layout.addWidget(QLabel("Combo: "), row, 0, AR)
         layout.addWidget(self._combo_cb, row, 1)
 
@@ -73,6 +81,10 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Overload."""
         mediator = self._mediator
 
+        self._source_cb.currentTextChanged.connect(
+            mediator.onRoiNormSourceChange
+        )
+
         self._combo_cb.currentTextChanged.connect(
             lambda x: mediator.onRoiNormComboChange(self._available_combos[x]))
 
@@ -81,6 +93,7 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def updateMetaData(self):
         """Overload."""
+        self._source_cb.currentTextChanged.emit(self._source_cb.currentText())
         self._combo_cb.currentTextChanged.emit(self._combo_cb.currentText())
         self._type_cb.currentTextChanged.emit(self._type_cb.currentText())
         return True
@@ -88,7 +101,28 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.ROI_PROC)
+        self._source_cb.setCurrentText(cfg["norm:source"])
         self._combo_cb.setCurrentText(
             self._available_combos_inv[int(cfg["norm:combo"])])
         self._type_cb.setCurrentText(
             self._available_types_inv[int(cfg["norm:type"])])
+
+    def updateOptions(self, options):
+        if options == self._current_options:
+            return
+
+        self._current_options = options
+        self._source_cb.blockSignals(True)
+        selected = self._source_cb.currentText()
+        for i in range(1, self._source_cb.count()):
+            self._source_cb.removeItem(1)
+
+        for item in options:
+            self._source_cb.addItem(item)
+
+        self._source_cb.blockSignals(False)
+        self._source_cb.setCurrentText(selected)
+
+    @property
+    def selected_source(self):
+        return self._source_cb.currentText()
