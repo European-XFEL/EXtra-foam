@@ -239,8 +239,13 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         # update bulletin
         self._bulletin_view.updateF(processed, auto_update)
-        # update other ImageView/PlotWidget in the activated tab
-        self._views_tab.currentWidget().updateF(processed, auto_update)
+        # Update other ImageViews/PlotWidgets in the activated tab. The
+        # CorrectedView needs all the data, so we treat it differently from the
+        # others.
+        if self._views_tab.currentIndex() == self.TabIndex.OVERVIEW:
+            self._views_tab.currentWidget().updateF(data, auto_update)
+        else:
+            self._views_tab.currentWidget().updateF(processed, auto_update)
 
     @pyqtSlot(int)
     def onViewsTabClicked(self, idx):

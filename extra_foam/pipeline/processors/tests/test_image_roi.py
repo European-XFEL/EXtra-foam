@@ -82,6 +82,27 @@ class TestImageRoiPulse(_TestDataMixin):
         assert list(roi.geom3.geometry) == proc._geom3
         assert list(roi.geom4.geometry) == proc._geom4
 
+    def testRoiNormSources(self):
+        proc = self._proc
+        proc._meta.has_analysis = MagicMock(return_value=True)
+
+        # Test with default detector data
+        data, processed = self._get_data()
+        proc._norm_combo = RoiCombo.ROI3
+        proc._norm_type = RoiFom.SUM
+        proc.process(data)
+
+        s = self._get_roi_slice(processed.roi.geom3.geometry)
+        np.testing.assert_array_equal(processed.pulse.roi.norm,
+                                      np.nansum(data["assembled"]["sliced"][:, s[0], s[1]], axis=(-2, -1)))
+
+        # Now with an external source
+        raw_data_src = "foo bar"
+        data["raw"][raw_data_src] = np.random.rand(*processed.image.masked_mean.shape)
+        proc._norm_source = raw_data_src
+        proc.process(data)
+        assert np.isclose(processed.pulse.roi.norm, np.nansum(data["raw"][raw_data_src][s[0], s[1]]))
+
     @pytest.mark.parametrize("norm_type, fom_handler",
                              [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
@@ -310,6 +331,25 @@ class TestImageRoiTrain(_TestDataMixin):
                     processed.pp.analysis_type = AnalysisType.ROI_PROJ
                     proc.process(data)
                     mocked_p_norm_pp.assert_called_once()
+
+    def testRoiNormSources(self):
+        proc = self._proc
+
+        # Test with default detector data
+        data, processed = self._get_data()
+        proc._norm_combo = RoiCombo.ROI3
+        proc._norm_type = RoiFom.SUM
+        proc.process(data)
+
+        s = self._get_roi_slice(processed.roi.geom3.geometry)
+        assert processed.roi.norm == np.nansum(processed.image.masked_mean[s[0], s[1]])
+
+        # Now with an external source
+        raw_data_src = "foo bar"
+        data["raw"][raw_data_src] = np.random.rand(*processed.image.masked_mean.shape)
+        proc._norm_source = raw_data_src
+        proc.process(data)
+        assert np.isclose(processed.roi.norm, np.nansum(data["raw"][raw_data_src][s[0], s[1]]))
 
     @pytest.mark.parametrize("norm_type, fom_handler",
                              [(k, v) for k, v in _roi_fom_handlers.items()])

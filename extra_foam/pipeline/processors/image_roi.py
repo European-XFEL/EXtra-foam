@@ -19,7 +19,7 @@ from ...algorithms import nanhist_with_stats, nanmean, nansum, slice_curve
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...utils import profiler
-from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom, RoiProjType
+from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom, RoiProjType, config
 
 from extra_foam.algorithms import (
     intersection, mask_image_data, nanstd, nanvar
@@ -64,6 +64,7 @@ class _RoiProcessorBase(_BaseProcessor):
         self._hist_n_bins = 10
         self._hist_bin_range = (-math.inf, math.inf)
 
+        self._norm_source = config["DETECTOR"]
         self._norm_combo = RoiCombo.ROI3
         self._norm_type = RoiFom.SUM
 
@@ -91,6 +92,7 @@ class _RoiProcessorBase(_BaseProcessor):
         self._hist_n_bins = int(cfg['hist:n_bins'])
         self._hist_bin_range = self.str2tuple(cfg["hist:bin_range"])
 
+        self._norm_source = cfg["norm:source"]
         self._norm_combo = RoiCombo(int(cfg['norm:combo']))
         self._norm_type = RoiFom(int(cfg['norm:type']))
 
@@ -168,6 +170,7 @@ class ImageRoiPulse(_RoiProcessorBase):
 
     @profiler("ROI Processor (pulse)")
     def process(self, data):
+        raw = data["raw"]
         processed = data['processed']
         assembled = data['assembled']['sliced']
 
@@ -180,7 +183,12 @@ class ImageRoiPulse(_RoiProcessorBase):
         roi.geom4.geometry = intersection(self._geom4, img_geom)
 
         if self._pulse_resolved:
-            self._process_norm(assembled, processed)
+            if self._norm_source == config["DETECTOR"]:
+                norm_source = assembled
+            else:
+                norm_source =  raw[self._norm_source]
+
+            self._process_norm(norm_source, processed)
             self._process_fom(assembled, processed)
             self._process_hist(processed)
 
@@ -199,7 +207,7 @@ class ImageRoiPulse(_RoiProcessorBase):
                         threshold_mask=threshold_mask)
         return handler(roi, axis=(-2, -1))
 
-    def _process_norm(self, assembled, processed):
+    def _process_norm(self, norm_source, processed):
         """Calculate pulse-resolved ROI normalizers.
 
         Always calculate.
@@ -212,9 +220,9 @@ class ImageRoiPulse(_RoiProcessorBase):
 
         roi = processed.roi
 
-        roi3 = roi.geom3.rect(assembled)
+        roi3 = roi.geom3.rect(norm_source)
         mask3 = None if image_mask is None else roi.geom3.rect(image_mask)
-        roi4 = roi.geom4.rect(assembled)
+        roi4 = roi.geom4.rect(norm_source)
         mask4 = None if image_mask is None else roi.geom4.rect(image_mask)
 
         if self._norm_combo == RoiCombo.ROI3:
@@ -406,16 +414,21 @@ class ImageRoiTrain(_RoiProcessorBase):
 
     @profiler("ROI Processor (train)")
     def process(self, data):
+        raw = data["raw"]
         processed = data['processed']
         roi = processed.roi
 
         masked_mean = processed.image.masked_mean
+        if self._norm_source == config["DETECTOR"]:
+            norm_source_img = masked_mean
+        else:
+            norm_source_img = raw[self._norm_source]
 
         # update moving average
         self._roi1 = roi.geom1.rect(masked_mean)
         self._roi2 = roi.geom2.rect(masked_mean)
-        self._roi3 = roi.geom3.rect(masked_mean)
-        self._roi4 = roi.geom4.rect(masked_mean)
+        self._roi3 = roi.geom3.rect(norm_source_img)
+        self._roi4 = roi.geom4.rect(norm_source_img)
 
         self._process_hist(processed)
         self._process_norm(processed)
