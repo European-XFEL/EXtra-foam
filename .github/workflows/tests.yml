@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7]  #  TODO: Enable additional versions: 3.7
-        gcc-version: [8]  #  TODO: Enable additional versions: 6, 7
+        python-version: [3.7]
     env:
       DISPLAY: ":99.0"
 
@@ -50,15 +49,9 @@ jobs:
 
     - name: Install OS dependencies
       run: |
-        export GXX="g++-${{ matrix.gcc-version }}" GCC="gcc-${{ matrix.gcc-version }}"
-        sudo -E apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
         sudo apt-get -q update
         sudo -E apt-get -yq --no-install-suggests --no-install-recommends install \
-            $GXX libxkbcommon-x11-0 x11-apps libgl1-mesa-glx qtbase5-dev xvfb
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/$GXX 0
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/$GCC 0
-        g++ --version
-        gcc --version
+            libxkbcommon-x11-0 x11-apps libgl1-mesa-glx qtbase5-dev xvfb
         echo $'\nexport CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}' >> ~/.profile
 
     - name: Install python dependencies
