@@ -36,7 +36,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/setup.py') }}
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/setup.py') }}-${{ hashFiles('.github/dependabot/constraints.txt') }}
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v2
@@ -59,7 +59,7 @@ jobs:
       run: |
         git submodule update --init
         python3 -m pip install --upgrade pip
-        python3 -m pip install ".[test]"
+        python3 -m pip install ".[test]" --constraint .github/dependabot/constraints.txt
 
     - name: Build and test with pytest - parallel
       shell: bash -l {0}
