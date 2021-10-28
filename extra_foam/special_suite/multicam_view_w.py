@@ -16,7 +16,7 @@ from extra_foam.gui.plot_widgets import ImageViewF
 
 from .multicam_view_proc import MultiCamViewProcessor
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -83,13 +83,14 @@ class CameraView(ImageViewF):
         self.setTitle(data["channels"][self._index])
 
 
-@create_special(MultiCamViewCtrlWidget, MultiCamViewProcessor, QThreadKbClient)
+@create_special(MultiCamViewCtrlWidget, MultiCamViewProcessor)
 class MultiCamViewWindow(_SpecialAnalysisBase):
     """Main GUI for multi-camera view."""
 
     icon = "multi_cam_view.png"
     _title = "Multi-camera view"
     _long_title = "Multi-camera view"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False)

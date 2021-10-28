@@ -22,7 +22,7 @@ from .cam_view_proc import (
     CamViewProcessor, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
 )
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -115,13 +115,14 @@ class CameraViewRoiHist(HistMixin, PlotWidgetF):
             self.updateTitle(mean, median, std)
 
 
-@create_special(CamViewCtrlWidget, CamViewProcessor, QThreadKbClient)
+@create_special(CamViewCtrlWidget, CamViewProcessor)
 class CamViewWindow(_SpecialAnalysisBase):
     """Main GUI for camera view."""
 
     icon = "cam_view.png"
     _title = "Camera view"
     _long_title = "Camera view"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic)

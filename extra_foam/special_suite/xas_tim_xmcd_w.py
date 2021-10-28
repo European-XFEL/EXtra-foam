@@ -18,7 +18,7 @@ from extra_foam.gui.plot_widgets import TimedPlotWidgetF
 from extra_foam.gui.misc_widgets import FColor
 
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _SpecialAnalysisBase
+    create_special, ClientType, _SpecialAnalysisBase
 )
 from .xas_tim_xmcd_proc import XasTimXmcdProcessor, _DEFAULT_CURRENT_THRESHOLD
 from .xas_tim_w import (
@@ -176,7 +176,7 @@ class XasTimXmcdSpectraPlot(TimedPlotWidgetF):
             self._displayed = index
 
 
-@create_special(XasTimXmcdCtrlWidget, XasTimXmcdProcessor, QThreadKbClient)
+@create_special(XasTimXmcdCtrlWidget, XasTimXmcdProcessor)
 class XasTimXmcdWindow(_SpecialAnalysisBase):
     """Main GUI for XAS-TIM-XMCD analysis."""
 
@@ -184,6 +184,7 @@ class XasTimXmcdWindow(_SpecialAnalysisBase):
     _title = "XAS-TIM-XMCD"
     _long_title = "X-ray Absorption Spectroscopy with transmission " \
                   "intensity monitor for X-ray Magnetic Circular Dichroism"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False, with_levels=False)

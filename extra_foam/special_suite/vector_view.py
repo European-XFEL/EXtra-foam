@@ -18,7 +18,7 @@ from extra_foam.gui.plot_widgets import PlotWidgetF, TimedPlotWidgetF
 from extra_foam.pipeline.exceptions import ProcessingError
 
 from .special_analysis_base import (
-    create_special, profiler, QThreadFoamClient, QThreadWorker,
+    create_special, profiler, ClientType, QThreadWorker,
     _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase
 )
 
@@ -222,13 +222,14 @@ class VectorCorrelationPlot(TimedPlotWidgetF):
             self._plot.setData(vec1, vec2)
 
 
-@create_special(VectorViewCtrlWidget, VectorViewProcessor, QThreadFoamClient)
+@create_special(VectorViewCtrlWidget, VectorViewProcessor)
 class VectorViewWindow(_SpecialAnalysisBase):
     """Main GUI for vector view."""
 
     icon = "vector_view.png"
     _title = "Vector view"
     _long_title = "Vector view"
+    _client_support = ClientType.EXTRA_FOAM
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False, with_levels=False)

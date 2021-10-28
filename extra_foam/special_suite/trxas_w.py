@@ -20,7 +20,7 @@ from extra_foam.gui.plot_widgets import (
 )
 
 from .special_analysis_base import (
-    create_special, QThreadFoamClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 from .trxas_proc import (
@@ -205,13 +205,14 @@ class TrXasHeatmap(TimedImageViewF):
         self.setLabel('left', label)
 
 
-@create_special(TrXasCtrlWidget, TrXasProcessor, QThreadFoamClient)
+@create_special(TrXasCtrlWidget, TrXasProcessor)
 class TrXasWindow(_SpecialAnalysisBase):
     """Main GUI for tr-XAS analysis."""
 
     icon = "tr_xas.png"
     _title = "tr-XAS"
     _long_title = "Time-resolved X-ray Absorption Spectroscopy"
+    _client_support = ClientType.EXTRA_FOAM
 
     def __init__(self, topic):
         """Initialization."""

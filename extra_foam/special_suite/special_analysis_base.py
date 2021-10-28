@@ -15,6 +15,7 @@ from threading import Condition, Event
 import time
 import traceback
 from weakref import WeakKeyDictionary
+from enum import Enum
 
 import numpy as np
 
@@ -22,7 +23,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QFileDialog, QFormLayout, QFrame, QGridLayout, QLabel,
-    QMainWindow, QPushButton, QSizePolicy, QSplitter
+    QMainWindow, QPushButton, QSizePolicy, QSplitter, QComboBox
 )
 
 from extra_data import RunDirectory
@@ -43,6 +44,15 @@ from . import logger
 from .config import _IMAGE_DTYPE, config
 
 
+class ClientType(Enum):
+    """
+    Enum type to indicate support for different clients. Some suites may support
+    processing both EXtra-foam and Karabo bridge.
+    """
+    EXTRA_FOAM = "EXtra-foam"
+    KARABO_BRIDGE = "Karabo bridge"
+    BOTH = ""
+
 class _SharedCtrlWidgetS(QFrame):
     """Control widget used in all special analysis window.
 
@@ -52,9 +62,12 @@ class _SharedCtrlWidgetS(QFrame):
     # forward signal with the same name in _SingleRoiCtrlWidget
     roi_geometry_change_sgn = pyqtSignal(object)
 
-    def __init__(self, parent=None, *, with_dark=True, with_levels=True):
+    client_type_changed_sgn = pyqtSignal(object)
+
+    def __init__(self, client_support, parent=None, *, with_dark=True, with_levels=True):
         """Initialization.
 
+        :param ClientType client_support: Which clients the suite supports.
         :param bool with_dark: whether the dark recording/subtraction control
             widgets are included. For special analysis which makes use of
             the processed data in EXtra-foam, dark recording/subtraction
@@ -64,6 +77,7 @@ class _SharedCtrlWidgetS(QFrame):
         """
         super().__init__(parent=parent)
 
+        self._client_support = client_support
         self._with_dark = with_dark
         self._with_levels = with_levels
 
@@ -71,6 +85,10 @@ class _SharedCtrlWidgetS(QFrame):
         self._hostname_le.setMinimumWidth(100)
         self._port_le = SmartLineEdit(str(config["DEFAULT_CLIENT_PORT"]))
         self._port_le.setValidator(QIntValidator(0, 65535))
+
+        self._client_type_cb = QComboBox()
+        self._client_type_cb.addItem(ClientType.EXTRA_FOAM.value)
+        self._client_type_cb.addItem(ClientType.KARABO_BRIDGE.value)
 
         self.start_btn = QPushButton("Start")
         self.stop_btn = QPushButton("Stop")
@@ -89,6 +107,7 @@ class _SharedCtrlWidgetS(QFrame):
         self.roi_ctrl = None
 
         self.initUI()
+        self.initConnections()
 
         self.setFrameStyle(QFrame.StyledPanel)
 
@@ -105,6 +124,15 @@ class _SharedCtrlWidgetS(QFrame):
         layout.addWidget(self._hostname_le, i_row, 1)
         layout.addWidget(QLabel("Port: "), i_row, 2, AR)
         layout.addWidget(self._port_le, i_row, 3)
+
+        # Only show the combo box to select the client type if the suite
+        # supports both options.
+        if self._client_support == ClientType.BOTH:
+            i_row += 1
+            layout.addWidget(QLabel("Get data from: "), i_row, 0, AR)
+            layout.addWidget(self._client_type_cb, i_row, 1, 1, 3)
+        else:
+            self._client_type_cb.setCurrentText(self._client_support.value)
 
         i_row += 1
         layout.addWidget(self.start_btn, i_row, 1)
@@ -123,6 +151,11 @@ class _SharedCtrlWidgetS(QFrame):
             layout.addWidget(self.auto_level_btn, i_row, 3)
 
         self.setLayout(layout)
+
+    def initConnections(self):
+        self._client_type_cb.currentTextChanged.connect(
+            lambda s: self.client_type_changed_sgn.emit(ClientType(s))
+        )
 
     def addRoiCtrl(self, roi):
         """Add the ROI ctrl widget.
@@ -156,6 +189,7 @@ class _SharedCtrlWidgetS(QFrame):
         self._hostname_le.setEnabled(False)
         self._port_le.setEnabled(False)
         self.load_dark_run_btn.setEnabled(False)
+        self._client_type_cb.setEnabled(False)
 
     def onStopST(self):
         self.stop_btn.setEnabled(False)
@@ -163,9 +197,14 @@ class _SharedCtrlWidgetS(QFrame):
         self._hostname_le.setEnabled(True)
         self._port_le.setEnabled(True)
         self.load_dark_run_btn.setEnabled(True)
+        self._client_type_cb.setEnabled(True)
 
     def onRoiGeometryChange(self, object):
         self.roi_geometry_change_sgn.emit(object)
+
+    @property
+    def selected_client(self):
+        return ClientType(self._client_type_cb.currentText())
 
 
 class _BaseAnalysisCtrlWidgetS(QFrame):
@@ -296,6 +335,7 @@ class QThreadWorker(QObject):
         self._reset_st = True
 
         self._roi_geom_st = None
+        self.client_type = None
 
         self.log = _ThreadLogger()
 
@@ -390,6 +430,9 @@ class QThreadWorker(QObject):
         self._running_st = False
         with self._cv_st:
             self._cv_st.notify()
+
+    def setClientType(self, new_client_type):
+        self.client_type = new_client_type
 
     ###################################################################
     # Interface start
@@ -749,14 +792,13 @@ class QThreadKbClient(_BaseQThreadClient):
         self.log.info(f"Disconnected with {self._endpoint_st}")
 
 
-def create_special(ctrl_klass, worker_klass, client_klass):
+def create_special(ctrl_klass, worker_klass):
     """A decorator for the special analysis window."""
     def wrap(instance_type):
         @functools.wraps(instance_type)
         def wrapped_instance_type(*args, **kwargs):
             instance_type._ctrl_instance_type = ctrl_klass
             instance_type._worker_instance_type = worker_klass
-            instance_type._client_instance_type = client_klass
             return instance_type(*args, **kwargs)
         return wrapped_instance_type
     return wrap
@@ -765,7 +807,8 @@ def create_special(ctrl_klass, worker_klass, client_klass):
 class _SpecialAnalysisBase(QMainWindow):
     """Base class for special analysis windows.
 
-    It should be inherited by all concrete windows.
+    It should be inherited by all concrete windows. It expects a class variable
+    '_client_support' with some ClientType value.
     """
 
     _TOTAL_W, _TOTAL_H = config["GUI_SPECIAL_WINDOW_SIZE"]
@@ -785,18 +828,13 @@ class _SpecialAnalysisBase(QMainWindow):
         self.setWindowTitle(f"EXtra-foam {__version__} - "
                             f"special suite - {self._title}")
 
-        self._com_ctrl_st = _SharedCtrlWidgetS(**kwargs)
+        self._com_ctrl_st = _SharedCtrlWidgetS(self._client_support, **kwargs)
 
-        cv = Condition()
-        catalog = SourceCatalog()
-        queue = SimpleQueue(maxsize=1)
-        self._client_st = self._client_instance_type(queue, cv, catalog)
-        self._worker_st = self._worker_instance_type(queue, cv)
+        self._cv = Condition()
+        self._queue = SimpleQueue(maxsize=1)
+        self._worker_st = self._worker_instance_type(self._queue, self._cv)
         self._worker_thread_st = QThread()
         self._ctrl_widget_st = self._ctrl_instance_type(topic)
-
-        if isinstance(self._client_st, QThreadFoamClient):
-            self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
 
         # book-keeping plot widgets
         self._plot_widgets_st = WeakKeyDictionary()
@@ -827,8 +865,15 @@ class _SpecialAnalysisBase(QMainWindow):
 
         # init Connections
 
-        self._client_st.log.logOnMainThread(self)
         self._worker_st.log.logOnMainThread(self)
+        self._com_ctrl_st.roi_geometry_change_sgn.connect(
+            self._worker_st.onRoiGeometryChange)
+        self._com_ctrl_st.client_type_changed_sgn.connect(
+            self._setClient
+        )
+
+        # Emit this signal now so that the client is initialized properly
+        self._com_ctrl_st.client_type_changed_sgn.emit(self._com_ctrl_st.selected_client)
 
         # start/stop/reset
         self._com_ctrl_st.start_btn.clicked.connect(self._onStartST)
@@ -855,9 +900,23 @@ class _SpecialAnalysisBase(QMainWindow):
         self._com_ctrl_st.auto_level_btn.clicked.connect(
             self._onAutoLevelST)
 
-        # ROI ctrl
-        self._com_ctrl_st.roi_geometry_change_sgn.connect(
-            self._worker_st.onRoiGeometryChange)
+    @pyqtSlot(object)
+    def _setClient(self, client_type):
+        """
+        Set the client to use, to read data from either EXtra-foam or a Karabo
+        bridge.
+        """
+        catalog = SourceCatalog()
+
+        if client_type == ClientType.EXTRA_FOAM:
+            self._client_st = QThreadFoamClient(self._queue, self._cv, catalog)
+            self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
+        elif client_type == ClientType.KARABO_BRIDGE:
+            self._client_st = QThreadKbClient(self._queue, self._cv, catalog)
+            self._com_ctrl_st.updateDefaultPort(config["DEFAULT_CLIENT_PORT"])
+
+        self._client_st.log.logOnMainThread(self)
+        self._worker_st.setClientType(client_type)
 
     ###################################################################
     # Interface start

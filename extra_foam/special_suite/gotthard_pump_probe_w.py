@@ -22,7 +22,7 @@ from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 from .config import _MAX_N_GOTTHARD_PULSES, GOTTHARD_DEVICE
 from .gotthard_pump_probe_proc import GotthardPpProcessor
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -226,13 +226,14 @@ class GotthardPpImageView(ImageViewF):
         self.setImage(data['corrected'])
 
 
-@create_special(GotthardPpCtrlWidget, GotthardPpProcessor, QThreadKbClient)
+@create_special(GotthardPpCtrlWidget, GotthardPpProcessor)
 class GotthardPumpProbeWindow(_SpecialAnalysisBase):
     """Main GUI for Gotthard pump-probe analysis."""
 
     icon = "Gotthard_pump_probe.png"
     _title = "Gotthard (pump-probe)"
     _long_title = "Gotthard pump-probe analysis"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False)

@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QGridLayout, QSplitter
 
 from .module_scan_proc import ModuleScanProcessor
 from .special_analysis_base import (
-    create_special, QThreadFoamClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 from ..gui.plot_widgets import (
@@ -68,13 +68,14 @@ class ModuleScanRoiFomPlot(PlotWidgetF):
         self._mean.setData(data['mean'])
 
 
-@create_special(ModuleScanCtrlWidget, ModuleScanProcessor, QThreadFoamClient)
+@create_special(ModuleScanCtrlWidget, ModuleScanProcessor)
 class ModuleScanWindow(_SpecialAnalysisBase):
     """Main GUI for module scan."""
 
     icon = "module_scan.png"
     _title = "Module scan"
     _long_title = "Area detector module scan analysis"
+    _client_support = ClientType.EXTRA_FOAM
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False)

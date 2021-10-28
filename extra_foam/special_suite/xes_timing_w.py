@@ -20,7 +20,7 @@ from extra_foam.gui.plot_widgets import (
 
 from .xes_timing_proc import XesTimingProcessor
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -97,13 +97,14 @@ class XesTimingDelayScan(TimedPlotWidgetF):
         self._plot.setData(*self._data['delay_scan'])
 
 
-@create_special(XesTimingCtrlWidget, XesTimingProcessor, QThreadKbClient)
+@create_special(XesTimingCtrlWidget, XesTimingProcessor)
 class XesTimingWindow(_SpecialAnalysisBase):
     """Main GUI for XES timing."""
 
     icon = "xes_timing.png"
     _title = "XES timing"
     _long_title = "X-ray emission spectroscopy timing tool"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic)
