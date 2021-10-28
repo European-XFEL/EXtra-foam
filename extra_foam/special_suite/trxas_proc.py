@@ -144,13 +144,6 @@ class TrXasProcessor(QThreadWorker, _BinMixin):
             self._bin_range2 = value
             self._auto_range2[:] = [math.isinf(v) for v in value]
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._device_id1, self._ppt1, 0),
-            (self._device_id2, self._ppt2, 0),
-        ]
-
     @profiler("tr-XAS Processor")
     def process(self, data):
         """Override."""

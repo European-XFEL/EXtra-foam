@@ -115,15 +115,6 @@ class XasTimProcessor(QThreadWorker):
     def onNoBinsChanged(self, value: str):
         self._n_bins = int(value)
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._xgm_output_channel, self._xgm_ppt, 1),
-            *[(self._digitizer_output_channel, ppt, 1)
-              for ppt in self._digitizer_ppts],
-            (self._mono_device_id, self._mono_ppt, 0)
-        ]
-
     def _update_data_history(self, data):
         data, meta = data["raw"], data["meta"]
 

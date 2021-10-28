@@ -159,10 +159,6 @@ class TestSpecialAnalysisBase(_RawDataMixin):
                 assert f"tcp://{com_ctrl_widget._hostname_le.text()}:" \
                        f"{com_ctrl_widget._port_le.text()}" == client._endpoint_st
 
-                assert 2 == len(client._catalog_st)
-                assert "device1:output property1" in client._catalog_st
-                assert "device2 property2" in client._catalog_st
-
                 assert 1 == len(spy)
                 assert com_ctrl_widget.stop_btn.isEnabled()
                 assert not com_ctrl_widget.start_btn.isEnabled()
@@ -186,28 +182,6 @@ class TestSpecialAnalysisBase(_RawDataMixin):
 
                 client_stop.assert_called_once()
                 timer_stop.assert_called_once()
-
-        caplog.set_level(logging.ERROR, logger=special_suite_logger_name)
-        with patch.object(client, "start") as client_start:
-            with patch.object(win._plot_timer_st, "start") as timer_start:
-                with patch.object(worker, "sources") as mocked_sources:
-                    mocked_sources.return_value = [("", "property1", 1)]
-                    QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
-                    client_start.assert_not_called()
-                    timer_start.assert_not_called()
-                    assert "Empty source" in caplog.messages[-1]
-
-                    mocked_sources.return_value = [("device", "", 0)]
-                    QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
-                    client_start.assert_not_called()
-                    timer_start.assert_not_called()
-                    assert "Empty property" in caplog.messages[-1]
-
-                    mocked_sources.return_value = [("device", "property", 2)]
-                    QTest.mouseClick(com_ctrl_widget.start_btn, Qt.LeftButton)
-                    client_start.assert_not_called()
-                    timer_start.assert_not_called()
-                    assert "Not understandable data type" in caplog.messages[-1]
 
         with patch.object(client, "onResetST") as client_reset:
             with patch.object(worker, "onResetST") as worker_reset:
