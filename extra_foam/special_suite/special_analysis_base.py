@@ -471,16 +471,6 @@ class QThreadWorker(QObject):
         """
         pass
 
-    def sources(self):
-        """Interface method.
-
-        Return a list of (device ID/output channel, property).
-
-        Concrete child class should re-implement this method in order to
-        receive data from the bridge, transform and correlate them.
-        """
-        return []
-
     def preprocess(self):
         """Preprocess before processing data."""
         pass
@@ -615,13 +605,13 @@ class QThreadWorker(QObject):
 
 
 class _BaseQThreadClient(QThread):
-    def __init__(self, queue, condition, catalog, *args, **kwargs):
+    def __init__(self, queue, condition, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._output_st = queue
         self._cv_st = condition
-        self._catalog_st = catalog
-        self._transformer_st = DataTransformer(catalog)
+        self._catalog_st = SourceCatalog()
+        self._transformer_st = DataTransformer(self._catalog_st)
 
         self._endpoint_st = None
 
@@ -643,20 +633,6 @@ class _BaseQThreadClient(QThread):
     def updateEndpointST(self, endpoint):
         """Update endpoint of the client."""
         self._endpoint_st = endpoint
-
-    def updateSourcesST(self, sources):
-        """Update source catalog of the client."""
-        ctl = self._catalog_st
-        ctl.clear()
-        for name, ppt, ktype in sources:
-            if not name:
-                raise ValueError("Empty source name")
-            if not ppt:
-                raise ValueError(f"Empty property name for source {name}")
-            if ktype not in (0, 1):
-                raise ValueError(
-                    f"Not understandable data type: {ktype}")
-            ctl.add_item(None, name, None, ppt, None, None, ktype)
 
 
 class QThreadFoamClient(_BaseQThreadClient):
@@ -680,16 +656,6 @@ class QThreadFoamClient(_BaseQThreadClient):
                 if data["processed"] is None:
                     self.log.error("Processed data not found! Please check "
                                    "the ZMQ connection!")
-                    continue
-
-                # check whether all the requested sources are in the data
-                not_found = False
-                for src in self._catalog_st:
-                    if src not in data["catalog"]:
-                        self.log.error(f"{src} not found in the data!")
-                        not_found = True
-                        break
-                if not_found:
                     continue
 
                 # keep the latest processed data in the output
@@ -773,6 +739,16 @@ class QThreadKbClient(_BaseQThreadClient):
                     data = client.next()
                 except TimeoutError:
                     continue
+
+                # Make a catalog to select everything.
+                self._catalog_st.clear()
+                for name in data[0]:
+                    for ppt in data[0][name]:
+                        # We don't care about the metadata entries from the
+                        # Karabo bridge, so those are ignored.
+                        if ppt != "metadata":
+                            ktype = int(not np.isscalar(data[0][name][ppt]))
+                            self._catalog_st.add_item(None, name, None, ppt, None, None, ktype)
 
                 try:
                     correlated, _, dropped = self._transformer_st.correlate(data)
@@ -952,12 +928,6 @@ class _SpecialAnalysisBase(QMainWindow):
 
     def _onStartST(self):
         self._client_st.updateEndpointST(self._com_ctrl_st.endpoint())
-
-        try:
-            self._client_st.updateSourcesST(self._worker_st.sources())
-        except ValueError as e:
-            logger.error(str(e))
-            return
 
         self._com_ctrl_st.onStartST()
         self._ctrl_widget_st.onStartST()

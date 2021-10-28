@@ -40,13 +40,6 @@ class XesTimingProcessor(QThreadWorker):
     def onDelayDeviceChanged(self, value: str):
         self._delay_device = value
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._output_channel, self._ppt, 1),
-            (self._delay_device, self._delay_ppt, 0),
-        ]
-
     @profiler("XES timing processor")
     def process(self, data):
         """Override."""

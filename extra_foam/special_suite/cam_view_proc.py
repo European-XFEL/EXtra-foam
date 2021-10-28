@@ -87,12 +87,6 @@ class CamViewProcessor(QThreadWorker):
                 self.log.error(f"Unexpect exception when getting data array: "
                                f"{repr(e)}")
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._output_channel, self._ppt, 1),
-        ]
-
     @profiler("Camera view processor")
     def process(self, data):
         """Override."""
