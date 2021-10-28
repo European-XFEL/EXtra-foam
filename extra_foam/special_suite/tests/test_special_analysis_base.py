@@ -14,7 +14,7 @@ from extra_foam.special_suite import logger, mkQApp
 from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 from extra_foam.special_suite.special_analysis_base import (
     _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase, create_special,
-    QThreadKbClient, QThreadFoamClient, QThreadWorker
+    ClientType, QThreadWorker, QThreadFoamClient, QThreadKbClient
 )
 
 
@@ -80,10 +80,11 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 """Override."""
                 pass
 
-        @create_special(DummyCtrlWidget, DummyProcessor, QThreadKbClient)
+        @create_special(DummyCtrlWidget, DummyProcessor)
         class DummyWindow(_SpecialAnalysisBase):
             _title = "Dummy"
             _long_title = "Dummy analysis"
+            _client_support = ClientType.BOTH
 
             def __init__(self, topic):
                 super().__init__(topic)
@@ -365,3 +366,34 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         worker._roi_geom_st = (-5, -6, 2, 3)
         roi = worker.getRoiData(img)
         np.testing.assert_array_equal(np.empty((3, 0, 0)), roi)
+
+    def testClientChange(self):
+        win = self._win
+        ctrl_widget = win._com_ctrl_st
+        worker = win._worker_st
+
+        # Helper function to get the appropriate class for a client type
+        def client_class(client_type):
+            if client_type == ClientType.EXTRA_FOAM:
+                return QThreadFoamClient
+            elif client_type == ClientType.KARABO_BRIDGE:
+                return QThreadKbClient
+            else:
+                raise RuntimeError("Unrecognized client type")
+
+        # Check the client is initialized properly
+        client_type = ClientType(ctrl_widget._client_type_cb.currentText())
+        assert client_type == ctrl_widget.selected_client
+        assert client_class(client_type) == type(win._client_st)
+        assert worker.client_type == client_type
+
+        # Which client is selected by default doesn't actually matter for
+        # operation, but it's simpler to test if we know that this is the
+        # default.
+        assert client_type == ClientType.EXTRA_FOAM
+
+        # Change the client type
+        ctrl_widget._client_type_cb.setCurrentText(ClientType.KARABO_BRIDGE.value)
+        client_type = ctrl_widget.selected_client
+        assert client_class(client_type) == type(win._client_st)
+        assert worker.client_type == client_type

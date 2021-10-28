@@ -28,7 +28,7 @@ from .xas_tim_proc import (
     _DEFAULT_N_BINS, _MAX_N_BINS,
 )
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -297,7 +297,7 @@ class XasTimXgmSpectrumPlot(TimedPlotWidgetF):
         self._count.setData(centers, counts)
 
 
-@create_special(XasTimCtrlWidget, XasTimProcessor, QThreadKbClient)
+@create_special(XasTimCtrlWidget, XasTimProcessor)
 class XasTimWindow(_SpecialAnalysisBase):
     """Main GUI for XAS-TIM analysis."""
 
@@ -305,6 +305,7 @@ class XasTimWindow(_SpecialAnalysisBase):
     _title = "XAS-TIM"
     _long_title = "X-ray Absorption Spectroscopy with transmission " \
                   "intensity monitor"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic, with_dark=False, with_levels=False)

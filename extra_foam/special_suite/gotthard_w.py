@@ -29,7 +29,7 @@ from .gotthard_proc import (
     GotthardProcessor, _DEFAULT_BIN_RANGE, _DEFAULT_N_BINS
 )
 from .special_analysis_base import (
-    create_special, QThreadKbClient, _BaseAnalysisCtrlWidgetS,
+    create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
@@ -216,13 +216,14 @@ class GotthardHist(HistMixin, PlotWidgetF):
             self.updateTitle(mean, median, std)
 
 
-@create_special(GotthardCtrlWidget, GotthardProcessor, QThreadKbClient)
+@create_special(GotthardCtrlWidget, GotthardProcessor)
 class GotthardWindow(_SpecialAnalysisBase):
     """Main GUI for Gotthard analysis."""
 
     icon = "Gotthard.png"
     _title = "Gotthard"
     _long_title = "Gotthard analysis"
+    _client_support = ClientType.KARABO_BRIDGE
 
     def __init__(self, topic):
         super().__init__(topic)
