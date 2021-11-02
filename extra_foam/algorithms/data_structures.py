@@ -93,6 +93,9 @@ class _AbstractSequence(Sequence):
         """Override."""
         return self._len
 
+    def capacity(self):
+        return self._max_len
+
     @abstractmethod
     def data(self):
         """Return all the data."""
@@ -125,7 +128,8 @@ class SimpleSequence(_AbstractSequence):
     def __init__(self, *, max_len=100000, dtype=np.float64):
         super().__init__(max_len=max_len)
 
-        self._x = np.zeros(self._OVER_CAPACITY * max_len, dtype=dtype)
+        self._dtype = dtype
+        self.resize(max_len)
 
     def __getitem__(self, index):
         """Override."""
@@ -150,6 +154,11 @@ class SimpleSequence(_AbstractSequence):
     def extend(self, items):
         for item in items:
             self.append(item)
+
+    def resize(self, max_len):
+        self._max_len = max_len
+        self._x = np.zeros(self._OVER_CAPACITY * max_len, dtype=self._dtype)
+        self.reset()
 
     def reset(self):
         """Override."""
