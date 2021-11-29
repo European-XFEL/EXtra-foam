@@ -25,8 +25,17 @@ Install **EXtra-foam**
     # you want to install into an existing environment, use `conda env update` instead.
     $ conda env create -f environment.yml
 
-    # Install
     $ conda activate extra_foam
+    # We need to set this variable so that the libraries from the conda
+    # environment are loaded first, in particular libstdc++. If the system
+    # libstdc++ is loaded first and it's too old for the version extra-foam was
+    # compiled against, then we might get nasty loader errors.
+    $ conda env config vars set LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}
+    # Re-activate the environment so the new variables take effect
+    $ conda deactivate
+    $ conda activate extra_foam
+
+    # Install extra-foam
     $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
     $ pip install .
 
