@@ -60,7 +60,7 @@ class SignalProxy(QtCore.QObject):
                 leakTime = max(0, (lastFlush + (1.0 / self.rateLimit)) - now)
                 
             self.timer.stop()
-            self.timer.start((min(leakTime, self.delay)*1000)+1)
+            self.timer.start(int(min(leakTime, self.delay) * 1000) + 1)
             
         
     def flush(self):
