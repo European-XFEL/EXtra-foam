@@ -57,6 +57,7 @@ class ImageViewF(QWidget):
     def __init__(self, *,
                  has_roi=False,
                  hide_axis=True,
+                 histogram=True,
                  color_map=None,
                  roi_position=(0, 0),
                  roi_size=(100, 100),
@@ -75,6 +76,8 @@ class ImageViewF(QWidget):
         self._mediator = Mediator()
 
         self._mouse_hover_v_rounding_decimals = 1
+
+        self._histogram = histogram
 
         self._rois = []
         if has_roi:
@@ -120,13 +123,19 @@ class ImageViewF(QWidget):
     def initUI(self):
         layout = QHBoxLayout()
         layout.addWidget(self._plot_widget, 4)
-        layout.addWidget(self._hist_widget, 1)
+
+        if self._histogram:
+            layout.addWidget(self._hist_widget, 1)
+
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
     def reset(self):
         self.clear()
+
+    def addMenuItem(self, item):
+        self._plot_widget.addMenuItem(item)
 
     def updateF(self, data):
         """This method is called by the parent window.

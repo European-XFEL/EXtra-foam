@@ -12,7 +12,7 @@ import abc
 import numpy as np
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QTimer
-from PyQt5.QtWidgets import QSizePolicy
+from PyQt5.QtWidgets import QSizePolicy, QMenu, QAction
 
 from .. import pyqtgraph as pg
 
@@ -131,6 +131,12 @@ class PlotWidgetF(pg.GraphicsView):
     def setAspectLocked(self, *args, **kwargs):
         self._plot_area.setAspectLocked(*args, **kwargs)
 
+    def addMenuItem(self, item):
+        if not isinstance(item, QMenu) and not isinstance(item, QAction):
+            raise TypeError("Menu item must be either QMenu or QAction")
+
+        self._plot_area._menu.append(item)
+
     def setLabel(self, *args, **kwargs):
         self._plot_area.setLabel(*args, **kwargs)
 
@@ -141,7 +147,7 @@ class PlotWidgetF(pg.GraphicsView):
         self._plot_area.setAnnotationList(*args, **kwargs)
 
     def addLegend(self, *args, **kwargs):
-        self._plot_area.addLegend(*args, **kwargs)
+        return self._plot_area.addLegend(*args, **kwargs)
 
     def invertX(self, *args, **kargs):
         self._plot_area.invertX(*args, **kargs)

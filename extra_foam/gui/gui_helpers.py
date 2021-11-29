@@ -10,7 +10,7 @@ All rights reserved.
 import os.path as osp
 
 from PyQt5.QtCore import QSize
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QGuiApplication, QCursor
 from PyQt5.QtWidgets import QPushButton
 
 
@@ -230,3 +230,22 @@ def invert_dict(mapping):
     for k, v in mapping.items():
         ret[v] = k
     return ret
+
+def center_window(window, resize=True):
+    """Center the window to the screen the cursor is placed on.
+
+    Optionally also resize the window so that it fits on the screen.
+
+    :param QWidget window: Window widget to position.
+    :param bool    resize: Whether or not to resize the window.
+    """
+    screen = QGuiApplication.screenAt(QCursor.pos())
+
+    if resize:
+        screen_size = screen.size()
+        max_width = screen_size.width()
+        max_height = screen_size.height()
+
+        window.resize(max_width * 0.8, max_height * 0.8)
+
+    window.move(screen.geometry().center() - window.frameGeometry().center())
