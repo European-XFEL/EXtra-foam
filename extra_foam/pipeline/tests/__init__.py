@@ -95,7 +95,7 @@ class _TestDataMixin:
             'catalog': catalog,
             'meta': {
                 src: {
-                    'timestamp.tid': tid,
+                    'train_id': tid,
                     'source_type': src_type,
                 }
             },
