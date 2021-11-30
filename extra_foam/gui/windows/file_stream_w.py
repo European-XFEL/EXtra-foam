@@ -15,13 +15,11 @@ import socket
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFontMetrics, QIntValidator, QValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout,
+    QCheckBox, QComboBox, QFileDialog, QGridLayout,
     QHeaderView, QGroupBox, QLabel, QLineEdit, QLCDNumber, QProgressBar,
     QPushButton, QSlider, QSplitter, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget
+    QVBoxLayout, QWidget, QDoubleSpinBox
 )
-
-from zmq.error import ZMQError
 
 from .base_window import _AbstractSatelliteWindow
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
@@ -93,9 +91,14 @@ class _FileStreamCtrlWidget(QWidget):
         validator.setBottom(1)
         self.tid_stride_le.setValidator(validator)
 
-        self.stream_rate_lb = QLabel(f"{0.0:<12.1f}")
-        self.stream_rate_lb.setFixedWidth(
-            self.stream_rate_lb.sizeHint().width())
+        self.stream_rate_sb = QDoubleSpinBox()
+        self.stream_rate_sb.setSuffix(" Hz")
+        self.stream_rate_sb.setDecimals(1)
+        self.stream_rate_sb.setValue(10)
+        self.stream_rate_sb.setMinimum(0.1)
+        self.stream_rate_sb.setMaximum(100)
+
+        self.stream_rate_lb = QLabel()
 
         self.tid_progress_br = QProgressBar()
 
@@ -133,6 +136,7 @@ class _FileStreamCtrlWidget(QWidget):
             self.load_run_btn,
             self.mode_cb,
             self.port_le,
+            self.stream_rate_sb
         ]
 
         self.initUI()
@@ -155,9 +159,10 @@ class _FileStreamCtrlWidget(QWidget):
         ctrl_layout.addWidget(self.tid_stride_le, 1, 6)
         ctrl_layout.addWidget(QLabel("Mode: "), 1, 7, AR)
         ctrl_layout.addWidget(self.mode_cb, 1, 8, AR)
-        ctrl_layout.addWidget(QLabel("Rate: "), 1, 9, AR)
-        ctrl_layout.addWidget(self.stream_rate_lb, 1, 10)
-        ctrl_layout.addWidget(QLabel("Hz"), 1, 11, AR)
+        ctrl_layout.addWidget(QLabel("Max rate: "), 1, 9, AR)
+        ctrl_layout.addWidget(self.stream_rate_sb, 1, 10)
+        ctrl_layout.addWidget(QLabel("Actual rate:"), 1, 12, AR)
+        ctrl_layout.addWidget(self.stream_rate_lb, 1, 13, AR)
 
         progress = QWidget()
         progress_layout = QGridLayout()
@@ -426,7 +431,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         self._ctrl_widget.tid_progress_br.setValue(tid)
 
         self._ctrl_widget.stream_rate_lb.setText(
-            f"{round(self._rate.value, 1)}")
+            f"{round(self._rate.value, 1)} Hz")
 
     def startFileServer(self, repeat=False):
         ctrl_widget = self._ctrl_widget
@@ -438,6 +443,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         folder = ctrl_widget.data_folder_le.text()
         mode = ctrl_widget.getMode()
         tid_range = ctrl_widget.getTidRange()
+        max_rate = ctrl_widget.stream_rate_sb.value()
 
         if self._port is None:
             port = int(ctrl_widget.port_le.text())
@@ -458,7 +464,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         self._file_server = Process(
             target=serve_files,
             args=((self._rd_cal, self._rd_raw), port, self._latest_tid,
-                  self._rate),
+                  self._rate, max_rate),
             kwargs={
                 'tid_range': tid_range,
                 'mode': mode,

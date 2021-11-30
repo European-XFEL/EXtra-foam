@@ -10,7 +10,7 @@ All rights reserved.
 import os.path as osp
 import re
 import random
-from time import time
+from time import time, sleep
 from collections import deque
 
 from extra_data import by_id, RunDirectory
@@ -158,7 +158,7 @@ def generate_meta(devices, tid):
     return meta
 
 
-def serve_files(run_data, port, shared_tid, shared_rate, *,
+def serve_files(run_data, port, shared_tid, shared_rate, max_rate,
                 tid_range=None,
                 mode=StreamMode.NORMAL,
                 detector_sources=None,
@@ -179,7 +179,9 @@ def serve_files(run_data, port, shared_tid, shared_rate, *,
     shared_tid: Value
         The latest streamed train ID shared between processes.
     shared_rate: Value
-        The stream rate in Hz.
+        The actual streaming rate in Hz.
+    max_rate: float
+        The maximum streaming rate in Hz.
     tid_range: tuple
         (start, end, step) train ID.
     mode: StreamMode
@@ -214,6 +216,7 @@ def serve_files(run_data, port, shared_tid, shared_rate, *,
     streamer = ZMQStreamer(port, maxlen=buffer_size, **kwargs)
     streamer.start()  # run "REP" socket in a thread
 
+    train_delay = 1 / max_rate
     counter = 0
     n_buffered = 0
     t_sent = deque(maxlen=10)
@@ -260,6 +263,18 @@ def serve_files(run_data, port, shared_tid, shared_rate, *,
             # update processing rate
             n = len(t_sent) - 1
             if n > 0:
+                inter_train_delay = t_sent[-1] - t_sent[-2]
+                sleep_delay = train_delay - inter_train_delay
+
+                # If the delay is greater than some epsilon, sleep
+                if sleep_delay > 0.001:
+                    sleep(sleep_delay)
+
+                    # Record the current time as the end of processing time for
+                    # this train.
+                    t_sent.pop()
+                    t_sent.append(time())
+
                 shared_rate.value = n / (t_sent[-1] - t_sent[0])
 
             # update the train ID just sent
