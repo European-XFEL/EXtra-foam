@@ -22,13 +22,12 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 
 app = mkQApp()
+window_type = XasTimWindow
 
 logger.setLevel('INFO')
 
 
 class TestXasTimWindow(_SpecialSuiteWindowTestBase):
-    _window_type = XasTimWindow
-
     @staticmethod
     def data4visualization(n_trains=10, n_pulses_per_train=10, n_bins=6):
         """Override."""
@@ -42,39 +41,36 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
             "spectra": ([np.arange(n_bins)] * 5, np.arange(n_bins), np.arange(n_bins)),
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(9, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 9 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[XasTimXgmPulsePlot])
-        self.assertEqual(1, counter[XasTimDigitizerPulsePlot])
-        self.assertEqual(1, counter[XasTimMonoScanPlot])
-        self.assertEqual(4, counter[XasTimCorrelationPlot])
-        self.assertEqual(1, counter[XasTimSpectraPlot])
-        self.assertEqual(1, counter[XasTimXgmSpectrumPlot])
+        assert 1 == counter[XasTimXgmPulsePlot]
+        assert 1 == counter[XasTimDigitizerPulsePlot]
+        assert 1 == counter[XasTimMonoScanPlot]
+        assert 4 == counter[XasTimCorrelationPlot]
+        assert 1 == counter[XasTimSpectraPlot]
+        assert 1 == counter[XasTimXgmSpectrumPlot]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
-        win = self._win
+    def testCtrl(self, win):
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertTrue(proc._xgm_output_channel)
-        self.assertTrue(proc._digitizer_output_channel)
-        self.assertTrue(proc._mono_device_id)
-        self.assertListEqual([True] * 4, proc._digitizer_channels)
-        self.assertEqual(_DEFAULT_N_PULSES_PER_TRAIN, proc._n_pulses_per_train)
-        self.assertEqual(1, proc._apd_stride)
-        self.assertEqual(_DEFAULT_I0_THRESHOLD, proc._i0_threshold)
-        self.assertEqual(_MAX_CORRELATION_WINDOW, proc._correlation_window)
-        self.assertEqual(_MAX_WINDOW, proc._window)
-        self.assertEqual(_DEFAULT_N_BINS, proc._n_bins)
+        assert proc._xgm_output_channel
+        assert proc._digitizer_output_channel
+        assert proc._mono_device_id
+        assert all(proc._digitizer_channels)
+        assert _DEFAULT_N_PULSES_PER_TRAIN == proc._n_pulses_per_train
+        assert 1 == proc._apd_stride
+        assert _DEFAULT_I0_THRESHOLD == proc._i0_threshold
+        assert _MAX_CORRELATION_WINDOW == proc._correlation_window
+        assert _MAX_WINDOW == proc._window
+        assert _DEFAULT_N_BINS == proc._n_bins
 
         # test set new values
 
@@ -82,26 +78,26 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._xgm_output_channel)
+        assert "new/output/channel" == proc._xgm_output_channel
 
         widget = ctrl_widget.digitizer_output_ch_le
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._digitizer_output_channel)
+        assert "new/output/channel" == proc._digitizer_output_channel
 
         widget = ctrl_widget.mono_device_le
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._mono_device_id)
+        assert "new/output/channel" == proc._mono_device_id
 
         with patch.object(proc, "reset") as mocked_reset:
             mask_gt = [True] * 4
             for i, widget in enumerate(ctrl_widget.digitizer_channels.buttons()):
                 mask_gt[i] = False
                 QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
-                self.assertEqual(mask_gt, proc._digitizer_channels)
+                assert mask_gt == proc._digitizer_channels
             # test "reset" is only called when new digitizer channel is checked
             mocked_reset.assert_not_called()
             QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
@@ -111,43 +107,43 @@ class TestXasTimWindow(_SpecialSuiteWindowTestBase):
         widget.clear()
         QTest.keyClicks(widget, "300")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(300, proc._n_pulses_per_train)
+        assert 300 == proc._n_pulses_per_train
 
         widget = ctrl_widget.apd_stride_le
         widget.clear()
         QTest.keyClicks(widget, "2")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(2, proc._apd_stride)
+        assert 2 == proc._apd_stride
 
         widget = ctrl_widget.i0_threshold_le
         widget.clear()
         QTest.keyClicks(widget, "-0.1")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(-0.1, proc._i0_threshold)
+        assert -0.1 == proc._i0_threshold
 
         widget = ctrl_widget.correlation_window_le
         widget.clear()
         QTest.keyClicks(widget, "500")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(500, proc._correlation_window)
+        assert 500 == proc._correlation_window
 
         widget = ctrl_widget.pulse_window_le
         widget.clear()
         QTest.keyClicks(widget, "9999")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(9999, proc._window)
+        assert 9999 == proc._window
 
         widget = ctrl_widget.n_bins_le
         widget.clear()
         QTest.keyClicks(widget, "200")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(200, proc._n_bins)
+        assert 200 == proc._n_bins
 
         displayed_gt = [True] * 4
         for i, widget in enumerate(ctrl_widget.spectra_displayed.buttons()):
             displayed_gt[i] = False
             QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
-            self.assertEqual(displayed_gt, win._spectra._displayed)
+            assert displayed_gt == win._spectra._displayed
 
 
 class TestXasTimProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):

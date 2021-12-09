@@ -16,13 +16,12 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 
 app = mkQApp()
+window_type = VectorViewWindow
 
 logger.setLevel('INFO')
 
 
-class TestCamViewWindow(_SpecialSuiteWindowTestBase):
-    _window_type = VectorViewWindow
-
+class TestVectorViewWindow(_SpecialSuiteWindowTestBase):
     @staticmethod
     def data4visualization():
         """Override."""
@@ -33,37 +32,34 @@ class TestCamViewWindow(_SpecialSuiteWindowTestBase):
             "vector2_full": np.arange(100) + 5,
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(3, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 3 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[VectorPlot])
-        self.assertEqual(1, counter[InTrainVectorCorrelationPlot])
-        self.assertEqual(1, counter[VectorCorrelationPlot])
+        assert 1 == counter[VectorPlot]
+        assert 1 == counter[InTrainVectorCorrelationPlot]
+        assert 1 == counter[VectorCorrelationPlot]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
-        win = self._win
+    def testCtrl(self, win):
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertEqual('XGM intensity', proc._vector1)
-        self.assertEqual('', proc._vector2)
+        assert 'XGM intensity' == proc._vector1
+        assert '' == proc._vector2
 
         # test set new values
         widget = ctrl_widget.vector1_cb
         widget.setCurrentText("ROI FOM")
-        self.assertEqual("ROI FOM", proc._vector1)
+        assert "ROI FOM" == proc._vector1
 
         widget = ctrl_widget.vector2_cb
         widget.setCurrentText("Digitizer pulse integral")
-        self.assertEqual("Digitizer pulse integral", proc._vector2)
+        assert "Digitizer pulse integral" == proc._vector2
 
 
 class TestVectorViewProcessor(_TestDataMixin, _SpecialSuiteProcessorTestBase):
@@ -97,5 +93,5 @@ class TestVectorViewProcessor(_TestDataMixin, _SpecialSuiteProcessorTestBase):
 
     def _check_processed_data_structure(self, ret):
         """Override."""
-        data_gt = TestCamViewWindow.data4visualization().keys()
+        data_gt = TestVectorViewWindow.data4visualization().keys()
         assert set(ret.keys()) == set(data_gt)

@@ -19,13 +19,12 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 
 app = mkQApp()
+window_type = TrXasWindow
 
 logger.setLevel('INFO')
 
 
 class TestTrXasWindow(_SpecialSuiteWindowTestBase):
-    _window_type = TrXasWindow
-
     @staticmethod
     def data4visualization(n_bins1=6, n_bins2=4):
         """Override."""
@@ -43,41 +42,38 @@ class TestTrXasWindow(_SpecialSuiteWindowTestBase):
             "a21_heat_count": np.ones((n_bins2, n_bins1)),
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(6, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 6 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(3, counter[TrXasRoiImageView])
-        self.assertEqual(2, counter[TrXasSpectraPlot])
-        self.assertEqual(1, counter[TrXasHeatmap])
+        assert 3 == counter[TrXasRoiImageView]
+        assert 2 == counter[TrXasSpectraPlot]
+        assert 1 == counter[TrXasHeatmap]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
+    def testCtrl(self, win):
         from extra_foam.special_suite.trxas_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
 
-        win = self._win
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertTrue(proc._device_id1)
-        self.assertTrue(proc._ppt1)
-        self.assertTrue(win._a21._plot_area.getAxis("bottom").label.toPlainText())
-        self.assertTrue(win._a13_a23._plot_area.getAxis("bottom").label.toPlainText())
-        self.assertTrue(win._a21_heatmap._plot_widget._plot_area.getAxis("left").label.toPlainText())
-        self.assertTrue(win._a21_heatmap._plot_widget._plot_area.getAxis("bottom").label.toPlainText())
-        self.assertTrue(proc._device_id2)
-        self.assertTrue(proc._ppt2)
+        assert proc._device_id1
+        assert proc._ppt1
+        assert win._a21._plot_area.getAxis("bottom").label.toPlainText()
+        assert win._a13_a23._plot_area.getAxis("bottom").label.toPlainText()
+        assert win._a21_heatmap._plot_widget._plot_area.getAxis("left").label.toPlainText()
+        assert win._a21_heatmap._plot_widget._plot_area.getAxis("bottom").label.toPlainText()
+        assert proc._device_id2
+        assert proc._ppt2
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
-        self.assertTupleEqual(default_bin_range, proc._bin_range1)
-        self.assertTupleEqual(default_bin_range, proc._bin_range2)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
+        assert default_bin_range == proc._bin_range1
+        assert default_bin_range == proc._bin_range2
+        assert int(_DEFAULT_N_BINS) == proc._n_bins1
+        assert int(_DEFAULT_N_BINS) == proc._n_bins2
 
         # test set new values
 
@@ -85,13 +81,13 @@ class TestTrXasWindow(_SpecialSuiteWindowTestBase):
         widget.clear()
         QTest.keyClicks(widget, "phase/shifter")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("phase/shifter", proc._device_id1)
+        assert "phase/shifter" == proc._device_id1
 
         widget = ctrl_widget.ppt1_le
         widget.clear()
         QTest.keyClicks(widget, "phase/shifter/ppt")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("phase/shifter/ppt", proc._ppt1)
+        assert "phase/shifter/ppt" == proc._ppt1
 
         with patch.object(win._a21, "setLabel") as mocked_setLabel1:
             with patch.object(win._a13_a23, "setLabel") as mocked_setLabel2:
@@ -115,53 +111,53 @@ class TestTrXasWindow(_SpecialSuiteWindowTestBase):
         widget.clear()
         QTest.keyClicks(widget, "mono")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("mono", proc._device_id2)
+        assert "mono" == proc._device_id2
 
         widget = ctrl_widget.ppt2_le
         widget.clear()
         QTest.keyClicks(widget, "mono/ppt")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("mono/ppt", proc._ppt2)
+        assert "mono/ppt" == proc._ppt2
 
         widget = ctrl_widget.bin_range2_le
         widget.clear()
         QTest.keyClicks(widget, "-1.0, 1.0")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertTupleEqual((-1.0, 1.0), proc._bin_range2)
+        assert (-1.0, 1.0) == proc._bin_range2
 
         widget = ctrl_widget.n_bins2_le
         widget.clear()
         QTest.keyClicks(widget, "1000")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(100, proc._n_bins2)  # maximum is 999 and one can not put the 3rd 0 in
+        assert 100 == proc._n_bins2  # maximum is 999 and one can not put the 3rd 0 in
         widget.clear()
         QTest.keyClicks(widget, "999")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(999, proc._n_bins2)
+        assert 999 == proc._n_bins2
 
         widget = ctrl_widget.bin_range1_le
         widget.clear()
         QTest.keyClicks(widget, "-1, 1")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertTupleEqual((-1, 1), proc._bin_range1)
+        assert (-1, 1) == proc._bin_range1
 
         widget = ctrl_widget.n_bins1_le
         widget.clear()
         QTest.keyClicks(widget, "1000")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(100, proc._n_bins1)  # maximum is 999 and one can not put the 3rd 0 in
+        assert 100 == proc._n_bins1  # maximum is 999 and one can not put the 3rd 0 in
         widget.clear()
         QTest.keyClicks(widget, "999")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(999, proc._n_bins1)
+        assert 999 == proc._n_bins1
 
         QTest.mouseClick(ctrl_widget.swap_btn, Qt.LeftButton)
-        self.assertEqual("phase/shifter", proc._device_id2)
-        self.assertEqual("phase/shifter/ppt", proc._ppt2)
-        self.assertEqual("faked delay (s)", ctrl_widget.label2_le.text())
-        self.assertEqual("mono", proc._device_id1)
-        self.assertEqual("mono/ppt", proc._ppt1)
-        self.assertEqual("faked energy (eV)", ctrl_widget.label1_le.text())
+        assert "phase/shifter" == proc._device_id2
+        assert "phase/shifter/ppt" == proc._ppt2
+        assert "faked delay (s)" == ctrl_widget.label2_le.text()
+        assert "mono" == proc._device_id1
+        assert "mono/ppt" == proc._ppt1
+        assert "faked energy (eV)" == ctrl_widget.label1_le.text()
 
 
 class TestTrXasProcessor(_TestDataMixin, _SpecialSuiteProcessorTestBase):

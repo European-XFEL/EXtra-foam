@@ -15,17 +15,14 @@ from extra_foam.special_suite.module_scan_w import (
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
+window_type = ModuleScanWindow
 
 logger.setLevel('INFO')
 
 
 class TestModuleScan(_SpecialSuiteWindowTestBase):
-    _window_type = ModuleScanWindow
-
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(1, len(win._plot_widgets_st))
+    def testWindow(self, win):
+        assert 1 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
@@ -37,8 +34,7 @@ class TestModuleScan(_SpecialSuiteWindowTestBase):
         #
         # win.updateWidgetsST()
 
-    def testCtrl(self):
-        win = self._win
+    def testCtrl(self, win):
         widget = win._ctrl_widget_st
         proc = win._worker_st
 

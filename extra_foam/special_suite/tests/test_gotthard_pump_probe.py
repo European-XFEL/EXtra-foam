@@ -21,13 +21,12 @@ from extra_foam.special_suite.special_analysis_base import ProcessingError
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
+window_type = GotthardPumpProbeWindow
 
 logger.setLevel('INFO')
 
 
 class TestGotthardPpWindow(_SpecialSuiteWindowTestBase):
-    _window_type = GotthardPumpProbeWindow
-
     @staticmethod
     def data4visualization(n_pulses=5, n_on=2, n_off=2):
         """Override."""
@@ -45,74 +44,71 @@ class TestGotthardPpWindow(_SpecialSuiteWindowTestBase):
             "vfom_ma_mean": np.arange(8),
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(5, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 5 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[GotthardPpImageView])
-        self.assertEqual(1, counter[GotthardPpFomMeanPlot])
-        self.assertEqual(1, counter[GotthardPpFomPulsePlot])
-        self.assertEqual(1, counter[GotthardPpRawPulsePlot])
-        self.assertEqual(1, counter[GotthardPpDarkPulsePlot])
+        assert 1 == counter[GotthardPpImageView]
+        assert 1 == counter[GotthardPpFomMeanPlot]
+        assert 1 == counter[GotthardPpFomPulsePlot]
+        assert 1 == counter[GotthardPpRawPulsePlot]
+        assert 1 == counter[GotthardPpDarkPulsePlot]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
-        win = self._win
+    def testCtrl(self, win):
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertTrue(proc._output_channel)
-        self.assertEqual(0, proc._poi_index)
-        self.assertEqual(0, proc._dark_poi_index)
-        self.assertEqual(1, proc.__class__._vfom_ma.window)
+        assert proc._output_channel
+        assert 0 == proc._poi_index
+        assert 0 == proc._dark_poi_index
+        assert 1 == proc.__class__._vfom_ma.window
 
         # test set new values
         widget = ctrl_widget.output_ch_le
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._output_channel)
+        assert "new/output/channel" == proc._output_channel
 
         widget = ctrl_widget.on_slicer_le
         widget.clear()
         QTest.keyClicks(widget, ":20:2")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(slice(None, 20, 2), proc._on_slicer)
+        assert slice(None, 20, 2) == proc._on_slicer
 
         widget = ctrl_widget.off_slicer_le
         widget.clear()
         QTest.keyClicks(widget, "1:20:2")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(slice(1, 20, 2), proc._off_slicer)
+        assert slice(1, 20, 2) == proc._off_slicer
 
         for widget, target in zip((ctrl_widget.poi_index_le, ctrl_widget.dark_poi_index_le),
                                   ("_poi_index", "_dark_poi_index")):
             widget.clear()
             QTest.keyClicks(widget, "121")
             QTest.keyPress(widget, Qt.Key_Enter)
-            self.assertEqual(0, getattr(proc, target))  # maximum is 119 and one can still type "121"
+            assert 0 == getattr(proc, target)  # maximum is 119 and one can still type "121"
             widget.clear()
             QTest.keyClicks(widget, "119")
             QTest.keyPress(widget, Qt.Key_Enter)
-            self.assertEqual(119, getattr(proc, target))
+            assert 119 == getattr(proc, target)
 
         widget = ctrl_widget.dark_slicer_le
         widget.clear()
         QTest.keyClicks(widget, "30:40")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(slice(30, 40), proc._dark_slicer)
+        assert slice(30, 40) == proc._dark_slicer
 
         widget = ctrl_widget.ma_window_le
         widget.clear()
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(9, proc.__class__._vfom_ma.window)
+        assert 9 == proc.__class__._vfom_ma.window
 
 
 class TestGotthardPpProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
