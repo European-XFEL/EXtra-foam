@@ -22,13 +22,12 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 
 app = mkQApp()
+window_type = XasTimXmcdWindow
 
 logger.setLevel('INFO')
 
 
 class TestXasTimXmcdWindow(_SpecialSuiteWindowTestBase):
-    _window_type = XasTimXmcdWindow
-
     @staticmethod
     def data4visualization(n_trains=10, n_pulses_per_train=10, n_bins=6):
         stats = [(np.arange(n_bins), np.arange(n_bins))] * 4
@@ -44,32 +43,29 @@ class TestXasTimXmcdWindow(_SpecialSuiteWindowTestBase):
             "spectra": (stats, np.arange(n_bins), np.arange(n_bins)),
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(10, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 10 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[XasTimXgmPulsePlot])
-        self.assertEqual(1, counter[XasTimDigitizerPulsePlot])
-        self.assertEqual(1, counter[XasTimXmcdSlowScanPlot])
-        self.assertEqual(4, counter[XasTimCorrelationPlot])
-        self.assertEqual(1, counter[XasTimXmcdAbsorpPnSpectraPlot])
-        self.assertEqual(1, counter[XasTimXmcdSpectraPlot])
-        self.assertEqual(1, counter[XasTimXgmSpectrumPlot])
+        assert 1 == counter[XasTimXgmPulsePlot]
+        assert 1 == counter[XasTimDigitizerPulsePlot]
+        assert 1 == counter[XasTimXmcdSlowScanPlot]
+        assert 4 == counter[XasTimCorrelationPlot]
+        assert 1 == counter[XasTimXmcdAbsorpPnSpectraPlot]
+        assert 1 == counter[XasTimXmcdSpectraPlot]
+        assert 1 == counter[XasTimXgmSpectrumPlot]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
-        win = self._win
+    def testCtrl(self, win):
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertTrue(proc._magnet_device_id)
-        self.assertEqual(_DEFAULT_CURRENT_THRESHOLD, proc._current_threshold)
+        assert proc._magnet_device_id
+        assert _DEFAULT_CURRENT_THRESHOLD == proc._current_threshold
 
         # test set new values
 
@@ -77,19 +73,19 @@ class TestXasTimXmcdWindow(_SpecialSuiteWindowTestBase):
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._magnet_device_id)
+        assert "new/output/channel" == proc._magnet_device_id
 
         widget = ctrl_widget.current_threshold_le
         widget.clear()
         QTest.keyClicks(widget, "0.1")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0.1, proc._current_threshold)
+        assert 0.1 == proc._current_threshold
 
         # only allow to display the spectra of one channel
         for i, widget in enumerate(ctrl_widget.spectra_displayed.buttons()):
             QTest.mouseClick(widget, Qt.LeftButton, pos=QPoint(2, int(widget.height() / 2)))
-            self.assertEqual(i, win._pn_spectra._displayed)
-            self.assertEqual(i, win._xas_xmcd_spectra._displayed)
+            assert i == win._pn_spectra._displayed
+            assert i == win._xas_xmcd_spectra._displayed
 
 
 class TestXasTimXmcdProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):

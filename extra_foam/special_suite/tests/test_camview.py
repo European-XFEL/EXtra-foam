@@ -21,13 +21,12 @@ from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 
 app = mkQApp()
+window_type = CamViewWindow
 
 logger.setLevel('INFO')
 
 
 class TestCamViewWindow(_SpecialSuiteWindowTestBase):
-    _window_type = CamViewWindow
-
     @staticmethod
     def data4visualization():
         """Override."""
@@ -36,71 +35,66 @@ class TestCamViewWindow(_SpecialSuiteWindowTestBase):
             "roi_hist": (np.arange(4), np.arange(4), 1, 2, 3)
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(2, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 2 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[CameraView])
-        self.assertEqual(1, counter[CameraViewRoiHist])
+        assert 1 == counter[CameraView]
+        1 == counter[CameraViewRoiHist]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
+    def testCtrl(self, win):
         from extra_foam.special_suite.cam_view_w import (
             _DEFAULT_OUTPUT_CHANNEL, _DEFAULT_PROPERTY, _DEFAULT_N_BINS,
             _DEFAULT_BIN_RANGE
         )
-
-        win = self._win
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertEqual(_DEFAULT_OUTPUT_CHANNEL, proc._output_channel)
-        self.assertEqual(_DEFAULT_PROPERTY, proc._ppt)
-        self.assertEqual(1, proc.__class__._raw_ma.window)
-        self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
-                              proc._bin_range)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
+        assert _DEFAULT_OUTPUT_CHANNEL == proc._output_channel
+        assert _DEFAULT_PROPERTY == proc._ppt
+        assert 1 == proc.__class__._raw_ma.window
+        assert tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')) == proc._bin_range
+        assert int(_DEFAULT_N_BINS) == proc._n_bins
 
         # test set new values
         widget = ctrl_widget.output_ch_le
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._output_channel)
+        assert "new/output/channel" == proc._output_channel
 
         widget = ctrl_widget.property_le
         widget.clear()
         QTest.keyClicks(widget, "new/property")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/property", proc._ppt)
+        assert "new/property" == proc._ppt
 
         widget = ctrl_widget.ma_window_le
         widget.clear()
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(9, proc.__class__._raw_ma.window)
+        assert 9 == proc.__class__._raw_ma.window
 
         widget = ctrl_widget.bin_range_le
         widget.clear()
         QTest.keyClicks(widget, "-1.0, 1.0")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertTupleEqual((-1.0, 1.0), proc._bin_range)
+        assert (-1.0, 1.0) == proc._bin_range
 
         widget = ctrl_widget.n_bins_le
         widget.clear()
         QTest.keyClicks(widget, "1000")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(100, proc._n_bins)  # maximum is 999 and one can not put the 3rd 0 in
+        assert 100 == proc._n_bins  # maximum is 999 and one can not put the 3rd 0 in
         widget.clear()
         QTest.keyClicks(widget, "999")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(999, proc._n_bins)
+        assert 999 == proc._n_bins
 
 
 class TestCamViewProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):

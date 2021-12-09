@@ -1,35 +1,23 @@
 import abc
-import unittest
+import logging
+
+import pytest
 
 from extra_foam.gui.plot_widgets import TimedPlotWidgetF, TimedImageViewF
+from extra_foam.special_suite import special_suite_logger_name, logger
 
-from extra_foam.special_suite import logger, mkQApp
 
-
-class _SpecialSuiteWindowTestBase(unittest.TestCase):
+class _SpecialSuiteWindowTestBase:
     @staticmethod
     def data4visualization():
         raise NotImplementedError
 
-    @classmethod
-    def setUpClass(cls):
-        cls._win = cls._window_type("TEST")
-        # We need to wait until the worker is waiting for notifications before
-        # continuing, otherwise a race condition is possible that would cause
-        # the worker to miss the notification to stop, which would cause the
-        # tests to hang.
-        cls._win._worker_st._waiting_st.wait()
+    @pytest.fixture
+    def check_update_plots(self, win, caplog):
+        def _check_update_plots():
+            worker = win._worker_st
 
-    @classmethod
-    def tearDownClass(cls):
-        # explicitly close the MainGUI to avoid error in GuiLogger
-        cls._win.close()
-
-    def _check_update_plots(self):
-        win = self._win
-        worker = win._worker_st
-
-        with self.assertLogs(logger, level="ERROR") as cm:
+            caplog.set_level(logging.ERROR, logger=special_suite_logger_name)
             logger.error("dummy")  # workaround
 
             win.updateWidgetsST()  # with empty data
@@ -43,7 +31,9 @@ class _SpecialSuiteWindowTestBase(unittest.TestCase):
                 if isinstance(widget, TimedImageViewF):
                     widget.refresh()
 
-            self.assertEqual(1, len(cm.output))
+            assert 1 == len(caplog.messages)
+
+        return _check_update_plots
 
 
 class _SpecialSuiteProcessorTestBase:

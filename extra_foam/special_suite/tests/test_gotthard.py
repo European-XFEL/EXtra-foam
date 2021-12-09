@@ -24,13 +24,12 @@ from extra_foam.special_suite.special_analysis_base import (
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
+window_type = GotthardWindow
 
 logger.setLevel('INFO')
 
 
 class TestGotthardWindow(_SpecialSuiteWindowTestBase):
-    _window_type = GotthardWindow
-
     @staticmethod
     def data4visualization(n_pulses=4):
         """Override."""
@@ -44,103 +43,98 @@ class TestGotthardWindow(_SpecialSuiteWindowTestBase):
             "hist": (np.arange(5), np.arange(5), 1, 1, 1),
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(4, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 4 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[GotthardImageView])
-        self.assertEqual(1, counter[GotthardAvgPlot])
-        self.assertEqual(1, counter[GotthardPulsePlot])
-        self.assertEqual(1, counter[GotthardHist])
+        assert 1 == counter[GotthardImageView]
+        assert 1 == counter[GotthardAvgPlot]
+        assert 1 == counter[GotthardPulsePlot]
+        assert 1 == counter[GotthardHist]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
+    def testCtrl(self, win):
         from extra_foam.special_suite.gotthard_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
-
-        win = self._win
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
         # test default values
-        self.assertTrue(proc._output_channel)
-        self.assertEqual(slice(None, None), proc._pulse_slicer)
-        self.assertEqual(0, proc._poi_index)
-        self.assertEqual(1, proc.__class__._raw_ma.window)
-        self.assertEqual(0, proc._scale)
-        self.assertEqual(0, proc._offset)
-        self.assertTupleEqual(tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')),
-                              proc._bin_range)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins)
-        self.assertFalse(proc._hist_over_ma)
+        assert proc._output_channel
+        assert slice(None, None) == proc._pulse_slicer
+        assert 0 == proc._poi_index
+        assert 1 == proc.__class__._raw_ma.window
+        assert 0 == proc._scale
+        assert 0 == proc._offset
+        assert tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(',')) == proc._bin_range
+        assert int(_DEFAULT_N_BINS) == proc._n_bins
+        assert not proc._hist_over_ma
 
         # test set new values
         widget = ctrl_widget.output_ch_le
         widget.clear()
         QTest.keyClicks(widget, "new/output/channel")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual("new/output/channel", proc._output_channel)
+        assert "new/output/channel" == proc._output_channel
 
         widget = ctrl_widget.pulse_slicer_le
         widget.clear()
         QTest.keyClicks(widget, "::2")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(slice(None, None, 2), proc._pulse_slicer)
+        assert slice(None, None, 2) == proc._pulse_slicer
 
         widget = ctrl_widget.poi_index_le
         widget.clear()
         QTest.keyClicks(widget, "120")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0, proc._poi_index)  # maximum is 119 and one can still type "120"
+        assert 0 == proc._poi_index  # maximum is 119 and one can still type "120"
         widget.clear()
         QTest.keyClicks(widget, "119")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(119, proc._poi_index)
+        assert 119 == proc._poi_index
 
         widget = ctrl_widget.ma_window_le
         widget.clear()
         QTest.keyClicks(widget, "9")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(9, proc.__class__._raw_ma.window)
+        assert 9 == proc.__class__._raw_ma.window
 
         widget = ctrl_widget.scale_le
         widget.clear()
         QTest.keyClicks(widget, "0.002")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(0.002, proc._scale)
+        assert 0.002 == proc._scale
         widget.clear()
         QTest.keyClicks(widget, "-1")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(1, proc._scale)  # cannot enter '-'
+        assert 1 == proc._scale  # cannot enter '-'
 
         widget = ctrl_widget.offset_le
         widget.clear()
         QTest.keyClicks(widget, "-0.18")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(-0.18, proc._offset)
+        assert -0.18 == proc._offset
 
         widget = ctrl_widget.bin_range_le
         widget.clear()
         QTest.keyClicks(widget, "-1.0, 1.0")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertTupleEqual((-1.0, 1.0), proc._bin_range)
+        assert (-1.0, 1.0) == proc._bin_range
 
         widget = ctrl_widget.n_bins_le
         widget.clear()
         QTest.keyClicks(widget, "1000")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(100, proc._n_bins)  # maximum is 999 and one can not put the 3rd 0 in
+        assert 100 == proc._n_bins  # maximum is 999 and one can not put the 3rd 0 in
         widget.clear()
         QTest.keyClicks(widget, "999")
         QTest.keyPress(widget, Qt.Key_Enter)
-        self.assertEqual(999, proc._n_bins)
+        assert 999 == proc._n_bins
 
         ctrl_widget.hist_over_ma_cb.setChecked(True)
-        self.assertTrue(proc._hist_over_ma)
+        assert proc._hist_over_ma
 
 
 class TestGotthardProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):

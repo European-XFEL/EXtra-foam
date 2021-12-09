@@ -19,13 +19,12 @@ from extra_foam.special_suite.multicam_view_w import (
 from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
 
 app = mkQApp()
+window_type = MultiCamViewWindow
 
 logger.setLevel('INFO')
 
 
 class TestMultiCamViewWindow(_SpecialSuiteWindowTestBase):
-    _window_type = MultiCamViewWindow
-
     @staticmethod
     def data4visualization():
         """Override."""
@@ -34,21 +33,17 @@ class TestMultiCamViewWindow(_SpecialSuiteWindowTestBase):
             "images": {0: np.ones((4, 5)), 1: None, 2: None, 3: np.ones((5, 6))}
         }
 
-    def testWindow(self):
-        win = self._win
-
-        self.assertEqual(4, len(win._plot_widgets_st))
+    def testWindow(self, win, check_update_plots):
+        assert 4 == len(win._plot_widgets_st)
         counter = Counter()
         for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
-        self.assertEqual(4, counter[CameraView])
+        assert 4 == counter[CameraView]
 
-        self._check_update_plots()
+        check_update_plots()
 
-    def testCtrl(self):
-
-        win = self._win
+    def testCtrl(self, win):
         ctrl_widget = win._ctrl_widget_st
         proc = win._worker_st
 
@@ -60,14 +55,14 @@ class TestMultiCamViewWindow(_SpecialSuiteWindowTestBase):
             widget.clear()
             QTest.keyClicks(widget, f"new/output/channel{i}")
             QTest.keyPress(widget, Qt.Key_Enter)
-            self.assertEqual(f"new/output/channel{i}", proc._output_channels[i])
+            assert f"new/output/channel{i}" == proc._output_channels[i]
 
         widgets = ctrl_widget.properties
         for i, widget in enumerate(widgets):
             widget.clear()
             QTest.keyClicks(widget, f"new/property{i}")
             QTest.keyPress(widget, Qt.Key_Enter)
-            self.assertEqual(f"new/property{i}", proc._properties[i])
+            assert f"new/property{i}" == proc._properties[i]
 
 
 class TestMultiCamViewProcessor(_RawDataMixin, _SpecialSuiteProcessorTestBase):
