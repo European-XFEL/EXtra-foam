@@ -329,6 +329,7 @@ setup(
             'sphinx',
             'nbsphinx',
             'ipython',  # For nbsphinx syntax highlighting
+            'sphinx_rtd_theme'
         ],
         'test': [
             'pytest',
