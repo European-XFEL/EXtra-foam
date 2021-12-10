@@ -148,6 +148,69 @@ instance.**
     checkbox is checked.
 
 
+.. _Correlator:
+
+Correlator
+""""""""""
+
+.. image:: images/special_suite_correlator.jpg
+   :width: 800
+
+The Correlator is a special suite that embeds `metropc
+<https://desy.de/~schmidtp/metropc-docs/>`_. The purpose is to allow the user to
+write custom analysis code on-the-fly and have it visualized immediately. The
+suite supports reading either raw data from a Karabo bridge, or processed data
+from a main EXtra-foam instance.
+
+The interface is organized by tabs, in the first tab there is a text editor
+where you can write the context code. All other tabs are for visualizing the
+outputs of metropc, called `views`.
+
+.. image:: images/special_suite_correlator_view_split.jpg
+   :width: 800
+
+If you select a view to visualize it will be displayed in the tab. By right
+clicking on the plot and selecting a split direction option from the `Split
+frame` menu, you can split the frame in any direction to display multiple plots
+on the same tab. It's also possible to undock a tab into a separate window by
+clicking on the undock button (little square icon next to the close tab
+button). If you then close the tab window it will redock to the main window.
+
+The usual workflow is:
+
+1. Set the source, EXtra-foam or Karabo bridge, and configure the hostname and
+   port appropriately.
+2. Modify the context file as desired (you can also load your own from a file).
+3. Click the `Reload context` button to apply your changes (don't forget to save
+   it too with the `Save context` button). If there were errors with the context
+   (e.g. a syntax error), they will be displayed in the log panel (bottom left
+   corner). Other errors with the context (e.g. runtime errors) will be
+   displayed in the terminal.
+4. Have a look at the views in a tab to see the results.
+
+Possible inputs to the views are displayed in the `Data paths` table on the
+left:
+
+.. image:: images/special_suite_correlator_data_paths.jpg
+   :width: 800
+
+As usual with metropc, you can access data from Karabo and the internal
+variables with the :code:`karabo#` and :code:`internal#` paths. To access data
+from EXtra-foam you'll need to use the :code:`foam#` path. For example, to get
+the drawn image mask from EXtra-foam (can be seen in the screenshot) you would
+write :code:`foam#image.image_mask` and get an array of booleans with shape
+:code:`(129, 1092)`. Note that this is more for advanced users as it requires
+some knowledge of EXtra-foams internals, contact the DA team if you want to do
+some analysis on top of what EXtra-foam already does (e.g. some special
+processing for a detector).
+
+To help with visualization beyond what metropc already supports, there are some
+extra tools in :code:`extra_foam.utils` that can be used:
+
+.. autofunction:: extra_foam.utils.rich_output
+
+.. autodata:: extra_foam.utils.Series
+
 Special purposed apps
 ---------------------
 
