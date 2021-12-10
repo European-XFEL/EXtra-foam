@@ -1,4 +1,3 @@
-import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 from collections import Counter
 
@@ -7,7 +6,7 @@ import numpy as np
 from xarray import DataArray
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtTest import QSignalSpy, QTest
+from PyQt5.QtTest import QTest
 
 from extra_foam.pipeline.tests import _RawDataMixin
 

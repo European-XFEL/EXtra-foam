@@ -1,12 +1,11 @@
-import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import patch, PropertyMock
 from collections import Counter
 
 import pytest
 import numpy as np
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtTest import QSignalSpy, QTest
+from PyQt5.QtTest import QTest
 
 from extra_foam.pipeline.tests import _RawDataMixin
 
