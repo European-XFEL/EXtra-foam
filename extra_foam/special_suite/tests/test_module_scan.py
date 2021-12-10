@@ -1,10 +1,6 @@
-import unittest
-import unittest
-from unittest.mock import MagicMock, patch
 from collections import Counter
 
 import pytest
-import numpy as np
 
 from extra_foam.special_suite import logger, mkQApp
 from extra_foam.special_suite.module_scan_proc import ModuleScanProcessor
@@ -12,7 +8,7 @@ from extra_foam.special_suite.module_scan_w import (
     ModuleScanWindow
 )
 
-from . import _SpecialSuiteWindowTestBase, _SpecialSuiteProcessorTestBase
+from . import _SpecialSuiteWindowTestBase
 
 app = mkQApp()
 window_type = ModuleScanWindow

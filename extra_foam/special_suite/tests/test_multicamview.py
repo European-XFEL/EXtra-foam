@@ -1,5 +1,3 @@
-import unittest
-from unittest.mock import patch
 from collections import Counter
 
 import pytest
