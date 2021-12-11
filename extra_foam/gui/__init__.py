@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication
 
-from .pyqtgraph import setConfigOptions
+from .pyqtgraph_old import setConfigOptions
 from .main_gui import MainGUI
 from ..config import config
 

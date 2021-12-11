@@ -18,9 +18,9 @@ from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QPoint, QPointF, QRectF, Qt
 )
 
-from .. import pyqtgraph as pg
-from ..pyqtgraph import Point
-from ..pyqtgraph import functions as fn
+from .. import pyqtgraph_old as pg
+from ..pyqtgraph_old import Point
+from ..pyqtgraph_old import functions as fn
 
 from ..misc_widgets import FColor
 from ...algorithms import quick_min_max

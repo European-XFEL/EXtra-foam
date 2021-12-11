@@ -13,7 +13,7 @@ from extra_foam.gui.plot_widgets.image_items import (
 from extra_foam.gui.plot_widgets.plot_items import (
     CurvePlotItem, BarGraphItem, ScatterPlotItem, StatisticsBarItem
 )
-from extra_foam.gui import pyqtgraph as pg
+from extra_foam.gui import pyqtgraph_old as pg
 from extra_foam.logger import logger
 
 
@@ -295,8 +295,8 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(0, area._n_vis_annotation_items)
 
         # test TextItem call
-        with patch("extra_foam.gui.pyqtgraph.TextItem.setPos") as mocked_pos:
-            with patch("extra_foam.gui.pyqtgraph.TextItem.setText") as mocked_value:
+        with patch("extra_foam.gui.pyqtgraph_old.TextItem.setPos") as mocked_pos:
+            with patch("extra_foam.gui.pyqtgraph_old.TextItem.setText") as mocked_value:
                 area.setAnnotationList([1, 2, 3], [4, 5, 6])
                 mocked_pos.assert_called_with(3, 6)
                 mocked_value.assert_called_with("3.0000")

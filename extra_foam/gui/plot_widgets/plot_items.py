@@ -17,8 +17,8 @@ from PyQt5.QtGui import (
 )
 from PyQt5.QtCore import pyqtSignal, QByteArray, QDataStream, QRectF, Qt
 
-from .. import pyqtgraph as pg
-from ..pyqtgraph import functions as fn
+from .. import pyqtgraph_old as pg
+from ..pyqtgraph_old import functions as fn
 
 from ..misc_widgets import FColor
 
