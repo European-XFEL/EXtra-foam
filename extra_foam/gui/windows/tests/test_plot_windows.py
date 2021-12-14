@@ -590,14 +590,26 @@ class TestPlotWindows(unittest.TestCase):
                 x1, y1 = np.random.rand(10), np.random.rand(10)
                 win._corr1._plot.setData(x1, y1)
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                mocked_fit.assert_called_once_with(x1, y1, p0=[1.0, 1.0])
+                # We have to check the arguments manually, because
+                # Mock.assert_called_once() will naively compare arrays to each
+                # other, resulting in an array of bools (because the arguments
+                # are numpy arrays), and that fails with a ValueError.
+                mocked_fit.assert_called_once()
+                np.testing.assert_array_equal(x1, mocked_fit.call_args.args[0])
+                np.testing.assert_array_equal(y1, mocked_fit.call_args.args[1])
+                np.testing.assert_array_equal([1.0, 1.0], mocked_fit.call_args.kwargs["p0"])
+
                 mocked_fit.reset_mock()
                 mocked_set_fitted.assert_called_once()
                 mocked_set_fitted.reset_mock()
                 fitting._params[0].setText("1.1")
                 fitting._params[1].setText("2.2")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
-                mocked_fit.assert_called_once_with(x1, y1, p0=[1.1, 2.2])
+                # Manually compare the arguments, as above
+                mocked_fit.assert_called_once()
+                np.testing.assert_array_equal(x1, mocked_fit.call_args.args[0])
+                np.testing.assert_array_equal(y1, mocked_fit.call_args.args[1])
+                np.testing.assert_array_equal([1.1, 2.2], mocked_fit.call_args.kwargs["p0"])
 
                 mocked_fit.side_effect = RuntimeError("runtime error")
                 QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
@@ -614,7 +626,8 @@ class TestPlotWindows(unittest.TestCase):
             mocked_fit.return_value = ([], [])
             QTest.mouseClick(fitting.fit_btn, Qt.LeftButton)
             self.assertEqual(1, len(mocked_fit.call_args_list))
-            self.assertTupleEqual(mocked_fit.call_args_list[0][0], (x2, y2))
+            np.testing.assert_array_equal(mocked_fit.call_args.args[0], x2)
+            np.testing.assert_array_equal(mocked_fit.call_args.args[1], y2)
 
     def _checkBinCtrlWidget(self, win):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
