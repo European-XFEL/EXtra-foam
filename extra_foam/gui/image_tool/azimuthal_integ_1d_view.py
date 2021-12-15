@@ -9,13 +9,14 @@ All rights reserved.
 """
 import numpy as np
 
+import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
-from ..plot_widgets import ImageViewF, PlotWidgetF, Crosshair
+from ..plot_widgets import ImageViewF, PlotWidgetF
 from ...algorithms import find_peaks_1d
 from ...config import AnalysisType, plot_labels
 
@@ -92,7 +93,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
 
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
-        self._crosshair = Crosshair()
+        self._crosshair = pg.TargetItem(size=30, movable=False, label="Beam center")
         self._crosshair.hide()
 
         self.initUI()
