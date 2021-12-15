@@ -13,7 +13,7 @@ import numpy as np
 from PyQt5.QtCore import pyqtSlot, Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
-from .. import pyqtgraph_old as pg
+import pyqtgraph as pg
 
 from .graphics_widgets import HistogramLUTItem
 from .plot_widget_base import PlotWidgetF
