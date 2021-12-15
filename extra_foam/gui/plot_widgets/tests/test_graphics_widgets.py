@@ -13,7 +13,8 @@ from extra_foam.gui.plot_widgets.image_items import (
 from extra_foam.gui.plot_widgets.plot_items import (
     CurvePlotItem, BarGraphItem, ScatterPlotItem, StatisticsBarItem
 )
-from extra_foam.gui import pyqtgraph_old as pg
+
+import pyqtgraph as pg
 from extra_foam.logger import logger
 
 
@@ -209,39 +210,31 @@ class TestPlotArea(unittest.TestCase):
         area.addItem(plot_item2, y2=True)
         transform_actions = menus[2].actions()
 
-        with patch.object(plot_item, "updateGraph") as mocked:
-            with patch.object(plot_item2, "updateGraph") as mocked2:
-                transform_actions[0].defaultWidget().setChecked(True)
-                self.assertTrue(area.getAxis("bottom").logMode)
-                # self.assertTrue(area.getAxis("top").logMode)
-                self.assertTrue(plot_item._log_x_mode)
-                self.assertTrue(plot_item2._log_x_mode)
-                mocked.assert_called_once()
-                mocked2.assert_called_once()
+        transform_actions[0].defaultWidget().setChecked(True)
+        self.assertTrue(area.getAxis("bottom").logMode)
+        # self.assertTrue(area.getAxis("top").logMode)
+        self.assertTrue(plot_item._log_x_mode)
+        self.assertTrue(plot_item2._log_x_mode)
 
-                plot_item3 = CurvePlotItem()
-                plot_item4 = ScatterPlotItem()
-                area.addItem(plot_item3)
-                area.addItem(plot_item4, y2=True)
-                self.assertTrue(plot_item3._log_x_mode)
-                self.assertTrue(plot_item4._log_x_mode)
+        plot_item3 = CurvePlotItem()
+        plot_item4 = ScatterPlotItem()
+        area.addItem(plot_item3)
+        area.addItem(plot_item4, y2=True)
+        self.assertTrue(plot_item3._log_x_mode)
+        self.assertTrue(plot_item4._log_x_mode)
 
-        with patch.object(plot_item, "updateGraph") as mocked:
-            with patch.object(plot_item2, "updateGraph") as mocked2:
-                transform_actions[1].defaultWidget().setChecked(True)
-                self.assertTrue(area.getAxis("left").logMode)
-                # self.assertTrue(area.getAxis("right").logMode)
-                self.assertTrue(plot_item._log_y_mode)
-                self.assertFalse(plot_item2._log_y_mode)
-                mocked.assert_called_once()
-                mocked2.assert_not_called()
+        transform_actions[1].defaultWidget().setChecked(True)
+        self.assertTrue(area.getAxis("left").logMode)
+        # self.assertTrue(area.getAxis("right").logMode)
+        self.assertTrue(plot_item._log_y_mode)
+        self.assertFalse(plot_item2._log_y_mode)
 
-                plot_item5 = CurvePlotItem()
-                plot_item6 = ScatterPlotItem()
-                area.addItem(plot_item5)
-                area.addItem(plot_item6, y2=True)
-                self.assertTrue(plot_item5._log_y_mode)
-                self.assertFalse(plot_item6._log_y_mode)
+        plot_item5 = CurvePlotItem()
+        plot_item6 = ScatterPlotItem()
+        area.addItem(plot_item5)
+        area.addItem(plot_item6, y2=True)
+        self.assertTrue(plot_item5._log_y_mode)
+        self.assertFalse(plot_item6._log_y_mode)
 
         area._enable_meter = False
         menus = self._area.getContextMenus(event)
@@ -295,8 +288,8 @@ class TestPlotArea(unittest.TestCase):
         self.assertEqual(0, area._n_vis_annotation_items)
 
         # test TextItem call
-        with patch("extra_foam.gui.pyqtgraph_old.TextItem.setPos") as mocked_pos:
-            with patch("extra_foam.gui.pyqtgraph_old.TextItem.setText") as mocked_value:
+        with patch("pyqtgraph.TextItem.setPos") as mocked_pos:
+            with patch("pyqtgraph.TextItem.setText") as mocked_value:
                 area.setAnnotationList([1, 2, 3], [4, 5, 6])
                 mocked_pos.assert_called_with(3, 6)
                 mocked_value.assert_called_with("3.0000")

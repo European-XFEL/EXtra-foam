@@ -20,10 +20,10 @@ from PyQt5.QtWidgets import (
     QGraphicsEllipseItem
 )
 
-from .. import pyqtgraph_old as pg
-from ..pyqtgraph_old import Point
-from ..pyqtgraph_old import functions as fn
-from ..plot_widgets.plot_items import CurvePlotItem
+import pyqtgraph as pg
+from pyqtgraph import Point
+from pyqtgraph import functions as fn
+from ..plot_widgets.plot_items import FoamPlotItem, FoamPlotDataItem, CurvePlotItem
 from ..misc_widgets import FColor
 
 
@@ -387,14 +387,14 @@ class PlotArea(pg.GraphicsWidget):
         for item in chain(self._plot_items, self._plot_items2):
             item.setLogX(state)
         self.getAxis("bottom").setLogMode(state)
-        self._vb.autoRange(disableAutoRange=False)
+        self._vb.enableAutoRange(pg.ViewBox.XAxis)
 
     @pyqtSlot(bool)
     def _onLogYChanged(self, state):
         for item in self._plot_items:
             item.setLogY(state)
         self.getAxis("left").setLogMode(state)
-        self._vb.autoRange(disableAutoRange=False)
+        self._vb.enableAutoRange(pg.ViewBox.YAxis)
 
     def addItem(self, item, ignore_bounds=False, y2=False):
         """Add a graphics item to ViewBox."""
@@ -404,7 +404,7 @@ class PlotArea(pg.GraphicsWidget):
 
         self._items.add(item)
 
-        if isinstance(item, pg.PlotItem):
+        if isinstance(item, (FoamPlotItem, FoamPlotDataItem)):
             if y2:
                 if self._log_x_cb.isChecked():
                     item.setLogX(True)
