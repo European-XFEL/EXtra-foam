@@ -10,9 +10,6 @@ jobs:
   tests:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7]
     env:
       DISPLAY: ":99.0"
 
@@ -36,14 +33,13 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/setup.py') }}-${{ hashFiles('.github/dependabot/constraints.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}-${{ hashFiles('.github/dependabot/constraints.txt') }}
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v2
       with:
         environment-file: environment.yml
         miniconda-version: "latest"
-        python-version: ${{ matrix.python-version }}
         channel-priority: strict
         use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
 
