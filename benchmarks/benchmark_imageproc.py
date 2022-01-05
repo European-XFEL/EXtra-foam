@@ -161,7 +161,7 @@ def _run_mask_image_array(data, mask, data_type, keep_nan=False):
 def bench_mask_image_array(shape):
     data = np.random.rand(*shape)
     data[::4, ::4, ::4] = np.nan
-    mask = np.zeros(shape[-2:], dtype=np.bool)
+    mask = np.zeros(shape[-2:], dtype=bool)
     mask[::10, ::10] = True
 
     _run_mask_image_array(data, mask, np.float32, keep_nan=False)
