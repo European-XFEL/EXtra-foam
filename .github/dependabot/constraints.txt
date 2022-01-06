@@ -30,7 +30,7 @@ Jinja2==3.0.2
 jsonschema==4.3.3
 jupyter==1.0.0
 jupyter-client==6.1.10
-jupyter-console==6.2.0
+jupyter-console==6.4.0
 jupyter-core==4.7.0
 jupyterlab-pygments==0.1.2
 jupyterlab-widgets==1.0.0
