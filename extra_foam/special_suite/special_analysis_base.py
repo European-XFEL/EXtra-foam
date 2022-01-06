@@ -620,9 +620,14 @@ class _BaseQThreadClient(QThread):
 
         self._output_st = queue
         self._cv_st = condition
-        self._catalog_st = catalog
-        self._transformer_st = DataTransformer(catalog)
 
+        # The two catalogs are used to track what the user wants, and what is
+        # actually retrieved. This is only for backwards compatibility with
+        # suites that specify exact sources.
+        self._catalog_st = SourceCatalog()
+        self._requested_catalog_st = catalog
+
+        self._transformer_st = DataTransformer(self._catalog_st)
         self._endpoint_st = None
 
         self.log = _ThreadLogger()
@@ -646,7 +651,7 @@ class _BaseQThreadClient(QThread):
 
     def updateSourcesST(self, sources):
         """Update source catalog of the client."""
-        ctl = self._catalog_st
+        ctl = self._requested_catalog_st
         ctl.clear()
         for name, ppt, ktype in sources:
             if not name:
@@ -684,7 +689,7 @@ class QThreadFoamClient(_BaseQThreadClient):
 
                 # check whether all the requested sources are in the data
                 not_found = False
-                for src in self._catalog_st:
+                for src in self._requested_catalog_st:
                     if src not in data["catalog"]:
                         self.log.error(f"{src} not found in the data!")
                         not_found = True
@@ -737,7 +742,7 @@ class QThreadKbClient(_BaseQThreadClient):
                         continue
 
                 if connected:
-                    for _, item in self._catalog_st.items():
+                    for _, item in self._requested_catalog_st.items():
                         if item.ktype:
                             try:
                                 device, channel = item.name.split(":")
@@ -773,6 +778,22 @@ class QThreadKbClient(_BaseQThreadClient):
                     data = client.next()
                 except TimeoutError:
                     continue
+
+                # If the suite didn't request anything specific, make a catalog
+                # to select everything.
+                if len(self._requested_catalog_st) == 0:
+                    self._catalog_st.clear()
+                    for name in data[0]:
+                        for ppt in data[0][name]:
+                            # We don't care about the metadata entries from the
+                            # Karabo bridge, so those are ignored.
+                            if ppt != "metadata":
+                                # Strip the '.value' suffix if necessary
+                                if ppt.endswith(".value"):
+                                    ppt = ppt.removesuffix(".value")
+
+                                ktype = int(":" in name)
+                                self._catalog_st.add_item(None, name, None, ppt, None, None, ktype)
 
                 try:
                     correlated, _, dropped = self._transformer_st.correlate(data)
