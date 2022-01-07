@@ -20,7 +20,7 @@ fsspec==0.8.7
 future==0.18.2
 h5py==3.6.0
 hiredis==2.0.0
-imageio==2.9.0
+imageio==2.13.5
 ipykernel==5.4.2
 ipython==7.19.0
 ipython-genutils==0.2.0
