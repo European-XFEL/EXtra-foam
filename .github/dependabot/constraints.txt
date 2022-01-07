@@ -62,7 +62,7 @@ prompt-toolkit==3.0.10
 psutil==5.9.0
 ptyprocess==0.7.0
 pybind11==2.8.0
-pycparser==2.20
+pycparser==2.21
 pyFAI==0.20.0
 Pygments==2.10.0
 pyparsing==2.4.7
