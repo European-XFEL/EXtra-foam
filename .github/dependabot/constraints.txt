@@ -79,7 +79,7 @@ QtPy==1.9.0
 redis==3.5.3
 RTDConf==0.1
 scipy==1.7.3
-Send2Trash==1.5.0
+Send2Trash==1.8.0
 silx==1.0.0
 six==1.16.0
 slumber==0.7.1
