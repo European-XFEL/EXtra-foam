@@ -73,7 +73,9 @@ jobs:
         # test serial version
         export BUILD_SERIAL_FOAM=1
         python3 setup.py build_ext --inplace --with-tests
-        python3 setup.py test -v
+        # Only the algorithms change in the serial build, so we don't bother
+        # running the other tests.
+        python3 -m pytest extra_foam/algorithms -v
         python3 setup.py benchmark -v
 
     - name: Upload coverage to Codecov
