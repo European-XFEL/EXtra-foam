@@ -8,7 +8,7 @@ channels:
 dependencies:
   - gxx_linux-64>=8
   - libstdcxx-ng
-  - cmake>=3.17
+  - cmake>=3.20
   - tbb-devel>=2021
   - tbb>=2021
   - xtensor==0.24.0
@@ -16,3 +16,5 @@ dependencies:
   - xtensor-blas==0.20.0
   - xsimd==8.0.5
   - python>=3.10
+  - gtest==1.10.0
+  - gmock==1.10.0

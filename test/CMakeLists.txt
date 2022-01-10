@@ -4,41 +4,7 @@
 # All rights reserved.                                            #
 ###################################################################
 
-# Download and unpack googletest at configure time
-configure_file(downloadGTest.cmake.in googletest-download/CMakeLists.txt)
-
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download
-)
-if (result)
-    message(FATAL_ERROR "CMAKE step for gtest failed: ${result}")
-endif()
-
-execute_process(
-    COMMAND ${CMAKE_COMMAND} --build .
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download
-)
-if (result)
-    message(FATAL_ERROR "BUILD step for gtest failed: ${result}")
-endif()
-
-# Prevent GoogleTest from overriding our compiler/linker options
-# when building with Visual Studio
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This adds the following targets:
-# gtest, gtest_main, gmock and gmock_main
-add_subdirectory(
-    ${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-    ${CMAKE_CURRENT_BINARY_DIR}/googletest-build EXCLUDE_FROM_ALL
-)
-
-set(GTEST_INCLUDE_DIRS "${gtest_SOURCE_DIR}/include")
-set(GMOCK_INCLUDE_DIRS "${gmock_SOURCE_DIR}/include")
-
+find_package(GTest REQUIRED)
 find_package(Threads REQUIRED)
 
 set(_FOAM_UNITTESTS
@@ -69,13 +35,12 @@ foreach(pathname IN LISTS _FOAM_UNITTESTS)
     target_include_directories(${targetname}
         PRIVATE
             ${GTEST_INCLUDE_DIRS}
-            ${GMOCK_INCLUDE_DIRS}
     )
     target_link_libraries(${targetname}
         PRIVATE
             extra-foam
             $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:TBB::tbb>
-            gtest
+            GTest::gtest
             pthread)
 
     if (${targetname} IN_LIST _FOAM_UNITTEST_TARGETS_NEED_BLAS)
@@ -95,12 +60,11 @@ add_executable(test_foam_cpp main.cpp ${_FOAM_UNITTESTS})
 
 target_include_directories(test_foam_cpp
     PRIVATE
-        ${GTEST_INCLUDE_DIRS}
-        ${GMOCK_INCLUDE_DIRS})
+        ${GTEST_INCLUDE_DIRS})
 
 target_link_libraries(test_foam_cpp
     PRIVATE
-        gtest
+        GTest::gtest
         pthread
         extra-foam
         $<$<OR:$<BOOL:${FOAM_USE_TBB}>,$<BOOL:${XTENSOR_USE_TBB}>>:TBB::tbb>
