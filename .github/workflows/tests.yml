@@ -49,6 +49,7 @@ jobs:
         sudo -E apt-get -yq --no-install-suggests --no-install-recommends install \
             libxkbcommon-x11-0 x11-apps libgl1-mesa-glx qtbase5-dev xvfb
         echo $'\nexport CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}' >> ~/.profile
+        echo $'\nexport LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}' >> ~/.profile
 
     - name: Install python dependencies
       shell: bash -l {0}
