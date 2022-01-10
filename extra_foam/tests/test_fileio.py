@@ -35,7 +35,7 @@ class TestFileIO(unittest.TestCase):
 
         # test read invalid file format
         with tempfile.NamedTemporaryFile(suffix='.txt') as fp:
-            with self.assertRaisesRegex(ValueError, 'Could not find a format'):
+            with self.assertRaisesRegex(ValueError, 'Could not find a backend'):
                 read_image(fp.name)
 
     def testWriteImage(self):
@@ -47,7 +47,7 @@ class TestFileIO(unittest.TestCase):
 
         # test write invalid file format
         with tempfile.NamedTemporaryFile(suffix='.txt') as fp:
-            with self.assertRaisesRegex(ValueError, 'Could not find a format'):
+            with self.assertRaisesRegex(ValueError, 'Could not find a backend'):
                 write_image(fp.name, img)
 
         # test read and write valid file formats
