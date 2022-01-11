@@ -65,7 +65,7 @@ pybind11==2.8.0
 pycparser==2.21
 pyFAI==0.20.0
 Pygments==2.10.0
-pyparsing==2.4.7
+pyparsing==3.0.6
 PyQt5==5.15.6
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.9.0
