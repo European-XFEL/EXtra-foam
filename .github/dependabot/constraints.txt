@@ -6,7 +6,7 @@ bleach==4.1.0
 certifi==2021.5.30
 cfelpyutils==1.0.1
 cffi==1.15.0
-cloudpickle==1.6.0
+cloudpickle==2.0.0
 cycler==0.11.0
 Cython==0.29.22
 dask==2021.12.0
@@ -22,7 +22,7 @@ h5py==3.6.0
 hiredis==2.0.0
 imageio==2.13.5
 ipykernel==5.4.2
-ipython==7.19.0
+ipython==8.0.0
 ipython-genutils==0.2.0
 ipywidgets==7.6.3
 jedi==0.17.2
