@@ -4,7 +4,7 @@ attrs==21.4.0
 backcall==0.2.0
 bleach==4.1.0
 certifi==2021.10.8
-cfelpyutils==1.0.1
+cfelpyutils==2.0.6
 cffi==1.15.0
 cloudpickle==2.0.0
 cycler==0.11.0
