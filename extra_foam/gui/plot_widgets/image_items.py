@@ -233,7 +233,7 @@ class ImageItem(pg.GraphicsObject):
             levels = None
 
         # TODO: replace fn.makeARGB and fn.makeQImage
-        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels)
+        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels, maskNans=False)
         self._qimage = fn.makeQImage(argb, alpha, transpose=False)
 
     def paint(self, p, *args):
