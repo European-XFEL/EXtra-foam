@@ -65,7 +65,6 @@ jobs:
         # test parallel version
         python3 setup.py build_ext --inplace --with-tests
         python3 setup.py test -v
-        python3 setup.py benchmark -v
 
     - name: Build and test with pytest - serial
       shell: bash -l {0}
@@ -76,7 +75,6 @@ jobs:
         # Only the algorithms change in the serial build, so we don't bother
         # running the other tests.
         python3 -m pytest extra_foam/algorithms -v
-        python3 setup.py benchmark -v
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
