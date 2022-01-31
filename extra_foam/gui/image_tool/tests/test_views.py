@@ -81,9 +81,11 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         data.ai.center_of_mass = (1, 1)
         view.updateF(data, True)
         data.ai.peaks = np.arange(10)
-        with patch.object(view._azimuthal_integ_1d_curve, "setAnnotationList") as mocked:
+        with (patch.object(view._azimuthal_integ_1d_curve, "setAnnotationList") as setAnnotationList,
+              patch.object(view._azimuthal_integ_1d_curve._center_of_mass, "setData") as comSetData):
             view._azimuthal_integ_1d_curve.updateF(data)
-            mocked.assert_called_once()
+            setAnnotationList.assert_called_once()
+            comSetData.assert_called_once()
 
         with patch.object(view._azimuthal_integ_1d_curve, "setFitted") as mocked:
             view._onCurveFit()
