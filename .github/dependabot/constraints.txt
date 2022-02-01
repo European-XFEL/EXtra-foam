@@ -92,4 +92,4 @@ typing==3.7.4.3
 wcwidth==0.2.5
 webencodings==0.5.1
 widgetsnbextension==3.5.2
-xarray==0.21.0
+xarray==0.21.1
