@@ -78,14 +78,7 @@ More info on command line arguments can be obtained as
     optional arguments:
       -h, --help            show this help message and exit
       -V, --version         show program's version number and exit
-      --use-gate            Use Karabo gate client (experimental feature)
       --debug               Run in debug mode
-
-.. note::
-    *Karabo gate* is an experimental feature which will allow users to request data
-    within **EXtra-foam**. Namely, one does not need to config the required data in
-    a *PipeToZeroMQ* device or a *TrainMatcher* device. For more details, please
-    contact the data analysis group.
 
 
 General purposed apps

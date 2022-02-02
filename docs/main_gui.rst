@@ -60,10 +60,17 @@ Action bar
 Data source
 -----------
 
+.. _bridge settings:
+
 Bridge client connections
 """""""""""""""""""""""""
 
-**EXtra-foam** supports different kind of data flow. Unless you are very familiar with the
+.. figure:: images/data_source_from_bridge.png
+   :align: center
+
+   Bridge settings in EXtra-foam.
+
+**EXtra-foam** supports different kinds of data flows. Unless you are very familiar with the
 **EXtra-foam** and Karabo, it is recommended to use the scenario 1 depicted in :ref:`data flow`.
 Namely, only one connection should be checked.
 
@@ -73,7 +80,7 @@ Namely, only one connection should be checked.
 | ``Source type``            | Receiving the data from                                            |
 |                            |                                                                    |
 |                            | - *ZeroMQ bridge*: mainly used for real-time analysis. The data    |
-|                            |   will be sent from a *PipeToZeroMQ* Karabo device;                |
+|                            |   will be sent from a *TrainMatcher* Karabo device;                |
 |                            |                                                                    |
 |                            | - *run directory*: used for replaying the experiment.              |
 +----------------------------+--------------------------------------------------------------------+

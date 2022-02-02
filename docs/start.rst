@@ -104,21 +104,23 @@ To start the **test** version on online or `Maxwell` clusters:
 Data analysis in real time
 --------------------------
 
-For real-time data analysis, the (calibrated) data is streamed via a `ZMQ bridge`, which is
-a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
+For real-time data analysis, the (calibrated) data is streamed via a `Karabo bridge`, which is
+a `Karabo` device (`TrainMatcher`) running inside the control network.
 
 .. image:: images/data_source_from_bridge.png
    :width: 500
 
 
-.. _online-clusters: https://in.xfel.eu/readthedocs/docs/data-analysis-user-documentation/en/latest/computing.html#online-cluster
+.. _online-clusters: https://rtd.xfel.eu/docs/data-analysis-user-documentation/en/latest/computing.html#online-cluster
 
 .. note::
-    Please check the online-clusters_ available for users at different instruments.
+   Please check the online-clusters_ available for users at different instruments.
 
 .. note::
-  The entire data analysis workflow with relevant hostnames and ports are provided in the instrument support
-  `documentation <https://in.xfel.eu/readthedocs/docs/fxe-instrument-control-infrastructure/en/latest/fxe_dataanalysis_toolbox.html>`__
+   If you are an external user coming to XFEL, EXtra-foam should already have
+   been all setup with all the relevant hostnames/ports. If you are an
+   instrument scientist who wants to know where the Karabo bridges are, please
+   get in touch your local DA contact (or email da-support@xfel.eu).
 
 Data analysis with files
 ------------------------
