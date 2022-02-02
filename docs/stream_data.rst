@@ -1,7 +1,7 @@
 .. _stream data from run directory:
 
-STREAM DATA FROM RUN DIRECTORY
-==============================
+Stream data from files
+======================
 
 
 .. image:: images/data_source_from_file.png

@@ -1,7 +1,7 @@
 .. _file stream:
 
-STREAMING FROM FILE
-===================
+Streaming from saved runs
+=========================
 
 There is a stand-alone tool, the EXtra-foam file streamer, dedicated to provide
 a data stream from files of a run directory. This tool has its own GUI window.

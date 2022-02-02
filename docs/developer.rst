@@ -1,5 +1,5 @@
-DEVELOPER
-=========
+Developer information
+=====================
 
 Design
 """"""

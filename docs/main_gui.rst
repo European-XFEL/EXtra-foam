@@ -1,4 +1,6 @@
-MAIN GUI
+.. _Main_GUI:
+
+Main GUI
 ========
 
 The main GUI of **EXtra-foam** is divided into several control panels grouped

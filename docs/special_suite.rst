@@ -1,7 +1,7 @@
 .. _special analysis suite:
 
-SPECIAL ANALYSIS SUITE
-======================
+Special analysis suites
+=======================
 
 Introduction
 ------------

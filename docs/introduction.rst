@@ -1,4 +1,4 @@
-INTRODUCTION
+Introduction
 ============
 
 .. image:: images/extra_foam_0.9.0.jpg

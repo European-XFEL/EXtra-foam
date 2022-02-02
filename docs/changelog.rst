@@ -1,4 +1,4 @@
-CHANGELOG
+Changelog
 =========
 
 1.0.0 (31 July 2020)
