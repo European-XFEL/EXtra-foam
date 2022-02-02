@@ -4,6 +4,9 @@ Troubleshooting
 .. _FastX2: https://confluence.desy.de/display/IS/FastX2
 .. _max-display: https://max-display.desy.de:3443/
 
+Starting-up issues
+------------------
+
 Could not connect to display
 ++++++++++++++++++++++++++++
 
@@ -73,14 +76,6 @@ If you are prompted to warning like,
 This error is triggered when the :ref:`config file` is not valid. Please correct it if you have modified
 the default one. Alternatively, you can delete it and let the program generate a default one for you.
 
-No data is received
-+++++++++++++++++++
-
-If **EXtra-foam** opens up fine and running it by clicking on *start* button does
-nothing, please make sure that relevant **PipeToZeroMQ** device is properly
-configured, activated and its *data sent* property is updating. This device
-can be configured only with the help of experts (data analysis support and beamline scientists).
-
 Incorrect dependencies
 ++++++++++++++++++++++
 
@@ -111,3 +106,133 @@ the example below:
   /home/username/.local/lib/python3.7/site-packages/redis/__init__.py
 
 The remedy is simply. Run `pip uninstall` to remove your local installation.
+
+.. _Operational issues:
+
+Operational issues
+------------------
+
+No data is received
++++++++++++++++++++
+
+If **EXtra-foam** opens up fine and running it by clicking on the *Start* button
+in the :ref:`Main_GUI` does nothing, please make sure that relevant
+:ref:`TrainMatcher <trainmatcher>` device is properly configured, activated, and
+sending data.
+
+.. _fig_trainmatcher_status:
+
+.. figure:: images/trainmatcher_matching_ratio.png
+   :align: center
+
+   Example of the matching/streaming status panel of a TrainMatcher.
+
+There is a wonderous number of things that could go wrong:
+
+- Matching might be failing. This can be checked by looking at the matching
+  ratio, in the above screenshot the matching ratio is 0%.
+
+  This could be for a couple of reasons:
+
+  - A source is not found. If the TrainMatcher cannot get data from a device for
+    some reason, it will display a status message in the sources list.
+
+    .. figure:: images/trainmatcher_source_errors.png
+       :align: center
+
+       Examples of errors the TrainMatcher shows for sources it can't connect
+       to.
+
+  - A source is enabled that isn't sending data. Check this by looking at the
+    statistics table in the TrainMatcher:
+
+    .. image:: images/trainmatcher_statistics.png
+
+    In this case one of the cameras (``MID_EXP_SAM/CAM/CAM3:output``) isn't
+    sending any data (its update rate is 0Hz), so disabling that camera would
+    fix the matching. Of course, if the device is actually meant to be streaming
+    data that would point to an issue with the device (e.g. maybe the camera
+    isn't acquiring).
+
+  - The buffer size is too low. Data from different sources arrives at slightly
+    different times, and unmatched trains are kept in a buffer which are
+    continually checked and matched as new data comes in. If a source has
+    unusually high latency and the buffer size is too small, old trains may be
+    removed from the buffer before the data from the high-latency source has a
+    chance to arrive.
+
+    You can check this by looking at the latency column in the statistics table,
+    and comparing it to the buffer size in the :ref:`matching/streaming status
+    panel <fig_trainmatcher_status>`. In the screenshot above of the statistics
+    table, there's only a couple trains of latency so a buffer size of 100
+    should be plenty.
+
+    .. note::
+       If the latency of sources is ridiculously high (e.g. hundreds of
+       millions of trains), the TrainMatcher is probably running on a device
+       server that hasn't been configured with a timeserver, so it's reporting
+       the wrong latency. The device server will need to be reconfigured with a
+       timeserver and restarted. This needs to be done by an expert, so ask your
+       local DA contact or email da-support@xfel.eu.
+
+- Sending might be failing. Check this with the ``Output rate`` and ``Sent``
+  fields in the :ref:`matching/streaming status panel
+  <fig_trainmatcher_status>`. If the output rate is 0Hz (and the matching ratio
+  is is not 0Hz), then there's a couple of possibilities:
+
+  - If there are no interfaces listed in the bridge outputs list in
+    TrainMatcher, then check the ``ZeroMQ configuration`` property of the
+    TrainMatcher.
+
+    - If the property is empty the TrainMatcher doesn't yet have a bridge
+      configured, and you should ask your local DA contact for help configuring
+      the TrainMatcher (or email da-support@xfel.eu).
+    - If it's not empty, then some other process might be using that port and
+      blocking the TrainMatcher from binding to it. Check this by SSH'ing into
+      the machine running the TrainMatcher (while the TrainMatcher device is
+      shutdown) and searching for used ports:
+
+      .. code-block:: bash
+
+         # Search for the port that the TrainMatcher is configured to use
+         $ netstat -antlp | grep 45059
+         (Not all processes could be identified, non-owned process info
+          will not be shown, you would have to be root to see it all.)
+         tcp        0      0 10.253.0.171:45059      0.0.0.0:*               LISTEN      24296/python3       
+         tcp        0      0 10.253.0.171:45059      10.253.0.151:51012      ESTABLISHED 24296/python3  
+
+      In this example, there's a ``python3`` process with PID ``24296`` bound to
+      port ``45059``. If you see a similar process, *do not* attempt to kill it
+      yourself, but contact an expert.
+
+      However, in the past we've also observed a strange bug that occurs if a
+      TrainMatcher crashes in the middle of operation while EXtra-foam is
+      connected to it: EXtra-foam will keep the connection to the port, and even
+      though it's not bound to it, that alone will block the TrainMatcher from
+      binding to the port. In this case you'll see something like:
+
+      .. code-block:: bash
+
+         $ netstat -antlp | grep 45056
+         (Not all processes could be identified, non-owned process info
+         will not be shown, you would have to be root to see it all.)
+         tcp        0      0 10.253.0.171:45056      10.253.0.171:45056      ESTABLISHED 133974/python
+
+      There's only a single ``ESTABLISHED`` connection to that port, which in
+      this case is from EXtra-foam. Restarting EXtra-foam and then the
+      TrainMatcher should fix this.
+
+  - Otherwise, EXtra-foam is probably configured to read from the wrong
+    hostname/port. Check that the :ref:`bridge settings` match that of the
+    TrainMatcher.
+- EXtra-foam cannot find the sources it's configured for in the data being
+  streamed from the TrainMatcher. In this case, the TrainMatcher will show that
+  data is being sent but EXtra-foam will do nothing.
+
+  This could be because:
+
+  - There's a typo in some source name in EXtra-foam, in which case you'll need
+    to modify the :ref:`Data source tree`.
+  - EXtra-foam has the right source name, but it hasn't been enabled in the
+    TrainMatcher. You'll need to cross-check the enabled sources in EXtra-foam
+    and the TrainMatcher.
