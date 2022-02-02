@@ -24,7 +24,7 @@ Contents:
    :caption: Tutorials
    :maxdepth: 1
 
-   tutorial_data_flow
+   tutorial_karabo_stream
    tutorial_file_stream
 
 .. toctree::
