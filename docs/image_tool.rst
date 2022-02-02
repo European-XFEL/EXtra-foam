@@ -1,6 +1,6 @@
 .. _Image tool:
 
-IMAGE TOOL
+Image tool
 ==========
 
 .. _pyFAI: https://github.com/silx-kit/pyFAI

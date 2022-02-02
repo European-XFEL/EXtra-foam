@@ -1,6 +1,6 @@
 .. _config file:
 
-CONFIG FILE
+Config file
 ===========
 
 Users from different instruments should use the corresponding config file to config

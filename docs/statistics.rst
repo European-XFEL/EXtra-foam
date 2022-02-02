@@ -1,6 +1,6 @@
 .. _statistics analysis:
 
-STATISTICS ANALYSIS
+Statistics analysis
 ===================
 
 .. _Binning:

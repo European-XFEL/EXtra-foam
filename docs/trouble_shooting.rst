@@ -1,5 +1,5 @@
-TROUBLE SHOOTING
-================
+Troubleshooting
+===============
 
 .. _FastX2: https://confluence.desy.de/display/IS/FastX2
 .. _max-display: https://max-display.desy.de:3443/

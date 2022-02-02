@@ -1,6 +1,6 @@
 .. _Pump-probe analysis:
 
-PUMP-PROBE ANALYSIS
+Pump-probe analysis
 ===================
 
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html

@@ -1,4 +1,4 @@
-GETTING STARTED
+Getting started
 ===============
 
 

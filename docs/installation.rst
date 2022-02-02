@@ -1,4 +1,4 @@
-INSTALLATION
+Installation
 ============
 
 If you want to use **EXtra-foam** on the online or `Maxwell` cluster, please check **GETTING STARTED**.
