@@ -83,7 +83,7 @@ Send2Trash==1.8.0
 silx==1.0.0
 six==1.16.0
 slumber==0.7.1
-terminado==0.9.2
+terminado==0.13.1
 testpath==0.5.0
 toolz==0.11.2
 tornado==6.1
