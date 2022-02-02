@@ -35,10 +35,12 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.graphviz',
     'sphinx_rtd_theme',
     'sphinxcontrib_github_alt'
 ]
 
+graphviz_output_format = 'svg'
 
 # For :ghissue: and :ghpull: links.
 github_project_url = "https://github.com/European-XFEL/EXtra-foam/"
