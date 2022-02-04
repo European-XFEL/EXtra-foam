@@ -61,7 +61,7 @@ prometheus-client==0.13.1
 prompt-toolkit==3.0.26
 psutil==5.9.0
 ptyprocess==0.7.0
-pybind11==2.9.0
+pybind11==2.9.1
 pycparser==2.21
 pyFAI==0.21.0
 Pygments==2.11.2
