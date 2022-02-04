@@ -303,6 +303,11 @@ class ImageItem(pg.GraphicsObject):
         """Slot connected in GraphicsView."""
         self.setPxMode(False)
 
+    def setScaleXY(self, sx, sy):
+        tr = self.transform()
+        tr.scale(sx, sy)
+        self.setTransform(tr)
+
     def pixelSize(self):
         """Override.
 

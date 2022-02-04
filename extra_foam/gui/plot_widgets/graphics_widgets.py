@@ -52,7 +52,7 @@ class HistogramLUTItem(pg.GraphicsWidget):
         self._lri = lri
 
         self._hist = CurvePlotItem(pen=FColor.mkPen('k'))
-        self._hist.rotate(90)
+        self._hist.setRotation(90)
 
         vb = pg.ViewBox(parent=self)
         vb.setMaximumWidth(152)
@@ -209,7 +209,7 @@ class PlotArea(pg.GraphicsWidget):
         self._legend = None
         self._axes = {}
         self._meter = pg.LabelItem(
-            '', size='11pt', justify='left', color='6A3D9A', parent=self)
+            '', size='11pt', justify='left', color='#6A3D9A', parent=self)
         self._title = pg.LabelItem('', size='11pt', parent=self)
 
         # context menu
