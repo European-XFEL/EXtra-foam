@@ -70,7 +70,10 @@ class TransformView(_AbstractImageToolView):
         if self._transform_type == ImageTransformType.CONCENTRIC_RINGS:
             self._transformed.setImage(image.masked_mean)
         elif image.transform_type == self._transform_type:
-            self._transformed.setImage(image.transformed)
+            if self._transform_type == ImageTransformType.FOURIER_TRANSFORM:
+                self._transformed.setImage(image.transformed.real)
+            else:
+                self._transformed.setImage(image.transformed)
         else:
             self._transformed.setImage(None)
 
