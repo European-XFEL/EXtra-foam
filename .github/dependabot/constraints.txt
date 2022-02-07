@@ -20,7 +20,7 @@ fsspec==2022.1.0
 future==0.18.2
 h5py==3.6.0
 hiredis==2.0.0
-imageio==2.14.1
+imageio==2.15.0
 ipykernel==6.8.0
 ipython==8.0.1
 ipython-genutils==0.2.0
@@ -58,7 +58,7 @@ pexpect==4.8.0
 pickleshare==0.7.5
 Pillow==9.0.0
 prometheus-client==0.13.1
-prompt-toolkit==3.0.26
+prompt-toolkit==3.0.27
 psutil==5.9.0
 ptyprocess==0.7.0
 pybind11==2.9.1
