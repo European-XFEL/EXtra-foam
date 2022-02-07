@@ -184,13 +184,12 @@ class _SingleRoiCtrlWidget(QWidget):
         self._activate_cb.setChecked(bool(int(state)))
 
     def updateParameters(self, x, y, w, h):
-        self.roi_geometry_change_sgn.disconnect()
+        self.blockSignals(True)
         self._px_le.setText(str(x))
         self._py_le.setText(str(y))
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self.roi_geometry_change_sgn.connect(
-            self._mediator.onRoiGeometryChange)
+        self.blockSignals(False)
 
     def setEditable(self, editable):
         for w in self._line_edits:
