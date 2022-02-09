@@ -112,6 +112,7 @@ class ImageViewF(QWidget):
 
         self._is_initialized = False
         self._image = None
+        self._is_first_image = True
 
         self.initUI()
 
@@ -177,6 +178,10 @@ class ImageViewF(QWidget):
     def rois(self):
         return self._rois
 
+    @property
+    def is_first_image(self):
+        return self._is_first_image
+
     def setImage(self, *args, **kwargs):
         """Interface method."""
         self._updateImageImp(*args, **kwargs)
@@ -200,6 +205,11 @@ class ImageViewF(QWidget):
 
         if not isinstance(img, np.ndarray):
             raise TypeError("Image data must be a numpy array!")
+
+        # Auto-level the first image set for convenience for the user
+        if self._is_first_image:
+            auto_levels = True
+            self._is_first_image = False
 
         self._image_item.setImage(img, auto_levels=auto_levels)
         self._image = img
