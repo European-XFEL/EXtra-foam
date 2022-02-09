@@ -68,6 +68,16 @@ class _SingleRoiCtrlWidget(QWidget):
 
         self.disableAllEdit()
 
+    def params(self):
+        """
+        Return the current parameters of the ROI.
+        """
+        activated = self._activate_cb.isChecked()
+        locked = self._lock_cb.isChecked()
+        x, y = list(map(int, self._roi.pos()))
+        w, h = list(map(int, self._roi.size()))
+        return (self._roi.index, activated, locked, x, y, w, h)
+
     def initUI(self):
         layout = QHBoxLayout()
 

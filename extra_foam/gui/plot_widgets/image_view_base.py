@@ -280,6 +280,9 @@ class ImageViewF(QWidget):
         self._cached_title = None if len(args) == 0 else args[0]
         self._plot_widget.setTitle(*args, **kwargs)
 
+    def title(self):
+        return self._cached_title
+
     def invertX(self, *args, **kwargs):
         self._plot_widget.invertX(*args, **kwargs)
 
