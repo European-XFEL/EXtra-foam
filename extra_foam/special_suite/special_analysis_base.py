@@ -104,7 +104,7 @@ class _SharedCtrlWidgetS(QFrame):
 
         self.auto_level_btn = QPushButton("Auto level")
 
-        self.roi_ctrl = None
+        self.roi_ctrls = []
 
         self.initUI()
         self.initConnections()
@@ -162,20 +162,20 @@ class _SharedCtrlWidgetS(QFrame):
 
         :param RectROI roi: Roi item.
         """
-        if self.roi_ctrl is not None:
-            raise RuntimeError("Only one ImageView with ROI ctrl is allowed!")
+        if len(self.roi_ctrls) == 4:
+            raise RuntimeError("Maximum of 4 ROI ctrls for one ImageView is allowed!")
 
         roi.setLocked(False)
 
-        self.roi_ctrl = _SingleRoiCtrlWidget(
-            roi, mediator=self, with_lock=False)
-        self.roi_ctrl.setLabel("ROI")
-        self.roi_ctrl.roi_geometry_change_sgn.connect(
-            self.onRoiGeometryChange)
-        self.roi_ctrl.notifyRoiParams()
+        roi_ctrl = _SingleRoiCtrlWidget(roi, mediator=self, with_lock=False)
+        roi_ctrl.setLabel("ROI")
+        roi_ctrl.roi_geometry_change_sgn.connect(self.roi_geometry_change_sgn)
+        roi_ctrl.notifyRoiParams()
         layout = self.layout()
-        self.roi_ctrl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        layout.addWidget(self.roi_ctrl, layout.rowCount(), 0, 1, 4)
+        roi_ctrl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        layout.addWidget(roi_ctrl, layout.rowCount(), 0, 1, 4)
+
+        self.roi_ctrls.append(roi_ctrl)
 
     def endpoint(self):
         return f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
@@ -198,9 +198,6 @@ class _SharedCtrlWidgetS(QFrame):
         self._port_le.setEnabled(True)
         self.load_dark_run_btn.setEnabled(True)
         self._client_type_cb.setEnabled(True)
-
-    def onRoiGeometryChange(self, object):
-        self.roi_geometry_change_sgn.emit(object)
 
     @property
     def selected_client(self):
@@ -334,7 +331,7 @@ class QThreadWorker(QObject):
 
         self._reset_st = True
 
-        self._roi_geom_st = None
+        self._rois_geom_st = { }
         self.client_type = None
 
         self.log = _ThreadLogger()
@@ -367,11 +364,12 @@ class QThreadWorker(QObject):
     def onRoiGeometryChange(self, value: tuple):
         """EXtra-foam interface method."""
         idx, activated, locked, x, y, w, h = value
+
         if activated:
-            self._roi_geom_st = (x, y, w, h)
+            self._rois_geom_st[idx] = (x, y, w, h)
         else:
             # distinguish None from no intersection
-            self._roi_geom_st = None
+            self._rois_geom_st[idx] = None
 
     def getOutputDataST(self):
         """Get data from the output queue."""
@@ -588,18 +586,18 @@ class QThreadWorker(QObject):
 
         return img
 
-    def getRoiData(self, img, copy=False):
+    def getRoiData(self, img, roi_idx=1, copy=False):
         """Get the ROI(s) of an image or arrays of images.
 
         :param numpy.ndarray img: image data. Shape = (..., y, x)
         :param bool copy: True for copying the ROI data.
         """
-        if self._roi_geom_st is None:
+        roi_geom = self._rois_geom_st[roi_idx]
+        if roi_geom is None:
             roi = img
         else:
             img_shape = img.shape[-2:]
-            x, y, w, h = intersection(self._roi_geom_st,
-                                      (0, 0, img_shape[1], img_shape[0]))
+            x, y, w, h = intersection(roi_geom, (0, 0, img_shape[1], img_shape[0]))
 
             if w <= 0 or h <= 0:
                 w, h = 0, 0
@@ -1054,8 +1052,8 @@ class _SpecialAnalysisBase(QMainWindow):
         self._plot_widgets_st[instance] = 1
         if isinstance(instance, ImageViewF):
             self._image_views_st[instance] = 1
-            if instance.rois:
-                self._com_ctrl_st.addRoiCtrl(instance.rois[0])
+            for roi in instance.rois:
+                self._com_ctrl_st.addRoiCtrl(roi)
 
     def unregisterPlotWidget(self, instance):
         """EXtra-foam interface method."""
