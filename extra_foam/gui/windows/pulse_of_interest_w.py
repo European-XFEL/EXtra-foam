@@ -25,7 +25,7 @@ class PoiImageView(ImageViewF):
     """
     def __init__(self, idx, *, parent=None):
         """Initialization."""
-        super().__init__(has_roi=True, parent=parent)
+        super().__init__(num_rois=4, parent=parent)
 
         self._index = idx
 

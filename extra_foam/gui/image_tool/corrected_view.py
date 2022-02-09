@@ -102,7 +102,7 @@ class CorrectedView(_AbstractImageToolView):
         self._corrected = ImageAnalysis(hide_axis=False)
         self._corrected.setTitle("Averaged over train")
 
-        self._roi_norm_image = ImageViewF(has_roi=True, hide_axis=False)
+        self._roi_norm_image = ImageViewF(num_rois=4, hide_axis=False)
         self._roi_norm_image.setTitle("Image source for ROI normalizer")
         for roi in self._roi_norm_image.rois:
             roi.setLocked(False)

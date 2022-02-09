@@ -55,7 +55,7 @@ class ImageViewF(QWidget):
 
     """
     def __init__(self, *,
-                 has_roi=False,
+                 num_rois=0,
                  hide_axis=True,
                  histogram=True,
                  color_map=None,
@@ -79,9 +79,11 @@ class ImageViewF(QWidget):
 
         self._histogram = histogram
 
+        # Create ROIs
+        if num_rois < 0 or num_rois > 4:
+            raise ValueError("num_rois must be between 0 and 4")
         self._rois = []
-        if has_roi:
-            self._initializeROIs(roi_position, roi_size)
+        self._initializeROIs(roi_position, roi_size, num_rois)
 
         self._plot_widget = PlotWidgetF(enable_meter=False,
                                         enable_transform=False)
@@ -146,8 +148,8 @@ class ImageViewF(QWidget):
         """
         pass
 
-    def _initializeROIs(self, pos, size):
-        for i, color in enumerate(config["GUI_ROI_COLORS"], 0):
+    def _initializeROIs(self, pos, size, num_rois):
+        for i, color in enumerate(config["GUI_ROI_COLORS"][:num_rois], 0):
             roi = RectROI(i + 1,
                           pos=(pos[0] + 10*i, pos[1] + 10*i),
                           size=size,

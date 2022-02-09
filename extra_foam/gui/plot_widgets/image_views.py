@@ -31,9 +31,9 @@ class ImageAnalysis(ImageViewF):
 
     IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
-    def __init__(self, has_roi=True, **kwargs):
+    def __init__(self, num_rois=4, **kwargs):
         """Initialization."""
-        super().__init__(has_roi=has_roi, **kwargs)
+        super().__init__(num_rois=num_rois, **kwargs)
 
         self._geom_item = GeometryItem()
 
