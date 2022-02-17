@@ -26,6 +26,7 @@ from ..misc_widgets import FColor
 from ...algorithms import quick_min_max
 from ...config import config, MaskState
 from ...ipc import ImageMaskPub
+from ...utils import RectROI as MetroRectROI
 
 
 class ImageItem(pg.GraphicsObject):
@@ -578,6 +579,13 @@ class RectROI(pg.ROI):
             self.translatable = True
             self._addHandle()
             self._handle_info = self.handles[0]
+
+    def configureFromMetroROI(self, metro_roi: MetroRectROI):
+        if not isinstance(metro_roi, MetroRectROI):
+            raise RuntimeError(f"Input must be a MetroRectROI, not {type(metro_roi)}")
+
+        self.setPos(metro_roi.x, metro_roi.y)
+        self.setSize((metro_roi.width, metro_roi.height))
 
     def _addHandle(self):
         """An alternative to addHandle in parent class."""

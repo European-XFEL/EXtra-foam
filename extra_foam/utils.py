@@ -14,11 +14,17 @@ import socket
 import multiprocessing as mp
 import functools
 import subprocess
+from dataclasses import dataclass
 from collections import namedtuple
 from threading import RLock, Thread
 import time
 
+import numpy as np
 import xarray as xr
+
+from metropc.core import View
+from metropc.client import ViewOutput
+from metropc.viewdef import ViewDecorator
 
 from .logger import logger
 
@@ -374,3 +380,48 @@ def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs
                 full_data.append(data)
 
     return xr.DataArray(full_data, attrs=xr_attrs)
+
+@dataclass
+class RectROI():
+    x: int = 0
+    y: int = 0
+    width: int = 100
+    height: int = 100
+
+    def of(self, data):
+        if not isinstance(data, np.ndarray):
+            raise ValueError(f"ROI input is a {type(data)} instead of an np.ndarray")
+        elif data.ndim != 2:
+            raise ValueError(f"ROI input must be 2D, but is actually: {data.ndim}D")
+
+        return data[self.y:self.y + self.height, self.x:self.x + self.width]
+
+
+@dataclass
+class LinearROI():
+    lower_bound: float = 0
+    upper_bound: float = 10
+
+    def of(self, data):
+        if not isinstance(data, np.ndarray):
+            raise ValueError(f"ROI input is a {type(data)} instead of an np.ndarray")
+        elif data.ndim != 1:
+            raise ValueError(f"ROI input must be 1D, but is actually: {data.ndim}D")
+
+        return data[lower_bound:upper_bound]
+
+class AnnotatedView(View, abstract=True):
+    def __init__(self, *args, annotations, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.annotations = annotations
+
+class ImageWithROIsView(AnnotatedView, output=ViewOutput.IMAGE):
+    def __init__(self, *args, rois=None, **kwargs):
+        super().__init__(*args, annotations=rois, **kwargs)
+
+class VectorWithROIsView(AnnotatedView, output=ViewOutput.VECTOR):
+    def __init__(self, *args, rois=None, **kwargs):
+        super().__init__(*args, annotations=rois, **kwargs)
+
+ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=ImageWithROIsView))
+ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=VectorWithROIsView))

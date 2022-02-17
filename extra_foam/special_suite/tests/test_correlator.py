@@ -426,7 +426,7 @@ class TestCorrelatorWindow:
         output = np.random.rand(10, 10)
         with patch.object(image_view, "setImage") as set_image:
             widget.updateF({ view_name: [output] })
-            set_image.assert_called_with(output, auto_levels=ANY)
+            set_image.assert_called_with(output)
 
 
 class TestCorrelatorProcessor(_TestDataMixin, _SpecialSuiteProcessorTestBase):

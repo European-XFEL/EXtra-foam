@@ -85,6 +85,9 @@ class PlotWidgetF(pg.GraphicsView):
         self.setParent(None)
         super().close()
 
+    def getViewBox(self):
+        return self._plot_area.getViewBox()
+
     def addItem(self, *args, **kwargs):
         """Explicitly call PlotArea.addItem.
 

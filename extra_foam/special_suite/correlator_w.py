@@ -6,6 +6,9 @@ import os.path as osp
 from enum import Enum
 from collections import defaultdict
 
+import libcst as cst
+import libcst.matchers as m
+import libcst.metadata as cstmeta
 import numpy as np
 import xarray as xr
 
@@ -22,8 +25,11 @@ from metropc.client import ViewOutput
 
 from .. import ROOT_PATH
 from ..utils import RectROI as MetroRectROI
+from ..utils import LinearROI as MetroLinearROI
 from ..algorithms import SimpleSequence
 from ..pipeline.data_model import ProcessedData
+from ..gui.plot_widgets import LinearROI
+from ..gui.plot_widgets.image_items import RectROI
 from ..gui.misc_widgets import FColor
 from ..gui.gui_helpers import center_window
 from ..gui.plot_widgets import ImageViewF, PlotWidgetF
@@ -173,6 +179,7 @@ class ViewWidget(QStackedWidget):
         self._xs = SimpleSequence(max_len=self._max_points)
         self._ys = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
         self._errors = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
+        self._annotations = { }
         self._current_view = None
 
         self._main_window.registerPlotWidget(self)
@@ -205,7 +212,9 @@ class ViewWidget(QStackedWidget):
         view_selection_widget.setLayout(layout)
 
         # Create plot widgets
-        self._image_view = ImageViewF()
+        self._image_view = ImageViewF(has_roi=True)
+        for roi in self._image_view.rois:
+            roi.setLocked(False)
         # Note: this QHBoxLayout is currently unused but should be kept, it's a
         # placeholder for future widgets.
         image_widget_layout = QHBoxLayout()
@@ -452,6 +461,39 @@ class ViewWidget(QStackedWidget):
                     logger.error(f"Only rich_output() is supported for View.Compute, cannot handle: {type(data)}")
                     return
 
+            view = self._views[self._current_view]
+            is_image = view_type == ViewOutput.IMAGE
+
+            # Check if there are annotations on this view
+            if view.annotations is not None:
+                for idx, roi_name in enumerate(view.annotations):
+                    if roi_name not in self._annotations:
+                        roi = self._image_view.rois[idx + 1] if is_image else LinearROI(self._plot_widget)
+                        if not is_image:
+                            self._plot_widget.addItem(roi)
+
+                        self._annotations[roi_name] = roi
+
+                        # Update parameters from context
+                        metro_roi = self._main_window.context.parameters[roi_name]
+                        roi.configureFromMetroROI(metro_roi)
+
+                        roi.setLabel(roi_name)
+                        roi.sigRegionChanged.connect(self._main_window.onRoiChanged)
+                        roi.show()
+
+            # Hide unused annotations
+            for roi_name in list(self._annotations.keys()):
+                if roi_name not in view.annotations:
+                    roi = self._annotations[roi_name]
+                    roi.sigRegionChanged.disconnect()
+                    roi.hide()
+                    del self._annotations[roi_name]
+
+                    if not is_image:
+                        self._plot_widget.removeItem(roi)
+                        roi.deleteLater()
+
             # Update the plots
             if view_type == ViewOutput.IMAGE:
                 if not is_ndarray:
@@ -461,7 +503,7 @@ class ViewWidget(QStackedWidget):
                     logger.error(f"Image data has wrong number of dimensions: {data.ndim} (expected 2)")
                     return
 
-                self._image_view.setImage(data, auto_levels=True)
+                self._image_view.setImage(data)
             else:
                 self._legend.clear()
                 for label, ys_data in self._ys.items():
@@ -486,12 +528,15 @@ class ViewWidget(QStackedWidget):
                         self._plot_widget.setTitle(data.attrs["title"])
 
     def setViews(self, views):
-        if views == self._views:
-            return
-
+        # Always update the view indexes
+        old_views = self._views
         self._views = views
-        self.updateAvailableViews()
-        self.views_updated_sgn.emit()
+
+        # But we only update the options displayed if any views have been
+        # added/removed.
+        if self._views.keys() != old_views.keys():
+            self.updateAvailableViews()
+            self.views_updated_sgn.emit()
 
     def updateAvailableViews(self):
         self.view_picker.blockSignals(True)
@@ -730,20 +775,30 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
 class RoiTransformer(cst.CSTTransformer):
     METADATA_DEPENDENCIES = (cstmeta.ParentNodeProvider, )
 
-    def __init__(self, roi):
-        self._roi_name = roi.label()
-        self._roi_args = [int(x) for x in [*roi.pos(), *roi.size()]]
+    def __init__(self, roi_cls, roi_name, roi_args):
+        self._roi_cls_name = roi_cls.__name__
+        self._roi_name = roi_name
+        self._roi_args = roi_args
 
-    def roi_args(self):
-        return self._roi_args
+    def gen_number_node(self, value):
+        # If this is a numpy type, np.float64 etc, then we need to convert it to
+        # a native Python ctype.
+        if hasattr(value, "dtype"):
+            value = value.item()
 
-    def gen_int_node(self, value):
-        int_node = cst.Integer(str(np.abs(value)))
+        if isinstance(value, int):
+            node_cls = cst.Integer
+        elif isinstance(value, float):
+            node_cls = cst.Float
+        else:
+            raise RuntimeError(f"Unsupported numeric type: {type(value)}")
+
+        number_node = node_cls(str(np.abs(value)))
 
         if value < 0:
-            return cst.UnaryOperation(cst.Minus(), int_node)
+            return cst.UnaryOperation(cst.Minus(), number_node)
         else:
-            return int_node
+            return number_node
 
     def visit_Call(self, call):
         """
@@ -752,30 +807,32 @@ class RoiTransformer(cst.CSTTransformer):
         return m.matches(call,
                          m.Call(
                              func=m.Name("parameters"),
-                             args=[m.AtLeastN(n=1,
-                                            matcher=m.Arg(
-                                                value=m.Call(func=m.Name("RectROI"))
-                                            ))
+                             args=[m.ZeroOrMore(),
+                                   m.AtLeastN(n=1,
+                                              matcher=m.Arg(
+                                                  value=m.Call(func=m.Name(self._roi_cls_name))
+                                              )),
+                                   m.ZeroOrMore()
                                    ]
                          ))
 
     def leave_Call(self, original_node, updated_node):
         """
-        On the way back up, modify the 'RectROI' calls
+        On the way back up, modify the ROI calls.
         """
-        if m.matches(updated_node.func, m.Name("RectROI")):
+        if m.matches(updated_node.func, m.Name(self._roi_cls_name)):
             parent = self.get_metadata(cstmeta.ParentNodeProvider, updated_node)
 
             # If this object is the value for a keyword argument of the same
             # name, it's the one we're looking for and we can update it.
             if m.matches(parent, m.Arg(keyword=m.Name(self._roi_name))):
                 # Create the new int nodes
-                new_ints = [self.gen_int_node(x) for x in self._roi_args]
+                new_ints = [self.gen_number_node(x) for x in self._roi_args]
 
                 # If the constructor already has all arguments, then we just
                 # update each arguments value individually. This preserves any
                 # existing formatting/comments.
-                if len(updated_node.args) == 4:
+                if len(updated_node.args) == len(self._roi_args):
                     new_args = []
                     for arg, x in zip(updated_node.args, new_ints):
                         new_args.append(arg.with_changes(value=x))
@@ -885,6 +942,7 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         self._path = None
         self._total_tab_count = 1
         self._context_saved = True
+        self._roi_last_changed_time = time.time()
 
         self.settings = Settings(osp.join(ROOT_PATH, "correlator.ini"), QSettings.IniFormat)
 
@@ -986,6 +1044,39 @@ class CorrelatorWindow(_SpecialAnalysisBase):
 
         self._completer.setViewPaths(views)
         self._ctrl_widget_st.setViewPaths(views)
+
+    def onRoiChanged(self, roi):
+        if time.time() - self._roi_last_changed_time < 0.1:
+            return
+
+        # Get current source
+        ctx = self._editor.text()
+        cursor_pos = self._editor.getCursorPosition()
+        first_visible_line = self._editor.firstVisibleLine()
+
+        roi_name = roi.label()
+        if isinstance(roi, RectROI):
+            roi_cls = MetroRectROI
+            roi_args = [int(x) for x in [*roi.pos(), *roi.size()]]
+        elif isinstance(roi, LinearROI):
+            roi_cls = MetroLinearROI
+            roi_args = [np.around(x, 5) for x in roi.getRegion()]
+        else:
+            raise RuntimeError("Unsupported ROI type")
+
+        # Modify the source as needed
+        module = cstmeta.MetadataWrapper(cst.parse_module(ctx))
+        transformer = RoiTransformer(roi_cls, roi_name, roi_args)
+        new_source = module.visit(transformer)
+
+        # Set the new source and update the parameter
+        self._editor.setText(new_source.code)
+        self._editor.setCursorPosition(*cursor_pos)
+        self._editor.setFirstVisibleLine(first_visible_line)
+
+        self._worker_st.set_parameter(roi.label(),
+                                      roi_cls(*roi_args))
+        self._roi_last_changed_time = time.time()
 
     @pyqtSlot()
     def _addTab(self, splitter=None):
