@@ -18,3 +18,4 @@ dependencies:
   - python>=3.10
   - gtest==1.10.0
   - gmock==1.10.0
+  - pip
