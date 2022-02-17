@@ -8,7 +8,7 @@ cfelpyutils==1.0.1
 cffi==1.15.0
 cloudpickle==2.0.0
 cycler==0.11.0
-Cython==0.29.27
+Cython==0.29.28
 dask==2022.2.0
 decorator==5.1.1
 defusedxml==0.7.1
