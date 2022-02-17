@@ -250,6 +250,13 @@ class ViewWidget(QStackedWidget):
         self._split_left_action.triggered.connect(lambda: split(SplitDirection.LEFT))
         self._split_right_action.triggered.connect(lambda: split(SplitDirection.RIGHT))
 
+    def updateImage(self, **kwargs):
+        """
+        This is a wrapper function for _SpecialAnalysisBase to work with.
+        Specifically, this gets called for auto-leveling images.
+        """
+        self._image_view.updateImage(**kwargs)
+
     @pyqtSlot()
     def delete(self):
         self.hide()

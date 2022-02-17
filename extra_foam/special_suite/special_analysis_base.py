@@ -1026,9 +1026,9 @@ class _SpecialAnalysisBase(QMainWindow):
     def registerPlotWidget(self, instance):
         """EXtra-foam interface method."""
         self._plot_widgets_st[instance] = 1
-        if isinstance(instance, ImageViewF):
+        if hasattr(instance, "updateImage"):
             self._image_views_st[instance] = 1
-            if instance.rois:
+            if getattr(instance, "rois", None):
                 self._com_ctrl_st.addRoiCtrl(instance.rois[0])
 
     def unregisterPlotWidget(self, instance):
