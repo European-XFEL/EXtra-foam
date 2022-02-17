@@ -58,6 +58,15 @@ class FoamPath(MetroPath, alias="foam"):
         return operator.attrgetter(self.strip_type(self._full_path))(data)
 
 
+class ViewEntry(IndexViewEntry):
+    __slots__ = ["annotations"]
+
+    def __init__(self, annotations, entry):
+        super().__init__(entry.counts, entry.rate, entry.output, entry.stage)
+
+        self.annotations = annotations
+
+
 # This is a helper type to hold useful data about a path, to be displayed in a
 # client.
 PathData = namedtuple("PathData",
@@ -149,6 +158,7 @@ class CorrelatorProcessor(QThreadWorker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._ctx = None
         self.client_type = None
 
         self._index_event = Event()
@@ -215,15 +225,24 @@ class CorrelatorProcessor(QThreadWorker):
         """
         views = set(p for p, v in index.items() if isinstance(v, IndexViewEntry))
         subscribed_views = set(self._subscriptions.keys())
+        new_views = views - subscribed_views
+        old_views = subscribed_views - views
 
-        # Subscribe to new views
-        for s in views - subscribed_views:
-            self._subscriber.subscribe(s.encode())
-            self._subscriptions[s] = index[s]
+        # Subscribe to new views and update existing ones
+        for s in views:
+            if s in new_views:
+                # If it's a new view, subscribe to it
+                self._subscriber.subscribe(s.encode())
+
+            # Create a custom index entry that stores annotations
+            view = self._ctx.views[s.split("#")[1]]
+            view_entry = ViewEntry(getattr(view, "annotations", []), index[s])
+
+            self._subscriptions[s] = view_entry
             self.log.debug(f"Subscribed to {s}")
 
         # Unsubscribe from old ones
-        for s in subscribed_views - views:
+        for s in old_views:
             self._subscriber.unsubscribe(s.encode())
             del self._subscriptions[s]
             self.log.debug(f"Unsubscribed to {s}")
@@ -258,6 +277,9 @@ class CorrelatorProcessor(QThreadWorker):
             self._pipeline.send_index()
 
         event.wait()
+
+    def set_parameter(self, name, value):
+        self._pipeline.queue_to_all(b"params", {name: value})
 
     # Helper function to inspect an object and create a PathData object
     # for it.
