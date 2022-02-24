@@ -7,17 +7,15 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import os.path as osp
 import re
 import random
 from time import time, sleep
 from collections import deque
 
-from extra_data import by_id, RunDirectory
+from extra_data import by_id
 from extra_data.export import ZMQStreamer
 
 from .offline_config import StreamMode
-from ..utils import profiler
 
 
 _ALL_PROPERTIES = "*"
