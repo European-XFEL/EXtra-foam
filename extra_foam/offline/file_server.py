@@ -38,29 +38,6 @@ def run_info(rd):
     return n_trains, first_train, last_train
 
 
-@profiler("Load run directories")
-def load_runs(path):
-    """Load data from both calibrated and raw run directories.
-
-    :param str path: path of the calibrated run directory.
-
-    :raises (ValueError, Exception)
-    """
-    if not path:
-        raise ValueError(f"Empty path!")
-    if not osp.isdir(path):
-        raise ValueError(f"{path} is not an existing directory!")
-
-    rd_cal = RunDirectory(path)
-
-    try:
-        rd_raw = RunDirectory(path.replace('/proc/', '/raw/'))
-    except Exception:
-        rd_raw = None
-
-    return rd_cal, rd_raw
-
-
 def _sorted_properties(orig, prioritized):
     """Return the sorted properties.
 
@@ -84,11 +61,10 @@ def _sorted_properties(orig, prioritized):
     return ret
 
 
-def gather_sources(rd_cal, rd_raw):
+def gather_sources(rd):
     """Gather device IDs and properties from run data.
 
-    :param DataCollection rd_cal: Calibrated run data.
-    :param DataCollection rd_raw: Raw run data.
+    :param DataCollection rd: Run data.
 
     :return: A tuple of dictionaries with keys being the device IDs /
         output channels and values being a list of available properties.
@@ -118,27 +94,24 @@ def gather_sources(rd_cal, rd_raw):
     ])
 
     detector_srcs, instrument_srcs, control_srcs = dict(), dict(), dict()
-    if rd_cal is not None:
-        for src in rd_cal.instrument_sources:
-            if re.compile(r'(.+)/DET/(.+):(.+)').match(src):
-                detector_srcs[src] = _sorted_properties(
-                    rd_cal.keys_for_source(src), _prioritized_detector_ppts)
+    for src in rd.instrument_sources:
+        if re.compile(r'(.+)/DET/(.+):(.+)').match(src):
+            detector_srcs[src] = _sorted_properties(
+                rd.keys_for_source(src), _prioritized_detector_ppts)
 
-        rd = rd_cal if rd_raw is None else rd_raw
+    for src in rd.instrument_sources:
+        if src not in detector_srcs:
+            instrument_srcs[src] = _sorted_properties(
+                rd.keys_for_source(src), _prioritized_instrument_ppts)
 
-        for src in rd.instrument_sources:
-            if src not in detector_srcs:
-                instrument_srcs[src] = _sorted_properties(
-                    rd.keys_for_source(src), _prioritized_instrument_ppts)
-
-        for src in rd.control_sources:
-            filtered_ppts = set()
-            for ppt in rd.keys_for_source(src):
-                # ignore *.timestamp properties and remove ".value" suffix
-                if ppt[-5:] == "value":
-                    filtered_ppts.add(ppt)
-            control_srcs[src] = _sorted_properties(
-                filtered_ppts, _prioritized_control_ppts)
+    for src in rd.control_sources:
+        filtered_ppts = set()
+        for ppt in rd.keys_for_source(src):
+            # ignore *.timestamp properties and remove ".value" suffix
+            if ppt[-5:] == "value":
+                filtered_ppts.add(ppt)
+        control_srcs[src] = _sorted_properties(
+            filtered_ppts, _prioritized_control_ppts)
 
     return detector_srcs, instrument_srcs, control_srcs
 
@@ -158,7 +131,7 @@ def generate_meta(devices, tid):
     return meta
 
 
-def serve_files(run_data, port, shared_tid, shared_rate, max_rate,
+def serve_files(run, port, shared_tid, shared_rate, max_rate,
                 tid_range=None,
                 mode=StreamMode.NORMAL,
                 detector_sources=None,
@@ -172,8 +145,8 @@ def serve_files(run_data, port, shared_tid, shared_rate, max_rate,
 
     Parameters
     ----------
-    run_data: list/tuple
-        A list/tuple of calibrated and raw run data.
+    run: DataCollection
+        The run data to stream.
     port: int
         Local TCP port to bind socket to.
     shared_tid: Value
@@ -207,11 +180,7 @@ def serve_files(run_data, port, shared_tid, shared_rate, max_rate,
     buffer_size: int
         ZMQStreamer buffer size.
     """
-    rd_cal, rd_raw = run_data
-    num_trains = len(rd_cal.train_ids)
-
-    if rd_raw is None:
-        rd_raw = rd_cal
+    num_trains = len(run.train_ids)
 
     streamer = ZMQStreamer(port, maxlen=buffer_size, **kwargs)
     streamer.start()  # run "REP" socket in a thread
@@ -221,22 +190,10 @@ def serve_files(run_data, port, shared_tid, shared_rate, max_rate,
     n_buffered = 0
     t_sent = deque(maxlen=10)
     while True:
-        for tid, train_data in rd_cal.trains(
+        for tid, train_data in run.trains(
                 devices=detector_sources,
                 train_range=by_id[tid_range[0]:tid_range[1]:tid_range[2]],
                 require_all=require_all):
-            if rd_raw is not None:
-                try:
-                    # get raw data corresponding to the train id
-                    _, raw_train_data = rd_raw.train_from_id(
-                        tid, devices=instrument_sources + control_sources)
-                    # Merge calibrated and raw data
-                    train_data.update(raw_train_data)
-                except ValueError:
-                    # Value Error is raised by EXtra-data when any raw data
-                    # is not found.
-                    pass
-
             if train_data:
                 if mode == StreamMode.NORMAL:
                     # Generate fake meta data with monotonically increasing

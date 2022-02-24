@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QMainWindow
 
 from extra_foam.logger import logger_stream as logger
 from extra_foam.gui import mkQApp
-from extra_foam.gui.windows.file_stream_w import FileStreamWindow
+from extra_foam.gui.windows.file_stream_w import FileStreamWindow, DataSelector, RunData
 
 app = mkQApp()
 
@@ -74,78 +74,91 @@ class TestFileStreamWindow(unittest.TestCase):
 
         win = FileStreamWindow(port=45449)
         widget = win._ctrl_widget
+        module = "extra_foam.gui.windows.file_stream_w"
         self.assertEqual('45449', widget.port_le.text())
         self.assertIsNone(win._mediator)
 
-        with patch("extra_foam.gui.windows.file_stream_w.Process.start") as mocked_start:
+        with patch(f"{module}.Process.start") as mocked_start:
             # test when win._rd_cal is None
             spy = QSignalSpy(win.file_server_started_sgn)
             widget.serve_start_btn.clicked.emit()
             self.assertEqual(0, len(spy))
             mocked_start.assert_not_called()
 
-            # test when win._rd_cal is not None
-            win._rd_cal = MagicMock()
+            # test when win._rd is not None
+            win._rd = MagicMock()
             widget.serve_start_btn.clicked.emit()
             self.assertEqual(1, len(spy))
             mocked_start.assert_called_once()
 
         # test populate sources
-        with patch("extra_foam.gui.windows.file_stream_w.load_runs") as lr:
-            with patch("extra_foam.gui.windows.file_stream_w.gather_sources") as gs:
-                with patch.object(widget, "initProgressControl") as fpc:
-                    with patch.object(widget, "fillSourceTables") as fst:
-                        # test load_runs return (None, None)
-                        win._rd_cal, win._rd_raw = object(), object()
-                        gs.return_value = (set(), set(), set())
-                        lr.return_value = (None, None)
-                        widget.data_folder_le.setText("abc")
-                        lr.assert_called_with("abc")
-                        fpc.assert_called_once_with(-1, -1)
-                        fpc.reset_mock()
-                        fst.assert_called_once_with(None, None)  # test _rd_cal and _rd_raw were reset
-                        fst.reset_mock()
+        with (patch(f"{module}.RunDirectory") as RunDirectory,
+              patch(f"{module}.open_run") as open_run,
+              patch(f"{module}.gather_sources") as gs,
+              patch.object(widget, "initProgressControl") as fpc):
+            with patch.object(widget, "fillSourceTables") as fst:
+                win._rd = object()
+                gs.return_value = (set(), set(), set())
 
-                        # test load_runs raises
-                        lr.side_effect = ValueError
-                        widget.data_folder_le.setText("efg")
-                        fpc.assert_called_once_with(-1, -1)
-                        fpc.reset_mock()
-                        fst.assert_called_once_with(None, None)
-                        fst.reset_mock()
+                # Load from a proposal/run number. Loading should not occur
+                # until all necessary fields have been set.
+                widget.run_source_cb.setCurrentText(DataSelector.RUN_NUMBER.value)
+                open_run.assert_not_called()
+                widget.proposal_number_le.setText("1234")
+                open_run.assert_not_called()
+                widget.run_number_le.setText("314")
+                open_run.assert_called_once()
+                fst.assert_called_once()
 
-                    with patch("extra_foam.gui.windows.file_stream_w.run_info",
-                               return_value=(100, 1001, 1100)):
-                        # test load_runs return
-                        lr.side_effect = None
-                        gs.return_value = ({"DET1": ["data.adc"]},
-                                           {"output1": ["x", "y"]},
-                                           {"motor1": ["actualPosition"], "motor2": ["actualCurrent"]})
-                        widget.data_folder_le.setText("hij")
-                        fpc.assert_called_once_with(1001, 1100)
+                # Changing the run data should also trigger a reload
+                open_run.reset_mock()
+                fst.reset_mock()
+                widget.run_data_cb.setCurrentText(RunData.RAW.value)
+                open_run.assert_called_with(1234, 314, data=RunData.RAW.value)
+                fst.assert_called_once()
 
-                        self.assertEqual("DET1", widget._detector_src_tb.item(0, 0).text())
-                        cell_widget = widget._detector_src_tb.cellWidget(0, 1)
-                        self.assertEqual(1, cell_widget.count())
-                        self.assertEqual("data.adc", cell_widget.currentText())
+                # Test loading from a run directory
+                widget.run_source_cb.setCurrentText(DataSelector.RUN_DIR.value)
+                widget.data_folder_le.setText("abc")
+                RunDirectory.assert_called_with("abc")
 
-                        self.assertEqual("output1", widget._instrument_src_tb.item(0, 0).text())
-                        cell_widget = widget._instrument_src_tb.cellWidget(0, 1)
-                        self.assertEqual(2, cell_widget.count())
-                        self.assertEqual("x", cell_widget.currentText())
+                # Changing back to the proposal/run number selector should load
+                # the run with the previously-set values.
+                open_run.reset_mock()
+                widget.run_source_cb.setCurrentText(DataSelector.RUN_NUMBER.value)
+                open_run.assert_called_once()
 
-                        self.assertEqual("motor1", widget._control_src_tb.item(0, 0).text())
-                        cell_widget = widget._control_src_tb.cellWidget(0, 1)
-                        self.assertEqual(1, cell_widget.count())
-                        self.assertEqual("actualPosition", cell_widget.currentText())
+            with patch("extra_foam.gui.windows.file_stream_w.run_info",
+                       return_value=(100, 1001, 1100)):
+                gs.return_value = ({"DET1": ["data.adc"]},
+                                   {"output1": ["x", "y"]},
+                                   {"motor1": ["actualPosition"], "motor2": ["actualCurrent"]})
+                fpc.reset_mock()
+                widget.data_folder_le.setText("hij")
+                fpc.assert_called_once_with(1001, 1100)
 
-                        self.assertEqual("motor2", widget._control_src_tb.item(1, 0).text())
-                        cell_widget = widget._control_src_tb.cellWidget(1, 1)
-                        self.assertEqual(1, cell_widget.count())
-                        self.assertEqual("actualCurrent", cell_widget.currentText())
+                self.assertEqual("DET1", widget._detector_src_tb.item(0, 0).text())
+                cell_widget = widget._detector_src_tb.cellWidget(0, 1)
+                self.assertEqual(1, cell_widget.count())
+                self.assertEqual("data.adc", cell_widget.currentText())
 
-                        # None is selected.
-                        self.assertEqual(([], [], []), widget.getSourceLists())
+                self.assertEqual("output1", widget._instrument_src_tb.item(0, 0).text())
+                cell_widget = widget._instrument_src_tb.cellWidget(0, 1)
+                self.assertEqual(2, cell_widget.count())
+                self.assertEqual("x", cell_widget.currentText())
+
+                self.assertEqual("motor1", widget._control_src_tb.item(0, 0).text())
+                cell_widget = widget._control_src_tb.cellWidget(0, 1)
+                self.assertEqual(1, cell_widget.count())
+                self.assertEqual("actualPosition", cell_widget.currentText())
+
+                self.assertEqual("motor2", widget._control_src_tb.item(1, 0).text())
+                cell_widget = widget._control_src_tb.cellWidget(1, 1)
+                self.assertEqual(1, cell_widget.count())
+                self.assertEqual("actualCurrent", cell_widget.currentText())
+
+                # None is selected.
+                self.assertEqual(([], [], []), widget.getSourceLists())
 
     def testInitProgressControl(self):
         win = FileStreamWindow(port=45452)
