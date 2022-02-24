@@ -7,6 +7,7 @@ Author: Ebad Kamil <ebad.kamil@xfel.eu> and Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from enum import Enum
 from collections import OrderedDict
 from multiprocessing import Process, Value
 from contextlib import closing
@@ -18,8 +19,10 @@ from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGridLayout,
     QHeaderView, QGroupBox, QLabel, QLineEdit, QLCDNumber, QProgressBar,
     QPushButton, QSlider, QSplitter, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget, QDoubleSpinBox
+    QVBoxLayout, QHBoxLayout, QWidget, QDoubleSpinBox, QStackedWidget
 )
+
+from extra_data import RunDirectory, open_run
 
 from .base_window import _AbstractSatelliteWindow
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
@@ -28,9 +31,18 @@ from ...gui.gui_helpers import create_icon_button
 from ...gui.misc_widgets import GuiLogger
 from ...logger import logger_stream as logger
 from ...offline import (
-    gather_sources, load_runs, run_info, serve_files, StreamMode
+    gather_sources, run_info, serve_files, StreamMode
 )
 
+
+class RunData(Enum):
+    ALL = "proc + raw"
+    PROC = "proc"
+    RAW = "raw"
+
+class DataSelector(Enum):
+    RUN_DIR = "Run directory"
+    RUN_NUMBER = "Proposal/run number"
 
 class _FileStreamCtrlWidget(QWidget):
 
@@ -51,9 +63,26 @@ class _FileStreamCtrlWidget(QWidget):
     def __init__(self, *, parent=None):
         super().__init__(parent=parent)
 
-        self.load_run_btn = QPushButton("Load run")
+        self.run_source_cb = QComboBox()
+        self.run_source_cb.addItem(DataSelector.RUN_NUMBER.value)
+        self.run_source_cb.addItem(DataSelector.RUN_DIR.value)
 
+        self.load_run_btn = QPushButton("Load run")
         self.data_folder_le = SmartLineEdit()
+
+        self.proposal_number_le = SmartLineEdit()
+        self.proposal_number_le.setPlaceholderText("Proposal number")
+        self.proposal_number_le.setValidator(QIntValidator())
+        self.run_number_le = SmartLineEdit()
+        self.run_number_le.setPlaceholderText("Run number")
+        self.run_number_le.setValidator(QIntValidator())
+
+        self.run_data_cb = QComboBox()
+        self.run_data_cb.addItem(RunData.ALL.value)
+        self.run_data_cb.addItem(RunData.PROC.value)
+        self.run_data_cb.addItem(RunData.RAW.value)
+
+        self.run_source_sw = QStackedWidget()
 
         self.serve_start_btn = create_icon_button(
             "start.png", 18, description="Stream once")
@@ -125,6 +154,10 @@ class _FileStreamCtrlWidget(QWidget):
         logger.addHandler(self._gui_logger)
 
         self._non_reconfigurable_widgets = [
+            self.run_source_cb,
+            self.proposal_number_le,
+            self.run_number_le,
+            self.run_data_cb,
             self.data_folder_le,
             self._select_all_cb,
             self._detector_src_tb,
@@ -146,9 +179,30 @@ class _FileStreamCtrlWidget(QWidget):
         """Override."""
         AR = Qt.AlignRight
 
+        run_dir_layout = QHBoxLayout()
+        run_dir_layout.addWidget(self.load_run_btn)
+        run_dir_layout.addWidget(self.data_folder_le)
+        run_dir_widget = QWidget()
+        run_dir_widget.setLayout(run_dir_layout)
+
+        proposal_layout = QHBoxLayout()
+        proposal_layout.addWidget(self.proposal_number_le)
+        proposal_layout.addWidget(self.run_number_le)
+        proposal_layout.addWidget(self.run_data_cb)
+        proposal_layout.addStretch()
+        proposal_widget = QWidget()
+        proposal_widget.setLayout(proposal_layout)
+
+        self.run_source_sw.addWidget(proposal_widget)
+        self.run_source_sw.addWidget(run_dir_widget)
+
         ctrl_layout = QGridLayout()
-        ctrl_layout.addWidget(self.load_run_btn, 0, 0)
-        ctrl_layout.addWidget(self.data_folder_le, 0, 1, 1, 11)
+        col = 0
+        ctrl_layout.addWidget(QLabel("Select data from:"), 0, col)
+        col += 1
+        ctrl_layout.addWidget(self.run_source_cb, 0, col)
+        col += 1
+        ctrl_layout.addWidget(self.run_source_sw, 0, col, 1, 11)
 
         ctrl_layout.addWidget(QLabel("Port: "), 1, 0, AR)
         ctrl_layout.addWidget(self.port_le, 1, 1)
@@ -191,6 +245,8 @@ class _FileStreamCtrlWidget(QWidget):
         layout.addWidget(progress)
         layout.addWidget(self._gui_logger.widget)
         layout.addWidget(table_area)
+
+        layout.setStretchFactor(table_area, 1)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -201,6 +257,8 @@ class _FileStreamCtrlWidget(QWidget):
 
         self._select_all_cb.toggled.connect(
             lambda x: self._setAllChecked(self._detector_src_tb, x))
+
+        self.run_source_cb.currentIndexChanged.connect(self.run_source_sw.setCurrentIndex)
 
     def onRunFolderLoad(self):
         folder_name = QFileDialog.getExistingDirectory(
@@ -249,12 +307,16 @@ class _FileStreamCtrlWidget(QWidget):
         self.tid_start_sld.setValue(first_tid)
         self.tid_end_sld.setValue(last_tid)
 
-    def fillSourceTables(self, run_dir_cal, run_dir_raw):
-        detector_srcs, instrument_srcs, control_srcs = gather_sources(
-            run_dir_cal, run_dir_raw)
+    def fillSourceTables(self, run_dir):
+        detector_srcs, instrument_srcs, control_srcs = gather_sources(run_dir)
         self._fillSourceTable(detector_srcs, self._detector_src_tb )
         self._fillSourceTable(instrument_srcs, self._instrument_src_tb)
         self._fillSourceTable(control_srcs, self._control_src_tb)
+
+    def clearSourceTables(self):
+        self._detector_src_tb.setRowCount(0)
+        self._instrument_src_tb.setRowCount(0)
+        self._control_src_tb.setRowCount(0)
 
     def _fillSourceTable(self, srcs, table):
         table.setRowCount(len(srcs))
@@ -343,8 +405,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
         self._port = None
 
-        self._rd_cal = None
-        self._rd_raw = None
+        self._rd = None
 
         self._latest_tid = Value('i', -1)
         self._rate = Value('f', 0.0)
@@ -385,39 +446,83 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
     def initConnections(self):
         """Override"""
-        self._ctrl_widget.serve_start_btn.clicked.connect(
+        ctrl = self._ctrl_widget
+
+        ctrl.serve_start_btn.clicked.connect(
             lambda: self.startFileServer(False))
-        self._ctrl_widget.repeat_serve_start_btn.clicked.connect(
+        ctrl.repeat_serve_start_btn.clicked.connect(
             lambda: self.startFileServer(True))
         self.file_server_started_sgn.connect(
-            self._ctrl_widget.onFileServerStarted)
-        self._ctrl_widget.serve_terminate_btn.clicked.connect(
+            ctrl.onFileServerStarted)
+        ctrl.serve_terminate_btn.clicked.connect(
             self.stopFileServer)
         self.file_server_stopped_sgn.connect(
-            self._ctrl_widget.onFileServerStopped)
+            ctrl.onFileServerStopped)
 
-        self._ctrl_widget.data_folder_le.value_changed_sgn.connect(
-            self._populateSources)
+        ctrl.data_folder_le.value_changed_sgn.connect(self._populateSources)
+        ctrl.proposal_number_le.value_changed_sgn.connect(self._populateSources)
+        ctrl.run_number_le.value_changed_sgn.connect(self._populateSources)
+        ctrl.run_source_cb.currentIndexChanged.connect(self._populateSources)
+        ctrl.run_data_cb.currentIndexChanged.connect(self._populateSources)
 
         if self._mediator is not None:
             self._mediator.connection_change_sgn.connect(
                 self._onTcpPortChange)
             self._mediator.file_stream_initialized_sgn.emit()
 
-    def _populateSources(self, path):
+    def _populateSources(self, _=None):
+        ctrl = self._ctrl_widget
+
         # reset old DataCollections
-        self._rd_cal, self._rd_raw = None, None
+        self._rd = None
+        ctrl.clearSourceTables()
+
+        select_by_run_number = ctrl.run_source_cb.currentText() == DataSelector.RUN_NUMBER.value
+        proposal = ctrl.proposal_number_le.text()
+        run = ctrl.run_number_le.text()
+        run_data = RunData(ctrl.run_data_cb.currentText())
+        path = ctrl.data_folder_le.text()
+
+        if (select_by_run_number and (len(proposal) == 0 or len(run) == 0)) or \
+           (not select_by_run_number and len(path) == 0):
+            return
 
         try:
-            self._rd_cal, self._rd_raw = load_runs(path)
+            logger.info("Loading run, this may take a while.")
+
+            # Force all events to be processed so that the above log message
+            # shows up. Ideally this would be replaced with a progress indicator
+            # at some point.
+            app = QApplication.instance()
+            app.processEvents()
+
+            if select_by_run_number:
+                try:
+                    # First try loading whatever the user wants
+                    self._rd = open_run(int(proposal), int(run), data=run_data.name.lower())
+                except FileNotFoundError as e:
+                    if run_data == RunData.ALL:
+                        # Currently open_run() throws if it's passed `data="all"`
+                        # and the proc data doesn't exist. If this is what the user
+                        # has selected, then manually fallback to loading the raw
+                        # data.
+                        #
+                        # TODO: remove this fallback when the next version of
+                        # EXtra-data is released, since it will do this
+                        # automatically.
+                        self._rd = open_run(int(proposal), int(run), data="raw")
+                    else:
+                        # Otherwise, just re-raise the exception
+                        raise e
+            else:
+                self._rd = RunDirectory(path)
         except Exception as e:
             logger.error(str(e))
-        finally:
-            self._ctrl_widget.fillSourceTables(self._rd_cal, self._rd_raw)
-            n_trains, first_tid, last_tid = run_info(self._rd_cal)
+        else:
+            self._ctrl_widget.fillSourceTables(self._rd)
+            n_trains, first_tid, last_tid = run_info(self._rd)
             if n_trains > 0:
-                logger.info(f"Loaded a run from {path} with {n_trains} "
-                            f"trains in total!")
+                logger.info(f"Loaded run with {n_trains} trains in total!")
             self._ctrl_widget.initProgressControl(first_tid, last_tid)
 
     def _onTcpPortChange(self, connections):
@@ -436,7 +541,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
     def startFileServer(self, repeat=False):
         ctrl_widget = self._ctrl_widget
 
-        if self._rd_cal is None:
+        if self._rd is None:
             logger.error("Please load a valid run first!")
             return
 
@@ -463,8 +568,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
         self._file_server = Process(
             target=serve_files,
-            args=((self._rd_cal, self._rd_raw), port, self._latest_tid,
-                  self._rate, max_rate),
+            args=(self._rd, port, self._latest_tid, self._rate, max_rate),
             kwargs={
                 'tid_range': tid_range,
                 'mode': mode,
