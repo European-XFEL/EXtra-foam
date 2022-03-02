@@ -572,9 +572,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
             kwargs={
                 'tid_range': tid_range,
                 'mode': mode,
-                'detector_sources': detector_srcs,
-                'instrument_sources': instrument_srcs,
-                'control_sources': control_srcs,
+                'sources': detector_srcs + instrument_srcs + control_srcs,
                 'repeat_stream': repeat,
                 'require_all': False,
             })
