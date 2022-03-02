@@ -132,9 +132,7 @@ def generate_meta(devices, tid):
 def serve_files(run, port, shared_tid, shared_rate, max_rate,
                 tid_range=None,
                 mode=StreamMode.NORMAL,
-                detector_sources=None,
-                instrument_sources=None,
-                control_sources=None,
+                sources=None,
                 require_all=True,
                 repeat_stream=False,
                 buffer_size=2,
@@ -161,11 +159,7 @@ def serve_files(run, port, shared_tid, shared_rate, max_rate,
         - Random shuffle: sources in a train are streamed one by one
                           and the order is random.
 
-    detector_sources: list of tuples
-        [('device ID/output channel name', 'property')]
-    instrument_sources: list of tuples
-        [('device ID/output channel name', 'property')]
-    control_sources: list of tuples
+    sources: list of tuples
         [('device ID/output channel name', 'property')]
     require_all: bool
         If set to True, will stream only trainIDs that has data
@@ -189,7 +183,7 @@ def serve_files(run, port, shared_tid, shared_rate, max_rate,
     t_sent = deque(maxlen=10)
     while True:
         for tid, train_data in run.trains(
-                devices=detector_sources,
+                devices=sources,
                 train_range=by_id[tid_range[0]:tid_range[1]:tid_range[2]],
                 require_all=require_all):
             if train_data:
