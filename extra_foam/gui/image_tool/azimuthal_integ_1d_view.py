@@ -59,11 +59,13 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
             self._peaks.setData(momentum[peaks], intensity[peaks])
             self.setAnnotationList(momentum[peaks], intensity[peaks])
 
-        com_x, com_y = ai.center_of_mass
-        if com_x == np.nan or com_y == np.nan:
-            self._center_of_mass.setData([], [])
-        else:
-            self._center_of_mass.setData([com_x], [com_y])
+        if ai.center_of_mass is not None:
+            com_x, com_y = ai.center_of_mass
+
+            if com_x == np.nan or com_y == np.nan:
+                self._center_of_mass.setData([], [])
+            else:
+                self._center_of_mass.setData([com_x], [com_y])
 
     def data(self):
         return self._plot.data()
