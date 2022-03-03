@@ -198,10 +198,10 @@ class AGIPD_1MGeometryFast(_AGIPD_1MGeometry, _1MGeometryPyMixin):
     """
     @classmethod
     def from_crystfel_geom(cls, filename):
-        from cfelpyutils.crystfel_utils import load_crystfel_geometry
+        from cfelpyutils.geometry import load_crystfel_geometry
         from extra_geom.detectors import GeometryFragment
 
-        geom_dict = load_crystfel_geometry(filename)
+        geom_dict = load_crystfel_geometry(filename).detector
         modules = []
         for i_p in range(cls.n_modules):
             tiles = []
@@ -305,10 +305,10 @@ class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
     """
     @classmethod
     def from_crystfel_geom(cls, n_rows, n_columns, filename):
-        from cfelpyutils.crystfel_utils import load_crystfel_geometry
+        from cfelpyutils.geometry import load_crystfel_geometry
         from extra_geom.detectors import GeometryFragment
 
-        geom_dict = load_crystfel_geometry(filename)
+        geom_dict = load_crystfel_geometry(filename).detector
         modules = []
         for i_p in module_indices(n_rows * n_columns, detector="JungFrau"):
             i_a = 1 if i_p > 4 else 8
