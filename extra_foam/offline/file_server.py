@@ -13,7 +13,7 @@ from time import time, sleep
 from collections import deque
 
 from extra_data import by_id
-from extra_data.export import ZMQStreamer
+from karabo_bridge import ServerInThread
 
 from .offline_config import StreamMode
 
@@ -174,7 +174,7 @@ def serve_files(run, port, shared_tid, shared_rate, max_rate,
     """
     num_trains = len(run.train_ids)
 
-    streamer = ZMQStreamer(port, maxlen=buffer_size, **kwargs)
+    streamer = ServerInThread(f"tcp://*:{port}", maxlen=buffer_size, **kwargs)
     streamer.start()  # run "REP" socket in a thread
 
     train_delay = 1 / max_rate
