@@ -36,7 +36,7 @@ class TestJungFrauGeometryFast:
         geom_file = osp.join(osp.expanduser("~"), "jungfrau.geom")
         try:
             cls.geom_32_cfel = load_geometry("JungFrau", filepath=geom_file, n_modules=6)
-        except FileNotFoundError:
+        except RuntimeError:
             module_coordinates = [
                 np.array([ 0.08452896,  0.07981445, 0.]),
                 np.array([ 0.08409096,  0.03890507, 0.]),
