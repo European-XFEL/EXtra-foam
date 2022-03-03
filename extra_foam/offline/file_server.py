@@ -172,6 +172,9 @@ def serve_files(run, port, shared_tid, shared_rate, max_rate,
     buffer_size: int
         ZMQStreamer buffer size.
     """
+    if tid_range is None:
+        tid_range = (run.train_ids[0], run.train_ids[-1], 1)
+
     num_trains = len(run.train_ids)
 
     streamer = ServerInThread(f"tcp://*:{port}", maxlen=buffer_size, **kwargs)
