@@ -1,10 +1,13 @@
 from unittest.mock import MagicMock
 
 import pytest
+import numpy as np
 
 @pytest.fixture
 def mock_run_data():
     run = MagicMock()
+
+    run.train_ids = np.arange(10)
     run.instrument_sources = [
         "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
         "SA1_XTD2_XGM/DOOCS/MAIN:output",
@@ -51,5 +54,20 @@ def mock_run_data():
             }
 
     run.keys_for_source.side_effect = keys_for_source
+
+    def trains(*args, **kwargs):
+        for tid in run.train_ids:
+            train_data = { }
+            for src in run.instrument_sources + run.control_sources:
+                train_data[src] = { }
+                train_data[src]["metadata"] = { "timestamp.tid": int(tid) }
+
+                for key in keys_for_source(src):
+                    is_control = src in run.control_sources
+                    train_data[src][key] = np.random.rand() if is_control else np.random.rand(10, 10)
+
+            yield (tid, train_data)
+
+    run.trains.side_effect = trains
 
     yield run
