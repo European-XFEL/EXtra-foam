@@ -58,7 +58,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         self._coordinates_tb = QTableWidget()
 
-        if self._detector in ("JungFrau", "ePix100"):
+        if self._detector == "JungFrau":
             self._coordinates_tb.setEnabled(False)
             self._assembler_cb.removeItem(1)  # no EXtra-geom
         elif self._detector == "AGIPD":

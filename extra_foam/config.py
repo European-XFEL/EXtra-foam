@@ -428,7 +428,7 @@ class _Config(dict):
         "ePix100": _AreaDetectorConfig(
             REDIS_PORT=6384,
             PULSE_RESOLVED=False,
-            REQUIRE_GEOMETRY=False,
+            REQUIRE_GEOMETRY=True,
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(708, 768),
             PIXEL_SIZE=0.050e-3,

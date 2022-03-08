@@ -373,7 +373,7 @@ def application():
     )
 
     # update global configuration
-    if detector in ("JungFrau", "ePix100"):
+    if detector == "JungFrau":
         n_modules = args.n_modules
         if n_modules is None:
             n_modules = 1
