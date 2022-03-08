@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
+from scipy import ndimage
 
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
@@ -15,7 +16,23 @@ from .imageproc import (
     correctGain, correctOffset, correctDsscOffset, correctGainOffset,
     binPhotons
 )
+from .imageproc import dropletize as dropletize_impl
 
+
+def dropletize(data, adu_count, out=None):
+    if out is None:
+        out = np.zeros_like(data, dtype=np.float32)
+
+    # Mask NaNs
+    nan_mask = np.isnan(data)
+    data = np.nan_to_num(data)
+
+    labelled, n_labels = ndimage.label(data)
+    dropletize_impl(data, labelled, out, n_labels, adu_count)
+
+    out[nan_mask] = np.nan
+
+    return out
 
 def bin_photons(data, adu_count, out=None):
     if data.ndim not in [2, 3]:

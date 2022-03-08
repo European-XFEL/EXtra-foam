@@ -908,6 +908,140 @@ inline void maskImageDataNan(E& src, const M& mask, T lb, T ub)
 #endif
 }
 
+template<typename E, typename L, EnableIf<E, IsImage> = false>
+inline void dropletize(E& image, const L& labelled_image, E& photon_data, size_t n_labels, float adu_count)
+{
+    auto count_photons = [&] (auto& indices) {
+        float label_sum{ 0 };
+
+        for (auto& i : indices) {
+            label_sum += image.flat(i);
+        }
+
+        return static_cast<int>(std::round(label_sum / adu_count));
+    };
+
+    auto idxs_weighted_mean = [&] (auto& indices) {
+        std::array<float, 2> weighted_sum{ 0, 0 };
+        float weights_sum{ 0 };
+
+        for (auto& flat_idx : indices) {
+            auto array_idx{ xt::unravel_index(flat_idx, image.shape()) };
+
+            weighted_sum[0] += array_idx[0] * image[array_idx];
+            weighted_sum[1] += array_idx[1] * image[array_idx];
+            weights_sum += image[array_idx];
+        }
+
+        return std::array<size_t, 2>{ static_cast<size_t>(std::round(weighted_sum[0] / weights_sum)),
+                                   static_cast<size_t>(std::round(weighted_sum[1] / weights_sum)) };
+    };
+
+    // This vector of photon counts has one more entry than necessary so
+    // we can use base-1 indexing for convenience.
+    std::vector<float> photon_counts(n_labels + 1, 0);
+
+    // Do an initial photon count of all labels
+    for (int i = 0; i < image.size(); ++i) {
+        int label = labelled_image.flat(i);
+        photon_counts[label] += image.flat(i);
+    }
+    for (auto& count : photon_counts) {
+        count = std::round(count / adu_count);
+    }
+
+    // Iterate over each droplet in parallel.
+    // Known bug: the photon counts may be very slightly (e.g. 1 or 2) off
+    // when running in parallel. This is likely coming from the code where
+    // we check the neighbouring pixels, which does not consider whether
+    // the neighbours belong to a different label.
+    tbb::parallel_for(size_t(1), n_labels + 1,
+                      [&] (int label) {
+                          auto array_idxs{ xt::argwhere(xt::equal(labelled_image, label)) };
+                          auto label_indices{ xt::ravel_indices<xt::ravel_vector_tag>(array_idxs, labelled_image.shape()) };
+                          std::sort(label_indices.begin(), label_indices.end());
+
+                          int photons{ static_cast<int>(photon_counts[label]) };
+
+                          // If the droplet has more than 1 photon, assign 1 to the pixels
+                          // with high enough ADUs. Once a photon is assigned, remove the
+                          // ADU from the corresponding pixel.
+                          if (photons > 1) {
+                              for (int pixel_idx : label_indices) {
+                                  float& pixel{ image.flat(pixel_idx) };
+                                  float photons_in_pixel = std::floor(pixel / adu_count);
+                                  pixel -= photons_in_pixel * adu_count;
+                                  photon_data.flat(pixel_idx) += photons_in_pixel;
+                              }
+
+                              // Re-count the number of photons
+                              photons = count_photons(label_indices);
+                          }
+
+                          if (photons == 0) {
+                              for (auto& i : label_indices) {
+                                  image.flat(i) == 0;
+                              }
+                          } else if (photons == 1) {
+                              // Find coordinates of the brightest pixels
+                              std::array<size_t, 2> sp_idx{ idxs_weighted_mean(label_indices) };
+
+                              // Zero the droplet
+                              for (auto& i : label_indices) {
+                                  image.flat(i) = 0;
+                              }
+
+                              // Assign photon
+                              photon_data[sp_idx] += 1;
+                          } else {
+                              // Iterate over the remaining photons
+                              for (int i = 0; i < photons; ++i) {
+                                  // Find the brightest one
+                                  int max_idx{ 0 };
+                                  for (auto& idx : label_indices) {
+                                      if (image.flat(idx) > image.flat(max_idx)) {
+                                          max_idx = idx;
+                                      }
+                                  }
+
+                                  if (image.flat(max_idx) == 0) {
+                                      continue;
+                                  }
+
+                                  // If this is the brightest, add it to the photon counts
+                                  if (image.flat(max_idx) >= adu_count) {
+                                      photon_data.flat(max_idx) += 1;
+                                      image.flat(max_idx) -= adu_count;
+                                  } else {
+                                      // Otherwise, look for the second brightest around the
+                                      // neighbours.
+                                      size_t max_neighbour_idx{ 0 };
+                                      auto max_array_idx{ xt::unravel_index(max_idx, image.shape()) };
+                                      for (auto offset : std::initializer_list<std::array<int, 2>>({{0, -1}, {0, 1}, {1, 0}, {-1, 0}})) {
+                                          std::array<long, 2> neighbour_idx({ max_array_idx[0] + offset[0],
+                                                                                max_array_idx[1] + offset[1] });
+
+                                          if (image[neighbour_idx] > image.flat(max_neighbour_idx)) {
+                                              max_neighbour_idx = xt::ravel_index(neighbour_idx, image.shape(), image.layout());
+                                          }
+                                      }
+
+                                      if (image.flat(max_neighbour_idx) == 0) {
+                                          continue;
+                                      }
+
+                                      // Decide if the second photon is in the brightest
+                                      // pixel or the neighbour.
+                                      float distance{ (adu_count - image.flat(max_idx)) / adu_count };
+                                      photon_data.flat(distance <= 0.5 ? max_idx : max_neighbour_idx) += 1;
+                                      image.flat(max_idx) = 0;
+                                      image.flat(max_neighbour_idx) = 0;
+                                  }
+                              }
+                          }
+                      });
+}
+
 template<typename E, EnableIfEither<E, IsImage, IsImageArray> = false>
 inline void binPhotons(const E& data, size_t adu_count, E& out)
 {

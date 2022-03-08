@@ -68,6 +68,11 @@ PYBIND11_MODULE(imageproc, m)
   FOAM_BIN_PHOTONS(float, 2)
   FOAM_BIN_PHOTONS(float, 3)
 
+  m.def("dropletize",
+        &dropletize<xt::pytensor<float, 2>, xt::pytensor<int, 2>>,
+        py::arg("image").noconvert(), py::arg("labelled_image").noconvert(), py::arg("photon_data"),
+        py::arg("n_labels"), py::arg("adu_count"));
+
   //
   // mask
   //
