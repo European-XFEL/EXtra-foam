@@ -62,6 +62,8 @@ class _SharedCtrlWidgetS(QFrame):
     # forward signal with the same name in _SingleRoiCtrlWidget
     roi_geometry_change_sgn = pyqtSignal(object)
 
+    hostname_changed_sgn = pyqtSignal(str)
+    port_changed_sgn = pyqtSignal(str)
     client_type_changed_sgn = pyqtSignal(object)
 
     def __init__(self, client_support, parent=None, *, with_dark=True, with_levels=True):
@@ -157,6 +159,9 @@ class _SharedCtrlWidgetS(QFrame):
             lambda s: self.client_type_changed_sgn.emit(ClientType(s))
         )
 
+        self._hostname_le.textChanged.connect(self.hostname_changed_sgn)
+        self._port_le.textChanged.connect(self.port_changed_sgn)
+
     def addRoiCtrl(self, roi):
         """Add the ROI ctrl widget.
 
@@ -203,8 +208,20 @@ class _SharedCtrlWidgetS(QFrame):
         self.roi_geometry_change_sgn.emit(object)
 
     @property
+    def hostname(self):
+        return self._hostname_le.text()
+
+    @property
+    def port(self):
+        return self._port_le.text()
+
+    @property
     def selected_client(self):
         return ClientType(self._client_type_cb.currentText())
+
+    @selected_client.setter
+    def selected_client(self, client_type: ClientType):
+        self._client_type_cb.setCurrentText(client_type.value)
 
 
 class _BaseAnalysisCtrlWidgetS(QFrame):
@@ -845,7 +862,7 @@ class _SpecialAnalysisBase(QMainWindow):
         self._com_ctrl_st.roi_geometry_change_sgn.connect(
             self._worker_st.onRoiGeometryChange)
         self._com_ctrl_st.client_type_changed_sgn.connect(
-            self._setClient
+            self.setClient
         )
 
         # Emit this signal now so that the client is initialized properly
@@ -876,8 +893,28 @@ class _SpecialAnalysisBase(QMainWindow):
         self._com_ctrl_st.auto_level_btn.clicked.connect(
             self._onAutoLevelST)
 
+    ###################################################################
+    # Interface start
+    ###################################################################
+
+    @abc.abstractmethod
+    def initUI(self):
+        """Initialization of UI."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        raise NotImplementedError
+
+    def setHostname(self, hostname: str):
+        self._com_ctrl_st._hostname_le.setText(hostname)
+
+    def setPort(self, port: str):
+        self._com_ctrl_st._port_le.setText(port)
+
     @pyqtSlot(object)
-    def _setClient(self, client_type):
+    def setClient(self, client_type):
         """
         Set the client to use, to read data from either EXtra-foam or a Karabo
         bridge.
@@ -894,19 +931,9 @@ class _SpecialAnalysisBase(QMainWindow):
         self._client_st.log.logOnMainThread(self)
         self._worker_st.setClientType(client_type)
 
-    ###################################################################
-    # Interface start
-    ###################################################################
-
-    @abc.abstractmethod
-    def initUI(self):
-        """Initialization of UI."""
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def initConnections(self):
-        """Initialization of signal-slot connections."""
-        raise NotImplementedError
+        # Update the GUI if necessary
+        if self._com_ctrl_st.selected_client != client_type:
+            self._com_ctrl_st.selected_client = client_type
 
     def centralWidget(self):
         """Return the central widget."""
