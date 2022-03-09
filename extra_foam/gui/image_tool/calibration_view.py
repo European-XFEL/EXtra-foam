@@ -76,8 +76,9 @@ class CalibrationView(_AbstractImageToolView):
 
     @pyqtSlot()
     def _loadGainConst(self):
-        filepath = QFileDialog.getOpenFileName(
-            caption="Load gain", directory=osp.expanduser("~"))[0]
+        filepath = QFileDialog.getOpenFileName(caption="Load gain",
+                                               directory=osp.expanduser("~"),
+                                               filter="Numpy files (*.npy)")[0]
 
         # do not remove reference if the user meant to cancel the selection
         if filepath:
@@ -86,8 +87,9 @@ class CalibrationView(_AbstractImageToolView):
 
     @pyqtSlot()
     def _loadOffsetConst(self):
-        filepath = QFileDialog.getOpenFileName(
-            caption="Load offset", directory=osp.expanduser("~"))[0]
+        filepath = QFileDialog.getOpenFileName(caption="Load offset",
+                                               directory=osp.expanduser("~"),
+                                               filter="Numpy files (*.npy)")[0]
 
         # do not remove reference if the user meant to cancel the selection
         if filepath:
