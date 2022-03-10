@@ -115,6 +115,7 @@ class XesTimingProcessor(QThreadWorker):
         self.new_train_data_sgn.emit(data)
 
         if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device]):
+            self.log.info("Either the detector, delay property, or target delay property have not been set.")
             return None
 
         # Get the actual and target delays, and round them to 3 decimal places
@@ -125,6 +126,7 @@ class XesTimingProcessor(QThreadWorker):
 
         # We ignore trains where the delay motor hasn't reached its target
         if delay != target_delay:
+            self.log.info(f"Skipping train, delay is not equal to target delay")
             return None
 
         img = self.squeezeToImage(tid, self.getPropertyData(data, *self._detector))
