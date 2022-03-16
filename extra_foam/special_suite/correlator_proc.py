@@ -151,9 +151,16 @@ class MetroPipeline(ThreadedFrontend):
 class CorrelatorProcessor(QThreadWorker):
     # Emitted when the views are changed
     updated_views_sgn = pyqtSignal(dict)
+
     # Emitted when incoming data is processed, only contains paths generated
     # from the incoming data (not including e.g. view paths).
     updated_data_paths_sgn = pyqtSignal(dict)
+
+    # Emitted upon a ContextError
+    context_error_sgn = pyqtSignal(object)
+
+    # Emitted upon a successful reload
+    reloaded_sgn = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -425,16 +432,19 @@ class CorrelatorProcessor(QThreadWorker):
         except ContextError as e:
             # ContextError's have their own functions for pretty printing
             logger.error(e.format_for_context(source))
+            self.context_error_sgn.emit(e)
             return
         except Exception as e:
             # For all other exceptions we log the traceback and error
             logger.error("".join([*traceback.format_tb(e.__traceback__), repr(e)]))
+            self.context_error_sgn.emit(e)
             return
 
         self._next_ctx_version += 1
         self._paths = self._ctx.get_paths()
         self._pipeline.set_context(self._ctx)
 
+        self.reloaded_sgn.emit()
         self.log.info("Reloaded")
 
     def close(self, timeout=1):

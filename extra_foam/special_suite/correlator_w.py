@@ -1,3 +1,4 @@
+import sys
 import time
 import textwrap
 import itertools
@@ -18,10 +19,12 @@ from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
                              QStackedWidget, QComboBox, QLabel, QAction, QMenu,
                              QStyle, QTabBar, QToolButton, QFileDialog,
                              QCheckBox, QGridLayout, QHBoxLayout, QMessageBox,
-                             QTreeWidget, QTreeWidgetItem, QAbstractItemView)
+                             QTreeWidget, QTreeWidgetItem, QAbstractItemView,
+                             QApplication)
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs
 
 from metropc.client import ViewOutput
+from metropc import error as mpc_error
 
 from .. import ROOT_PATH
 from ..utils import RectROI as MetroRectROI
@@ -974,10 +977,13 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         self._editor.setIndentationsUseTabs(False)
         self._editor.setTabWidth(4)
         self._editor.setAutoIndent(True)
-        self._editor.setMarginWidth(0, "0000")
-        self._editor.setMarginLineNumbers(0, True)
         self._editor.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
         self._editor.textChanged.connect(self._onContextModified)
+
+        self._editor.setMarginWidth(0, "0000")
+        self._editor.setMarginLineNumbers(0, True)
+        self._editor.setMarginWidth(1, "0000")
+        self._editor.setMarginType(1, QsciScintilla.MarginType.SymbolMargin)
 
         self._tab_widget.addTab(self._editor, "Context")
 
@@ -997,6 +1003,11 @@ class CorrelatorWindow(_SpecialAnalysisBase):
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
+        self._error_marker_nr = 0
+        self._editor.markerDefine(QsciScintilla.MarkerSymbol.Circle, self._error_marker_nr)
+        self._editor.setMarkerForegroundColor(FColor.mkColor("r"), self._error_marker_nr)
+        self._editor.setMarkerBackgroundColor(FColor.mkColor("r"), self._error_marker_nr)
+
     def initConnections(self):
         ctrl = self._ctrl_widget_st
         worker = self._worker_st
@@ -1013,9 +1024,40 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         self._com_ctrl_st.port_changed_sgn.connect(self._onPortChanged)
         self._com_ctrl_st.client_type_changed_sgn.connect(self._onClientTypeChanged)
 
+        worker.reloaded_sgn.connect(self._clearMarkers)
+        worker.context_error_sgn.connect(self._onContextError)
         worker.updated_views_sgn.connect(self._onViewsUpdated)
         worker.updated_data_paths_sgn.connect(self._completer.setDataPaths)
         worker.updated_data_paths_sgn.connect(self._ctrl_widget_st.setDataPaths)
+
+    def _onContextError(self, error):
+        self._clearMarkers()
+
+        # Find the error line number in the context file
+        lineno = -1
+        if isinstance(error, cst.ParserSyntaxError):
+            lineno = error.raw_line
+        elif isinstance(error, mpc_error.PathResolutionError):
+            lineno = error.view.kernel.__code__.co_firstlineno
+        elif isinstance(error, mpc_error.ViewDefError):
+            lineno = error._find_context_frame("<ctx>")
+        elif isinstance(error, mpc_error.ContextSyntaxError):
+            lineno = error.orig_error.lineno
+        elif isinstance(error, Exception):
+            tb = sys.exc_info()[2]
+            for frame in traceback.extract_tb(tb):
+                if frame.filename == "<ctx>":
+                    lineno = frame.lineno
+                    break
+
+        if lineno == -1:
+            logger.error(f"Couldn't get line number from {type(error)} for display")
+            return
+
+        self._editor.markerAdd(lineno - 1, self._error_marker_nr)
+
+    def _clearMarkers(self):
+        self._editor.markerDeleteAll()
 
     @property
     def context(self):
@@ -1065,7 +1107,23 @@ class CorrelatorWindow(_SpecialAnalysisBase):
             raise RuntimeError("Unsupported ROI type")
 
         # Modify the source as needed
-        module = cstmeta.MetadataWrapper(cst.parse_module(ctx))
+        try:
+            module = cstmeta.MetadataWrapper(cst.parse_module(ctx))
+        except cst.ParserSyntaxError as e:
+            logger.error(str(e))
+
+            marker_exists = self._editor.markerFindNext(e.raw_line - 1, 1) == e.raw_line - 1
+            if not marker_exists:
+                self._onContextError(e)
+                active_window = QApplication.activeWindow()
+                QMessageBox.warning(active_window,
+                                    "Syntax error in context",
+                                    "The context file has a syntax error, updating the parameters in the context file will not work until it is fixed.")
+
+            return
+        else:
+            self._clearMarkers()
+
         transformer = RoiTransformer(roi_cls, roi_name, roi_args)
         new_source = module.visit(transformer)
 
