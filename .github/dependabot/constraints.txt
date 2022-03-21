@@ -13,7 +13,7 @@ dask==2022.2.1
 decorator==5.1.1
 defusedxml==0.7.1
 entrypoints==0.4
-EXtra-data==1.10.0
+EXtra-data==1.11.0
 fabio==0.13.0
 fsspec==2022.2.0
 EXtra-geom==1.7.0
