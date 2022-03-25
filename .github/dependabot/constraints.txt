@@ -63,7 +63,7 @@ psutil==5.9.0
 ptyprocess==0.7.0
 pybind11==2.9.1
 pycparser==2.21
-pyFAI==0.21.2
+pyFAI==0.21.3
 Pygments==2.11.2
 pyparsing==3.0.7
 PyQt5==5.15.6
