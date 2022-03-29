@@ -35,7 +35,7 @@ jupyter-core==4.9.2
 jupyterlab-pygments==0.1.2
 jupyterlab-widgets==1.1.0
 karabo-bridge==0.6.1
-kiwisolver==1.4.1
+kiwisolver==1.4.2
 locket==0.2.1
 MarkupSafe==2.1.1
 matplotlib==3.5.1
