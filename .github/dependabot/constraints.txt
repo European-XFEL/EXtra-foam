@@ -15,7 +15,7 @@ defusedxml==0.7.1
 entrypoints==0.4
 EXtra-data==1.11.0
 fabio==0.13.0
-fsspec==2022.2.0
+fsspec==2022.3.0
 EXtra-geom==1.7.0
 future==0.18.2
 h5py==3.6.0
