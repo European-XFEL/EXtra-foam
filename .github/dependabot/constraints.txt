@@ -38,6 +38,7 @@ karabo-bridge==0.6.1
 kiwisolver==1.4.2
 libcst==0.4.1
 locket==0.2.1
+lttbc==0.2.1
 MarkupSafe==2.1.1
 matplotlib==3.5.2
 mistune==2.0.2

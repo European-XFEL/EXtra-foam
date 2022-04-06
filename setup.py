@@ -316,6 +316,7 @@ setup(
         "metropc @ git+ssh://git@git.xfel.eu:10022/karaboDevices/metropc.git@high_high_water_mark",
         "qscintilla",
         "libcst",
+        "lttbc",
         # These dependencies are not directly used, but are needed to satisfy
         # pip's resolver:
         'pygments',
