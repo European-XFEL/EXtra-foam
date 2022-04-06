@@ -7,6 +7,7 @@ import os.path as osp
 from enum import Enum
 from collections import defaultdict
 
+import lttbc
 import libcst as cst
 import libcst.matchers as m
 import libcst.metadata as cstmeta
@@ -352,6 +353,9 @@ class ViewWidget(QStackedWidget):
             if buf.capacity() != self._max_points:
                 buf.resize(self._max_points)
 
+    def downsample(self, x, y):
+        return lttbc.downsample(x, y, 2000)
+
     def updateF(self, all_data):
         if self._current_view not in all_data:
             return
@@ -404,7 +408,9 @@ class ViewWidget(QStackedWidget):
                     # it's the Y axis data and generate the X axis.
                     if data.values.shape[0] == 1:
                         y_data = data.values[0]
-                        self._xs.extend(np.arange(len(y_data)))
+                        x_data = np.arange(len(y_data))
+                        x_data, y_data = self.downsample(x_data, y_data)
+                        self._xs.extend(x_data)
                         self._ys[y_series_labels[0]].extend(y_data)
 
                     # Otherwise, we treat the first vector slice as the X axis,
@@ -447,8 +453,11 @@ class ViewWidget(QStackedWidget):
                 self._clearData()
 
                 if is_ndarray:
-                    self._xs.extend(range(len(data)))
-                    self._ys["y0"].extend(data)
+                    x_data = np.arange(len(data))
+                    x_data, y_data = self.downsample(x_data, data)
+
+                    self._xs.extend(x_data)
+                    self._ys["y0"].extend(y_data)
                 elif is_xarray:
                     handle_rich_output()
                 else:
