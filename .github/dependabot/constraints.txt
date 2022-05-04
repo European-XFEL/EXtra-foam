@@ -38,13 +38,13 @@ karabo-bridge==0.6.1
 kiwisolver==1.4.2
 locket==0.2.1
 MarkupSafe==2.1.1
-matplotlib==3.5.1
+matplotlib==3.5.2
 mistune==2.0.2
 msgpack==1.0.3
 msgpack-numpy==0.4.7.1
-nbclient==0.6.0
+nbclient==0.6.2
 nbconvert==6.5.0
-nbformat==5.3.0
+nbformat==5.4.0
 nest-asyncio==1.5.5
 notebook==6.4.11
 numexpr==2.8.1
