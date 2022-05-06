@@ -411,9 +411,10 @@ class LinearROI():
         return data[lower_bound:upper_bound]
 
 class AnnotatedView(View, abstract=True):
-    def __init__(self, *args, annotations, **kwargs):
+    def __init__(self, *args, annotations=None, aspect_unlocked=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.annotations = annotations
+        self.aspect_unlocked = aspect_unlocked
 
 class ImageWithROIsView(AnnotatedView, output=ViewOutput.IMAGE):
     def __init__(self, *args, rois=None, **kwargs):
@@ -423,5 +424,10 @@ class VectorWithROIsView(AnnotatedView, output=ViewOutput.VECTOR):
     def __init__(self, *args, rois=None, **kwargs):
         super().__init__(*args, annotations=rois, **kwargs)
 
+class ImageAspectUnlockedView(AnnotatedView, output=ViewOutput.IMAGE):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, aspect_unlocked=True, **kwargs)
+
 ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=ImageWithROIsView))
 ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=VectorWithROIsView))
+ViewDecorator.kwargs_symbols.update(AspectUnlocked=dict(view_impl=ImageAspectUnlockedView))

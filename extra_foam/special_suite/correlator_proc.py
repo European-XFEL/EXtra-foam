@@ -59,12 +59,13 @@ class FoamPath(MetroPath, alias="foam"):
 
 
 class ViewEntry(IndexViewEntry):
-    __slots__ = ["annotations"]
+    __slots__ = ["annotations", "aspect_unlocked"]
 
-    def __init__(self, annotations, entry):
+    def __init__(self, entry, annotations=None, aspect_unlocked=False):
         super().__init__(entry.counts, entry.rate, entry.output, entry.stage)
 
         self.annotations = annotations
+        self.aspect_unlocked = aspect_unlocked
 
 
 # This is a helper type to hold useful data about a path, to be displayed in a
@@ -243,7 +244,9 @@ class CorrelatorProcessor(QThreadWorker):
 
             # Create a custom index entry that stores annotations
             view = self._ctx.views[s.split("#")[1]]
-            view_entry = ViewEntry(getattr(view, "annotations", []), index[s])
+            view_entry = ViewEntry(index[s],
+                                   getattr(view, "annotations", []),
+                                   getattr(view, "aspect_unlocked", False))
 
             self._subscriptions[s] = view_entry
             self.log.debug(f"Subscribed to {s}")
