@@ -508,6 +508,8 @@ class ViewWidget(QStackedWidget):
 
             # Update the plots
             if view_type == ViewOutput.IMAGE:
+                self._image_view.setAspectLocked(not view.aspect_unlocked)
+
                 if not is_ndarray:
                     logger.error(f"Cannot handle Image data of type: {type(data)}")
                     return
