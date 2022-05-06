@@ -216,7 +216,7 @@ class ViewWidget(QStackedWidget):
         view_selection_widget.setLayout(layout)
 
         # Create plot widgets
-        self._image_view = ImageViewF(has_roi=True)
+        self._image_view = ImageViewF(has_roi=True, hide_axis=False)
         for roi in self._image_view.rois:
             roi.setLocked(False)
         # Note: this QHBoxLayout is currently unused but should be kept, it's a
