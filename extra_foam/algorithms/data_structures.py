@@ -334,6 +334,10 @@ class OneWayAccuPairSequence(_AbstractSequence):
 
         self._last = 0
 
+    @property
+    def resolution(self):
+        return self._resolution
+
     def __getitem__(self, index):
         """Override."""
         s = slice(self._i0, self._i0 + self._len)
