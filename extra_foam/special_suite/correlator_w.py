@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
                              QStyle, QTabBar, QToolButton, QFileDialog,
                              QCheckBox, QGridLayout, QHBoxLayout, QMessageBox,
                              QTreeWidget, QTreeWidgetItem, QAbstractItemView,
-                             QApplication)
+                             QApplication, QGroupBox, QVBoxLayout, QDoubleSpinBox)
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs
 
 from metropc.client import ViewOutput
@@ -30,7 +30,7 @@ from metropc import error as mpc_error
 from .. import ROOT_PATH
 from ..utils import RectROI as MetroRectROI
 from ..utils import LinearROI as MetroLinearROI
-from ..algorithms import SimpleSequence
+from ..algorithms import SimpleSequence, OneWayAccuPairSequence
 from ..pipeline.data_model import ProcessedData
 from ..gui.plot_widgets import LinearROI
 from ..gui.plot_widgets.image_items import RectROI
@@ -182,6 +182,9 @@ class ViewWidget(QStackedWidget):
         self._max_points = 5000
         self._xs = SimpleSequence(max_len=self._max_points)
         self._ys = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
+        # We can't set the initial resolution to 0, so as a workaround we set it
+        # to 0.0001. This variable might die at some point.
+        self._scalar_ys = defaultdict(lambda: OneWayAccuPairSequence(0.0001, max_len=self._max_points))
         self._errors = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
         self._annotations = { }
         self._current_view = None
@@ -226,9 +229,46 @@ class ViewWidget(QStackedWidget):
         self._image_widget = QWidget()
         self._image_widget.setLayout(image_widget_layout)
 
+        # Create the plot widget
         self._plot_widget = PlotWidgetF()
         self._legend = self._plot_widget.addLegend(offset=(-30, -30))
         self._plot_widget.showLegend()
+
+        # Create the plot widget analyser
+        self._plot_widget_analyser = QWidget()
+        # Hide it by default
+        self._plot_widget_analyser.hide()
+        plot_widget_analyser_layout = QVBoxLayout()
+        self._plot_widget_analyser.setLayout(plot_widget_analyser_layout)
+
+        icon = self.style().standardIcon(QStyle.SP_ArrowRight)
+        analyser_close_btn = QToolButton()
+        analyser_close_btn.setIcon(icon)
+        analyser_close_btn.setToolTip("Minimize panel")
+        analyser_close_btn.clicked.connect(self._plot_widget_analyser.hide)
+        analyser_close_btn.setLayoutDirection(Qt.RightToLeft)
+        plot_widget_analyser_layout.addWidget(analyser_close_btn, Qt.AlignRight)
+
+        # Binning settings
+        self._binning_grpbox = QGroupBox("Scan binning")
+        self._binning_grpbox.setCheckable(True)
+        binning_layout = QGridLayout()
+        self._binning_grpbox.setLayout(binning_layout)
+
+        self._xbin_spinbox = QDoubleSpinBox()
+        self._xbin_spinbox.setSingleStep(0.1)
+        self._xbin_spinbox.setDecimals(5)
+
+        row = 0
+        binning_layout.addWidget(QLabel("Resolution:"), row, 0)
+        binning_layout.addWidget(self._xbin_spinbox, row, 1)
+
+        plot_widget_analyser_layout.addWidget(self._binning_grpbox)
+        plot_widget_analyser_layout.addStretch()
+
+        self._plot_widget_splitter = QSplitter()
+        self._plot_widget_splitter.addWidget(self._plot_widget)
+        self._plot_widget_splitter.addWidget(self._plot_widget_analyser)
 
         # Create menu items
         self._back_action = QAction("Back")
@@ -237,18 +277,20 @@ class ViewWidget(QStackedWidget):
         self._split_below_action = QAction("Below")
         self._split_left_action = QAction("Left")
         self._split_right_action = QAction("Right")
+        self._extra_analysis_action = QAction("Extra analysis")
         split_menu = QMenu("Split frame")
         split_menu.addAction(self._split_above_action)
         split_menu.addAction(self._split_below_action)
         split_menu.addAction(self._split_left_action)
         split_menu.addAction(self._split_right_action)
+        self._plot_widget.addMenuItem(self._extra_analysis_action)
         for action in [split_menu, self._back_action, self._reset_action]:
             self._image_view.addMenuItem(action)
             self._plot_widget.addMenuItem(action)
 
         self.addWidget(view_selection_widget)
         self.addWidget(self._image_widget)
-        self.addWidget(self._plot_widget)
+        self.addWidget(self._plot_widget_splitter)
 
     def initConnections(self):
         self.view_picker.currentTextChanged.connect(self._onViewChanged)
@@ -262,6 +304,7 @@ class ViewWidget(QStackedWidget):
         self._split_below_action.triggered.connect(lambda: split(SplitDirection.BELOW))
         self._split_left_action.triggered.connect(lambda: split(SplitDirection.LEFT))
         self._split_right_action.triggered.connect(lambda: split(SplitDirection.RIGHT))
+        self._extra_analysis_action.triggered.connect(self._plot_widget_analyser.show)
 
     def updateImage(self, **kwargs):
         """
@@ -269,6 +312,20 @@ class ViewWidget(QStackedWidget):
         Specifically, this gets called for auto-leveling images.
         """
         self._image_view.updateImage(**kwargs)
+
+    @property
+    def xbinning_resolution(self):
+        """
+        Return the resolution for scan binning along the X axis.
+        """
+        return self._xbin_spinbox.value()
+
+    @property
+    def xbinning_enabled(self):
+        """
+        Check if scan binning is enabled.
+        """
+        return self._xbin_spinbox.isEnabled() and self.xbinning_resolution > 0
 
     @pyqtSlot()
     def delete(self):
@@ -279,10 +336,11 @@ class ViewWidget(QStackedWidget):
     def _clearData(self):
         self._xs.reset()
 
+        self._scalar_ys.clear()
         for label in list(self._ys.keys()):
-            self._deletePlot(label, self._ys, self._plots)
+            self._deletePlot(label, self._plots, self._ys)
         for label in list(self._errors.keys()):
-            self._deletePlot(label, self._errors, self._error_plots)
+            self._deletePlot(label, self._error_plots, self._errors)
 
         # Resetting the color list makes the colors more consistent when views
         # are changed or reset.
@@ -311,6 +369,11 @@ class ViewWidget(QStackedWidget):
             self._current_view = view_name
 
         view = self._views[view_name]
+
+        # Only enable scan binning if it's a scalar plot
+        self._binning_grpbox.setEnabled(view.output in [ViewOutput.SCALAR, ViewOutput.COMPUTE])
+
+        # Set the right widget and appropriate plot factory
         if view.output == ViewOutput.IMAGE:
             self.setCurrentWidget(self._image_widget)
         else:
@@ -322,7 +385,7 @@ class ViewWidget(QStackedWidget):
                 logger.error(f"Unsupported view type: {view.output}")
 
             self._plots = defaultdict(plot_factory)
-            self.setCurrentWidget(self._plot_widget)
+            self.setCurrentWidget(self._plot_widget_splitter)
 
         self._currentPlotWidget().setTitle(view_name)
 
@@ -335,8 +398,10 @@ class ViewWidget(QStackedWidget):
     def _curve_plot_factory(self):
         return self._plot_widget.plotCurve(pen=FColor.mkPen(next(self._next_color)))
 
-    def _deletePlot(self, label, data_dict, plot_dict):
-        del data_dict[label]
+    def _deletePlot(self, label, plot_dict, data_dict=None):
+        if data_dict is not None:
+            del data_dict[label]
+
         self._plot_widget.removeItem(plot_dict[label])
         del plot_dict[label]
 
@@ -355,6 +420,44 @@ class ViewWidget(QStackedWidget):
 
     def downsample(self, x, y):
         return lttbc.downsample(x, y, 2000)
+
+    def update_scalar_series(self, label, value, error=None):
+        """
+        This function updates a scalar (as opposed to vector) series with new
+        data. Takes care of errors, etc.
+        """
+        # Helper lambda to generate nan's for the previous X values. Note that
+        # the length of the array is N - 1, since the new value goes at the N'th
+        # spot.
+        nan_xs = lambda: np.full((len(self._xs) - 1, ), np.nan)
+
+        # If the label is new, initialize it with NaNs for the
+        # previous elements so the label data is the right size to
+        # match self._xs.
+        if label not in self._ys and len(self._xs) > 0:
+            self._ys[label].extend(nan_xs())
+
+        self._ys[label].append(value)
+
+        if self.xbinning_enabled:
+            # Ensure that we've recorded the data with the right resolution
+            if self._scalar_ys[label].resolution != self.xbinning_resolution:
+                self._scalar_ys[label] = OneWayAccuPairSequence.from_array(self._xs.data(),
+                                                                           self._ys[label].data(),
+                                                                           self.xbinning_resolution,
+                                                                           max_len=self._max_points)
+            else:
+                self._scalar_ys[label].append((self._xs[-1], value))
+
+            # Update the error bars
+            xs, ys_stats = self._scalar_ys[label].data()
+            if label not in self._errors and len(self._xs) > 0:
+                y_stdev = (ys_stats.max - ys_stats.min) / 2
+                self._errors[label].extend(y_stdev)
+            elif len(ys_stats.avg) > 0:
+                y_stdev = (ys_stats.max[-1] - ys_stats.min[-1]) / 2
+                self._errors[label].append(y_stdev)
+
 
     def updateF(self, all_data):
         if self._current_view not in all_data:
@@ -383,24 +486,20 @@ class ViewWidget(QStackedWidget):
                     if len(data) == 1:
                         label = y_series_labels[0]
                         self._xs.append(len(self._xs))
-                        self._ys[label].append(data.values[0])
+                        self.update_scalar_series(label, data.values[0])
                     else:
+                        self._xs.append(data.values[0])
+
                         for i, value in enumerate(data.values[1:]):
                             label = y_series_labels[i]
+                            self.update_scalar_series(label, value)
 
-                            # If the label is new, initialize it with NaNs for the
-                            # previous elements so the label data is the right size to
-                            # match self._xs.
-                            if label not in self._ys and len(self._xs) > 0:
-                                self._ys[label].extend(np.full((len(self._xs), ), np.nan))
-                            self._ys[label].append(value)
-
-                            if label in series_errors:
+                            # TODO: move this block of code into update_scalar_series()
+                            if label in series_errors and not self.xbinning_enabled:
                                 if label not in self._errors and len(self._xs) > 0:
                                     self._errors[label].extend(np.full((len(self._xs), ), np.nan))
                                 self._errors[label].append(series_errors[label])
 
-                        self._xs.append(data.values[0])
 
                 # If we're dealing with Vector data
                 elif data.ndim == 2:
@@ -431,19 +530,26 @@ class ViewWidget(QStackedWidget):
                 # Remove old plots
                 for label in list(self._ys.keys()):
                     if label not in y_series_labels:
-                        self._deletePlot(label, self._ys, self._plots)
+                        self._deletePlot(label, self._plots, self._ys)
 
                         if label in self._errors:
-                            self._deletePlot(label, self._errors, self._error_plots)
+                            self._deletePlot(label, self._error_plots, self._errors)
 
-                    if label in self._errors and label not in series_errors:
-                        self._deletePlot(label, self._errors, self._error_plots)
+                    if label in self._errors and label not in series_errors and not self.xbinning_enabled:
+                        self._deletePlot(label, self._error_plots, self._errors)
 
             # Update stored data
             if view_type == ViewOutput.SCALAR:
                 if np.isscalar(data):
                     self._xs.append(len(self._xs))
-                    self._ys["y0"].append(data)
+                    self.update_scalar_series("y0", data)
+
+                    # Remove old error plots. TODO: merge this with the similar
+                    # code in handle_rich_output().
+                    for label in self._ys.keys():
+                        if label in self._errors and not self.xbinning_enabled:
+                            self._deletePlot(label, self._error_plots, self._errors)
+
                 elif is_xarray:
                     handle_rich_output()
                 else:
@@ -522,16 +628,34 @@ class ViewWidget(QStackedWidget):
                 self._legend.clear()
                 for label, ys_data in self._ys.items():
                     self._legend.addItem(self._plots[label], label)
-                    self._plots[label].setData(self._xs.data(), ys_data.data())
+
+                    if self.xbinning_enabled:
+                        xs_data, ys_stats = self._scalar_ys[label].data()
+                        ys_data = ys_stats.avg
+                    else:
+                        xs_data = self._xs.data()
+                        ys_data = ys_data.data()
+
+                    self._plots[label].setData(xs_data, ys_data)
 
                     if label in self._errors:
                         error_data = self._errors[label].data()
 
+                        beam_width = self.xbinning_resolution if self.xbinning_enabled else 1
                         if label not in self._error_plots:
-                            self._error_plots[label] = self._plot_widget.plotStatisticsBar(pen=self._plots[label]._pen, beam=1)
+                            self._error_plots[label] = self._plot_widget.plotStatisticsBar(pen=self._plots[label]._pen,
+                                                                                           beam=beam_width)
 
-                        self._error_plots[label].setData(self._xs.data(), ys_data,
-                                                         y_min=ys_data - error_data, y_max=ys_data + error_data)
+                        if self.xbinning_enabled:
+                            ys_min = ys_stats.min
+                            ys_max = ys_stats.max
+                        else:
+                            ys_min = ys_data - error_data
+                            ys_max = ys_data + error_data
+
+                        self._error_plots[label].setBeam(beam_width)
+                        self._error_plots[label].setData(xs_data, ys_data,
+                                                         y_min=ys_min, y_max=ys_max)
 
                 if is_xarray:
                     if "xlabel" in data.attrs:

@@ -428,6 +428,25 @@ class TestCorrelatorWindow:
             widget.updateF({ view_name: [output] })
             set_image.assert_called_with(output)
 
+    def testBinning(self, win, initial_context):
+        widget = win._tab_widget.widget(1).widget(0)
+        view_picker = widget.view_picker
+
+        view_name = "view#scalar"
+        view_picker.setCurrentText(view_name)
+
+        widget._binning_grpbox.setChecked(True)
+        widget._xbin_spinbox.setValue(0.1)
+
+        # Fill the plot with some scan data
+        scan_steps = 10
+        for x in range(scan_steps):
+            for _ in range(10):
+                output = rich_output(x, y1=S(np.random.rand()))
+                widget.updateF({ view_name: [output] })
+
+        assert len(widget._scalar_ys["y1"]) == scan_steps
+
 
 class TestCorrelatorProcessor(_TestDataMixin, _SpecialSuiteProcessorTestBase):
     digitizer = "MID_EXP_FASTADC/ADC/DESTEST:channel_1.output"
