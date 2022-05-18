@@ -12,6 +12,7 @@ from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QTabBar, QToolButton
 
 from . import _SpecialSuiteProcessorTestBase
+from ...algorithms import FittingType
 from ...utils import rich_output, Series as S
 from ..special_analysis_base import ClientType, _SpecialAnalysisBase
 from ...pipeline.tests import _TestDataMixin
@@ -427,6 +428,28 @@ class TestCorrelatorWindow:
         with patch.object(image_view, "setImage") as set_image:
             widget.updateF({ view_name: [output] })
             set_image.assert_called_with(output)
+
+    @pytest.mark.parametrize("fit_type", [FittingType.LINEAR, FittingType.GAUSSIAN])
+    def testCurveFitting(self, win, initial_context, fit_type):
+        widget = win._tab_widget.widget(1).widget(0)
+        view_picker = widget.view_picker
+
+        view_name = "view#scalar"
+        view_picker.setCurrentText(view_name)
+
+        # Fill the plot with some data
+        for x in range(100):
+            output = rich_output(x, y1=S(np.random.rand()))
+            widget.updateF({ view_name: [output] })
+
+        # Fit data
+        widget._fitting_function_cb.setCurrentText(fit_type.value)
+        widget._fit_btn.clicked.emit()
+
+        # Check that the fit succeeded and filled out the parameters. This is
+        # mostly a smoke test, we don't check that the fit makes sense.
+        for name, param_widget in widget._fit_parameter_widgets[fit_type].items():
+            assert len(param_widget.text()) != 0, f"Parameter '{name}' for {fit_type} has no value"
 
     def testBinning(self, win, initial_context):
         widget = win._tab_widget.widget(1).widget(0)

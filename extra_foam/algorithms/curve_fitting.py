@@ -8,20 +8,20 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import abstractmethod
-from enum import IntEnum
+from enum import Enum
 
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy import special
 
 
-class FittingType(IntEnum):
-    UNDEFINED = 0
-    LINEAR = 1
-    CUBIC = 2
-    GAUSSIAN = 11
-    LORENTZIAN = 21
-    ERF = 31
+class FittingType(Enum):
+    UNDEFINED = "None"
+    LINEAR = "Linear"
+    CUBIC = "Cubic"
+    GAUSSIAN = "Gaussian"
+    LORENTZIAN = "Lorentzian"
+    ERF = "erf"
 
 
 class CurveFitting:
@@ -34,9 +34,21 @@ class CurveFitting:
             popt, _ = curve_fit(self, x, y, p0=p0, check_finite=True)
             return popt
 
+        def parameters(self):
+            """
+            Return a list of parameters by name. Intended for display in GUIs etc.
+            """
+            raise NotImplementedError()
+
+        def guess_p0(self, x, y):
+            """
+            Return initial guesses for all required parameters.
+            """
+            raise NotImplementedError()
+
         @staticmethod
         def format(*args):
-            raise NotImplementedError
+            raise NotImplementedError()
 
     class Linear(_BaseCurveFitting):
         def __init__(self):
@@ -45,6 +57,15 @@ class CurveFitting:
 
         def __call__(self, x, a, b):
             return a + b * x
+
+        def parameters(self):
+            return ["Offset", "Slope"]
+
+        def guess_p0(self, x, y):
+            offset = np.nanmin(y)
+            slope = (y[-1] - y[0]) / (x[-1] - x[0])
+
+            return offset, slope
 
         @staticmethod
         def format(a, b):
@@ -71,6 +92,18 @@ class CurveFitting:
 
         def __call__(self, x, a, b, c, d):
             return a * np.exp(-(x - b)**2 / (2 * c**2)) + d
+
+        def parameters(self):
+            return ["Amplitude", "Mean", "Std dev.", "Offset"]
+
+        def guess_p0(self, x, y):
+            max_idx = np.nanargmax(y)
+            mean = x[max_idx]
+            amplitude = max(1, y[max_idx])
+            stdev = len(y) / 4
+            offset = np.nanmin(y)
+
+            return [amplitude, mean, stdev, offset]
 
         @staticmethod
         def format(a, b, c, d):
