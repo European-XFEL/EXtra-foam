@@ -14,14 +14,15 @@ import libcst.metadata as cstmeta
 import numpy as np
 import xarray as xr
 
-from PyQt5.QtGui import QFont, QBrush
+from PyQt5.QtGui import QFont, QBrush, QDoubleValidator
 from PyQt5.QtCore import Qt, QSettings, pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
-                             QStackedWidget, QComboBox, QLabel, QAction, QMenu,
-                             QStyle, QTabBar, QToolButton, QFileDialog,
+                             QFrame, QStackedWidget, QComboBox, QLabel, QAction,
+                             QMenu, QStyle, QTabBar, QToolButton, QFileDialog,
                              QCheckBox, QGridLayout, QHBoxLayout, QMessageBox,
                              QTreeWidget, QTreeWidgetItem, QAbstractItemView,
-                             QApplication, QGroupBox, QVBoxLayout, QDoubleSpinBox)
+                             QApplication, QGroupBox, QVBoxLayout,
+                             QDoubleSpinBox, QLineEdit, QScrollArea)
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs
 
 from metropc.client import ViewOutput
@@ -30,7 +31,7 @@ from metropc import error as mpc_error
 from .. import ROOT_PATH
 from ..utils import RectROI as MetroRectROI
 from ..utils import LinearROI as MetroLinearROI
-from ..algorithms import SimpleSequence, OneWayAccuPairSequence
+from ..algorithms import SimpleSequence, OneWayAccuPairSequence, FittingType, CurveFitting
 from ..pipeline.data_model import ProcessedData
 from ..gui.plot_widgets import LinearROI
 from ..gui.plot_widgets.image_items import RectROI
@@ -182,6 +183,8 @@ class ViewWidget(QStackedWidget):
         self._max_points = 5000
         self._xs = SimpleSequence(max_len=self._max_points)
         self._ys = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
+        self._fit_parameter_widgets = { }
+        self._fit_plots = { }
         # We can't set the initial resolution to 0, so as a workaround we set it
         # to 0.0001. This variable might die at some point.
         self._scalar_ys = defaultdict(lambda: OneWayAccuPairSequence(0.0001, max_len=self._max_points))
@@ -235,11 +238,15 @@ class ViewWidget(QStackedWidget):
         self._plot_widget.showLegend()
 
         # Create the plot widget analyser
-        self._plot_widget_analyser = QWidget()
+        self._plot_widget_analyser = QScrollArea()
+        self._plot_widget_analyser.setWidgetResizable(True)
+        self._plot_widget_analyser.setSizeAdjustPolicy(QScrollArea.AdjustToContentsOnFirstShow)
         # Hide it by default
         self._plot_widget_analyser.hide()
+
+        plot_widget_analyser_holder_widget = QWidget()
         plot_widget_analyser_layout = QVBoxLayout()
-        self._plot_widget_analyser.setLayout(plot_widget_analyser_layout)
+        plot_widget_analyser_holder_widget.setLayout(plot_widget_analyser_layout)
 
         icon = self.style().standardIcon(QStyle.SP_ArrowRight)
         analyser_close_btn = QToolButton()
@@ -263,10 +270,73 @@ class ViewWidget(QStackedWidget):
         binning_layout.addWidget(QLabel("Resolution:"), row, 0)
         binning_layout.addWidget(self._xbin_spinbox, row, 1)
 
+        # Curve fitting settings
+        curve_fitting_grpbox = QGroupBox("Curve fitting")
+        curve_fitting_layout = QGridLayout()
+        curve_fitting_grpbox.setLayout(curve_fitting_layout)
+
+        self._series_for_fitting_cb = QComboBox()
+        self._fitting_function_cb = QComboBox()
+        self._fitting_function_cb.addItem(FittingType.LINEAR.value)
+        self._fitting_function_cb.addItem(FittingType.GAUSSIAN.value)
+
+        self._fit_btn = QPushButton("Compute fit")
+
+        self._guess_fit_params_checkbox = QCheckBox("Guess fit parameters")
+        hline = QFrame()
+        hline.setFrameShape(QFrame.HLine)
+        hline.setStyleSheet('border: 2px solid lightgray')
+
+        parameters_grpbox = QGroupBox("Parameters:")
+        parameters_layout = QVBoxLayout()
+
+        self._parameters_stackwidget = QStackedWidget()
+        for fit_type in [FittingType.LINEAR, FittingType.GAUSSIAN]:
+            fitter = CurveFitting.create(fit_type)
+            self._fit_parameter_widgets[fit_type] = { }
+
+            widget = QWidget()
+            layout = QGridLayout()
+            widget.setLayout(layout)
+
+            for i, param in enumerate(fitter.parameters()):
+                param_widget = QLineEdit()
+                param_widget.setValidator(QDoubleValidator())
+                layout.addWidget(QLabel(f"{param}:"), i, 0)
+                layout.addWidget(param_widget, i, 1)
+
+                self._fit_parameter_widgets[fit_type][param] = param_widget
+
+            self._parameters_stackwidget.addWidget(widget)
+
+        parameters_layout.addWidget(self._parameters_stackwidget)
+        parameters_grpbox.setLayout(parameters_layout)
+
+        row = 0
+        curve_fitting_layout.addWidget(QLabel("Series:"), row, 0)
+        curve_fitting_layout.addWidget(self._series_for_fitting_cb, row, 1)
+        row += 1
+        curve_fitting_layout.addWidget(QLabel("Function:"), row, 0)
+        curve_fitting_layout.addWidget(self._fitting_function_cb, row, 1)
+        row += 1
+        curve_fitting_layout.addWidget(self._fit_btn, row, 0, 1, 2)
+        row += 1
+        curve_fitting_layout.addWidget(hline, row, 0, 1, 2)
+        row += 1
+        curve_fitting_layout.addWidget(self._guess_fit_params_checkbox, row, 0, 1, 2)
+        row += 1
+        curve_fitting_layout.addWidget(parameters_grpbox, row, 0, 1, 2)
+
         plot_widget_analyser_layout.addWidget(self._binning_grpbox)
+        plot_widget_analyser_layout.addWidget(curve_fitting_grpbox)
         plot_widget_analyser_layout.addStretch()
 
+        # We need to set the scroll area widget after it has been full created,
+        # otherwise the widgets don't show up.
+        self._plot_widget_analyser.setWidget(plot_widget_analyser_holder_widget)
+
         self._plot_widget_splitter = QSplitter()
+        self._plot_widget_splitter.setChildrenCollapsible(False)
         self._plot_widget_splitter.addWidget(self._plot_widget)
         self._plot_widget_splitter.addWidget(self._plot_widget_analyser)
 
@@ -306,6 +376,75 @@ class ViewWidget(QStackedWidget):
         self._split_right_action.triggered.connect(lambda: split(SplitDirection.RIGHT))
         self._extra_analysis_action.triggered.connect(self._plot_widget_analyser.show)
 
+        self._fit_btn.clicked.connect(self._computeFit)
+        self._fitting_function_cb.currentIndexChanged.connect(self._parameters_stackwidget.setCurrentIndex)
+        self._guess_fit_params_checkbox.stateChanged.connect(self._onGuessFitParamsChanged)
+        self._guess_fit_params_checkbox.setCheckState(Qt.Checked)
+
+    def _computeFit(self):
+        """
+        Fit a function to the currently selected series.
+        """
+        # Get the fitter and the series to fit
+        fit_type = FittingType(self._fitting_function_cb.currentText())
+        fitter = CurveFitting.create(fit_type)
+        series_label = self._series_for_fitting_cb.currentText()
+
+        # Get the data to fit
+        if self.xbinning_enabled:
+            x_data, y_stats = self._scalar_ys[series_label].data()
+            y_data = y_stats.avg
+        else:
+            x_data = self._xs.data()
+            y_data = self._ys[series_label].data()
+
+        x_count = len(x_data)
+        param_count = len(fitter.parameters())
+        if x_count < param_count:
+            QMessageBox.warning(self, "Fit failed", f"This series only has {x_count} points, need at least {param_count} to fit.")
+            return
+
+        # Get initial parameters
+        if self._guess_fit_params_checkbox.isChecked():
+            p0 = fitter.guess_p0(x_data, y_data)
+        else:
+            p0 = []
+            for param in fitter.parameters():
+                text = self._fit_parameter_widgets[fit_type][param].currentText()
+                if len(text) == 0:
+                    QMessageBox.warning(self, "Fit failed",
+                                        "Automatically guessing initial parameters is disabled, please set an initial guess manually for all parameters.")
+                    return
+
+                p0.append(float(text))
+
+        # Fit data
+        try:
+            fitted_params = fitter.fit(x_data, y_data, p0=p0)
+        except RuntimeError as e:
+            QMessageBox.warning(self, "Fit failed", str(e))
+            return
+
+        fit = fitter(x_data, *fitted_params)
+
+        # Update parameter widgets
+        for i, param in enumerate(fitter.parameters()):
+            value = fitted_params[i]
+            self._fit_parameter_widgets[fit_type][param].setText(f"{value:.4e}")
+
+        # Plot immediately
+        if series_label not in self._fit_plots:
+            self._fit_plots[series_label] = self._plot_widget.plotCurve(pen=self._plots[series_label]._pen)
+
+        self._fit_plots[series_label].setData(x_data, fit)
+
+    def _onGuessFitParamsChanged(self, state):
+        do_guess = state == Qt.Checked
+
+        for fit_params_dict in self._fit_parameter_widgets.values():
+            for param_widget in fit_params_dict.values():
+                param_widget.setReadOnly(do_guess)
+
     def updateImage(self, **kwargs):
         """
         This is a wrapper function for _SpecialAnalysisBase to work with.
@@ -333,7 +472,10 @@ class ViewWidget(QStackedWidget):
         self._main_window.unregisterPlotWidget(self)
         self.deleteLater()
 
-    def _clearData(self):
+    def _clearData(self, exclude_fits=False):
+        """
+        Clear all plot data.
+        """
         self._xs.reset()
 
         self._scalar_ys.clear()
@@ -341,6 +483,10 @@ class ViewWidget(QStackedWidget):
             self._deletePlot(label, self._plots, self._ys)
         for label in list(self._errors.keys()):
             self._deletePlot(label, self._error_plots, self._errors)
+
+        if not exclude_fits:
+            for label in list(self._fit_plots.keys()):
+                self._deletePlot(label, self._fit_plots)
 
         # Resetting the color list makes the colors more consistent when views
         # are changed or reset.
@@ -458,6 +604,25 @@ class ViewWidget(QStackedWidget):
                 y_stdev = (ys_stats.max[-1] - ys_stats.min[-1]) / 2
                 self._errors[label].append(y_stdev)
 
+    def update_fitting_series_options(self):
+        """
+        Update the combobox for the user to select a curve to fit.
+        """
+        selected_series = self._series_for_fitting_cb.currentText()
+        all_series = self._ys.keys()
+
+        # Check if we actually need to update the combobox
+        old_series = [self._series_for_fitting_cb.itemText(i)
+                      for i in range(self._series_for_fitting_cb.count())]
+        if set(all_series) == set(old_series):
+            return
+
+        self._series_for_fitting_cb.clear()
+        for label in sorted(all_series):
+            self._series_for_fitting_cb.addItem(label)
+
+        if selected_series in all_series:
+            self._series_for_fitting_cb.setCurrentText(selected_series)
 
     def updateF(self, all_data):
         if self._current_view not in all_data:
@@ -556,7 +721,7 @@ class ViewWidget(QStackedWidget):
                     logger.error(f"Cannot handle Scalar data of type: {type(data)}")
                     return
             elif view_type == ViewOutput.VECTOR:
-                self._clearData()
+                self._clearData(exclude_fits=True)
 
                 if is_ndarray:
                     x_data = np.arange(len(data))
@@ -611,6 +776,9 @@ class ViewWidget(QStackedWidget):
                     if not is_image:
                         self._plot_widget.removeItem(roi)
                         roi.deleteLater()
+
+            # Update the curve fitting series options
+            self.update_fitting_series_options()
 
             # Update the plots
             if view_type == ViewOutput.IMAGE:
