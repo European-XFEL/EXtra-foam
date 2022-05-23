@@ -3,7 +3,7 @@ async-generator==1.10
 attrs==21.4.0
 backcall==0.2.0
 bleach==5.0.0
-certifi==2022.5.18
+certifi==2022.5.18.1
 cfelpyutils==2.0.6
 cffi==1.15.0
 cloudpickle==2.0.0
@@ -15,7 +15,7 @@ defusedxml==0.7.1
 entrypoints==0.4
 EXtra-data==1.11.0
 fabio==0.13.0
-fsspec==2022.3.0
+fsspec==2022.5.0
 EXtra-geom==1.7.1
 future==0.18.2
 h5py==3.6.0
@@ -59,7 +59,7 @@ pickleshare==0.7.5
 Pillow==9.1.1
 prometheus-client==0.14.1
 prompt-toolkit==3.0.29
-psutil==5.9.0
+psutil==5.9.1
 ptyprocess==0.7.0
 pybind11==2.9.2
 pycparser==2.21
