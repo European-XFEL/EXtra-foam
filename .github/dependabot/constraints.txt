@@ -18,7 +18,7 @@ fabio==0.13.0
 fsspec==2022.5.0
 EXtra-geom==1.7.1
 future==0.18.2
-h5py==3.6.0
+h5py==3.7.0
 hiredis==2.0.0
 imageio==2.19.3
 ipykernel==6.13.0
