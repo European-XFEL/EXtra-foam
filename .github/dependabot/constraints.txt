@@ -27,7 +27,7 @@ ipython-genutils==0.2.0
 ipywidgets==7.7.0
 jedi==0.18.1
 Jinja2==3.1.2
-jsonschema==4.5.1
+jsonschema==4.6.0
 jupyter==1.0.0
 jupyter-client==7.3.1
 jupyter-console==6.4.3
@@ -40,7 +40,7 @@ locket==1.0.0
 MarkupSafe==2.1.1
 matplotlib==3.5.2
 mistune==2.0.2
-msgpack==1.0.3
+msgpack==1.0.4
 msgpack-numpy==0.4.7.1
 nbclient==0.6.3
 nbconvert==6.5.0
