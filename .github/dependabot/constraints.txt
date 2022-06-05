@@ -14,7 +14,7 @@ decorator==5.1.1
 defusedxml==0.7.1
 entrypoints==0.4
 EXtra-data==1.11.0
-fabio==0.13.0
+fabio==0.14.0
 fsspec==2022.5.0
 EXtra-geom==1.7.1
 future==0.18.2
