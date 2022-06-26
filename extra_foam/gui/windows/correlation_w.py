@@ -45,6 +45,15 @@ class CorrelationPlot(TimedPlotWidgetF):
 
         self._newScatterPlot()
 
+    def setSlaveVisible(self, visible: bool):
+        # The slave plot needs to be properly hidden so that it doesn't affect
+        # the calculation of the bounding box when auto-range is enabled.
+        self._plot_slave.setVisible(visible)
+        if visible:
+            self.showLegend()
+        else:
+            self.hideLegend()
+
     def refresh(self):
         """Override."""
         item = self._data["processed"].corr[self._idx]
@@ -73,12 +82,14 @@ class CorrelationPlot(TimedPlotWidgetF):
             # master-slave checkbox in the GUI.
             if y_slave is not None:
                 self._plot_slave.setData(item.x_slave, y_slave)
+
                 if len(y_slave) > 0:
-                    self.showLegend()
+                    self.setSlaveVisible(True)
                 else:
-                    self.hideLegend()
+                    self.setSlaveVisible(False)
             else:
-                self.hideLegend()
+                self.setSlaveVisible(False)
+
         else:
             if resolution != self._resolution:
                 if self._resolution == 0:
@@ -97,11 +108,11 @@ class CorrelationPlot(TimedPlotWidgetF):
                     item.x_slave, y_slave.avg,
                     y_min=y_slave.min, y_max=y_slave.max)
                 if len(y_slave.avg) > 0:
-                    self.showLegend()
+                    self.setSlaveVisible(True)
                 else:
-                    self.hideLegend()
+                    self.setSlaveVisible(False)
             else:
-                self.hideLegend()
+                self.setSlaveVisible(False)
 
     def updateLabel(self):
         src = self._source

@@ -313,6 +313,10 @@ setup(
         'imageio',
         'Pillow',
         'pyyaml',
+        # We need to use this commit from pyqtgraph master because it contains
+        # some fixes for Python 3.10, and an updated fn.makeARGB() to allow
+        # disabling masking NaNs.
+        'pyqtgraph @ git+https://github.com/pyqtgraph/pyqtgraph.git@67ad965',
         # These dependencies are not directly used, but are needed to satisfy
         # pip's resolver:
         'pygments',

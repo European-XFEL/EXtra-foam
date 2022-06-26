@@ -18,9 +18,8 @@ from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QPoint, QPointF, QRectF, Qt
 )
 
-from .. import pyqtgraph as pg
-from ..pyqtgraph import Point
-from ..pyqtgraph import functions as fn
+import pyqtgraph as pg
+from pyqtgraph import functions as fn
 
 from ..misc_widgets import FColor
 from ...algorithms import quick_min_max
@@ -41,8 +40,8 @@ class ImageItem(pg.GraphicsObject):
     draw_region_changed_sgn = pyqtSignal(int, int)  # (x, y)
     draw_finished_sgn = pyqtSignal()
 
-    def __init__(self, image=None, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, image=None):
+        super().__init__()
 
         self._image = None   # original image data
         self._qimage = None  # rendered image for display
@@ -191,8 +190,8 @@ class ImageItem(pg.GraphicsObject):
         if o is None or x is None or y is None:
             return
 
-        w = Point(x-o).length()
-        h = Point(y-o).length()
+        w = pg.Point(x-o).length()
+        h = pg.Point(y-o).length()
         if w == 0 or h == 0:
             self._qimage = None
             return
@@ -234,7 +233,7 @@ class ImageItem(pg.GraphicsObject):
             levels = None
 
         # TODO: replace fn.makeARGB and fn.makeQImage
-        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels)
+        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels, maskNans=False)
         self._qimage = fn.makeQImage(argb, alpha, transpose=False)
 
     def paint(self, p, *args):
@@ -304,6 +303,11 @@ class ImageItem(pg.GraphicsObject):
         """Slot connected in GraphicsView."""
         self.setPxMode(False)
 
+    def setScaleXY(self, sx, sy):
+        tr = self.transform()
+        tr.scale(sx, sy)
+        self.setTransform(tr)
+
     def pixelSize(self):
         """Override.
 
@@ -319,8 +323,8 @@ class ImageItem(pg.GraphicsObject):
         o = self.mapToDevice(QPointF(0, 0))
         x = self.mapToDevice(QPointF(1, 0))
         y = self.mapToDevice(QPointF(0, 1))
-        w = Point(x-o).length()
-        h = Point(y-o).length()
+        w = pg.Point(x-o).length()
+        h = pg.Point(y-o).length()
         if w == 0 or h == 0:
             self._qimage = None
             return
@@ -377,12 +381,12 @@ class MaskItem(pg.GraphicsObject):
     _TRANSPARENT = QColor(0, 0, 0, 0)
     _COLOR_FORMAT = QImage.Format_ARGB32
 
-    def __init__(self, item, parent=None):
+    def __init__(self, item):
         """Initialization.
 
         :param ImageItem item: a reference to the masked image item.
         """
-        super().__init__(parent=parent)
+        super().__init__()
         if not isinstance(item, ImageItem):
             raise TypeError("Input item must be an ImageItem instance.")
 
@@ -560,8 +564,8 @@ class RectROI(pg.ROI):
 
 
 class GeometryItem(pg.GraphicsObject):
-    def __init__(self, pen=None, brush=None, parent=None):
-        super().__init__(parent=parent)
+    def __init__(self, pen=None, brush=None):
+        super().__init__()
 
         if pen is None and brush is None:
             self._pen = FColor.mkPen('b')

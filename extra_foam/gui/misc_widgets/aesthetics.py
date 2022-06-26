@@ -10,17 +10,11 @@ All rights reserved.
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor, QPen, QPalette
 
-from ..pyqtgraph import ColorMap
-from ..pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-
-from ...config import config
+from pyqtgraph import ColorMap
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
-class QualitativeColor:
-
-    foreground = config["GUI_FOREGROUND_COLOR"]  # black
-    background = config["GUI_BACKGROUND_COLOR"]  # white-like
-
+class FColor:
     k = (0, 0, 0)  # black
     n = (251, 154, 153)  # pink
     r = (227, 26, 28)  # red
@@ -52,9 +46,6 @@ class QualitativeColor:
         if c is None:
             return QBrush(QColor(0, 0, 0, 0), Qt.NoBrush)
         return QBrush(QColor(*getattr(cls, c), alpha))
-
-
-FColor = QualitativeColor
 
 
 class SequentialColor:
@@ -159,6 +150,6 @@ def set_button_color(btn, c):
     if isinstance(c, QColor):
         palette.setColor(QPalette.Button, c)
     else:
-        palette.setColor(QPalette.Button, QualitativeColor.mkColor(c))
+        palette.setColor(QPalette.Button, FColor.mkColor(c))
     btn.setAutoFillBackground(True)
     btn.setPalette(palette)

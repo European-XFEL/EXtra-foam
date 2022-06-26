@@ -13,7 +13,7 @@ import numpy as np
 from PyQt5.QtCore import pyqtSlot, Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
-from .. import pyqtgraph as pg
+import pyqtgraph as pg
 
 from .graphics_widgets import HistogramLUTItem
 from .plot_widget_base import PlotWidgetF
@@ -207,7 +207,7 @@ class ImageViewF(QWidget):
         self._image_item.resetTransform()
 
         if scale is not None:
-            self._image_item.scale(*scale)
+            self._image_item.setScaleXY(*scale)
         if pos is not None:
             self._image_item.setPos(*pos)
 

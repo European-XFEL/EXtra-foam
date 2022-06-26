@@ -20,40 +20,11 @@ from PyQt5.QtWidgets import (
     QGraphicsEllipseItem
 )
 
-from .. import pyqtgraph as pg
-from ..pyqtgraph import Point
-from ..pyqtgraph import functions as fn
-from ..plot_widgets.plot_items import CurvePlotItem
+import pyqtgraph as pg
+from pyqtgraph import Point
+from pyqtgraph import functions as fn
+from ..plot_widgets.plot_items import FoamPlotItem, FoamPlotDataItem, CurvePlotItem
 from ..misc_widgets import FColor
-
-
-class Crosshair(QGraphicsItemGroup):
-    _HALF_LENGTH = 40
-    _HALF_RADIUS = 2 * _HALF_LENGTH
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        crosshair_pen = FColor.mkPen("r", width=3)
-        circle_pen = FColor.mkPen("k", width=2)
-
-        horiz_crosshair = QGraphicsLineItem()
-        vertical_crosshair = QGraphicsLineItem()
-        circle = QGraphicsEllipseItem()
-
-        horiz_crosshair.setPen(crosshair_pen)
-        vertical_crosshair.setPen(crosshair_pen)
-        circle.setPen(circle_pen)
-
-        self.addToGroup(horiz_crosshair)
-        self.addToGroup(vertical_crosshair)
-        self.addToGroup(circle)
-
-        self.setPos(0, 0)
-        horiz_crosshair.setLine(-self._HALF_LENGTH, 0, self._HALF_LENGTH, 0)
-        vertical_crosshair.setLine(0, -self._HALF_LENGTH, 0, self._HALF_LENGTH)
-        circle.setRect(-self._HALF_RADIUS, -self._HALF_RADIUS,
-                       2 * self._HALF_RADIUS, 2 * self._HALF_RADIUS)
 
 
 class HistogramLUTItem(pg.GraphicsWidget):
@@ -81,7 +52,7 @@ class HistogramLUTItem(pg.GraphicsWidget):
         self._lri = lri
 
         self._hist = CurvePlotItem(pen=FColor.mkPen('k'))
-        self._hist.rotate(90)
+        self._hist.setRotation(90)
 
         vb = pg.ViewBox(parent=self)
         vb.setMaximumWidth(152)
@@ -238,7 +209,7 @@ class PlotArea(pg.GraphicsWidget):
         self._legend = None
         self._axes = {}
         self._meter = pg.LabelItem(
-            '', size='11pt', justify='left', color='6A3D9A', parent=self)
+            '', size='11pt', justify='left', color='#6A3D9A', parent=self)
         self._title = pg.LabelItem('', size='11pt', parent=self)
 
         # context menu
@@ -387,14 +358,14 @@ class PlotArea(pg.GraphicsWidget):
         for item in chain(self._plot_items, self._plot_items2):
             item.setLogX(state)
         self.getAxis("bottom").setLogMode(state)
-        self._vb.autoRange(disableAutoRange=False)
+        self._vb.enableAutoRange(pg.ViewBox.XAxis)
 
     @pyqtSlot(bool)
     def _onLogYChanged(self, state):
         for item in self._plot_items:
             item.setLogY(state)
         self.getAxis("left").setLogMode(state)
-        self._vb.autoRange(disableAutoRange=False)
+        self._vb.enableAutoRange(pg.ViewBox.YAxis)
 
     def addItem(self, item, ignore_bounds=False, y2=False):
         """Add a graphics item to ViewBox."""
@@ -404,7 +375,7 @@ class PlotArea(pg.GraphicsWidget):
 
         self._items.add(item)
 
-        if isinstance(item, pg.PlotItem):
+        if isinstance(item, (FoamPlotItem, FoamPlotDataItem)):
             if y2:
                 if self._log_x_cb.isChecked():
                     item.setLogX(True)
