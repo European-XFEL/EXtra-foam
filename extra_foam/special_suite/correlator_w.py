@@ -14,8 +14,8 @@ import libcst.metadata as cstmeta
 import numpy as np
 import xarray as xr
 
-from PyQt5.QtGui import QFont, QBrush, QDoubleValidator
-from PyQt5.QtCore import Qt, QSettings, pyqtSlot, pyqtSignal
+from PyQt5.QtGui import QFont, QBrush, QDoubleValidator, QFontMetrics
+from PyQt5.QtCore import Qt, QSettings, pyqtSlot, pyqtSignal, QSize
 from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
                              QFrame, QStackedWidget, QComboBox, QLabel, QAction,
                              QMenu, QStyle, QTabBar, QToolButton, QFileDialog,
@@ -950,6 +950,34 @@ class PathLexer(QsciLexerPython):
         return ["#"]
 
 
+class ElidedLabel(QLabel):
+    """
+    Wee subclass of QLabel to automatically elide text to the left. Useful for
+    long file paths.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._full_text = ""
+        self._metrics = QFontMetrics(self.font())
+
+    def resizeEvent(self, event):
+        self.setText(self._full_text)
+        super().resizeEvent(event)
+
+    def elidedText(self):
+        return self._metrics.elidedText(self._full_text, Qt.ElideLeft, self.width())
+
+    def setText(self, text):
+        self._full_text = text
+        super().setText(self.elidedText())
+
+    def fullText(self):
+        return self._full_text
+
+    def minimumSizeHint(self):
+        return QSize(0, super().minimumSizeHint().height())
+
 class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
     open_file_sgn = pyqtSignal(str)
 
@@ -959,7 +987,7 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.open_btn = QPushButton("Open context")
         self.save_btn = QPushButton("Save context")
         self.reload_btn = QPushButton("Reload context")
-        self._path_label = QLabel("")
+        self._path_label = ElidedLabel("")
 
         menu = QMenu()
         menu.addSeparator()
@@ -1071,7 +1099,7 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     @property
     def context_path(self):
-        return self._path_label.text()
+        return self._path_label.fullText()
 
     @context_path.setter
     def context_path(self, path):
