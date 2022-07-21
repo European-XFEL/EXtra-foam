@@ -92,15 +92,16 @@ class TestPlotItems:
             item.setData(np.arange(2).astype(dtype), np.arange(3).astype(dtype))
 
         # test log mode
+        plot_bottom_right = np.log10(float(x[-1]))
         self._widget._plot_area._onLogXChanged(True)
         if dtype == float:
             _display()
-        assert item.boundingRect() == QRectF(0, 0, 1.0, 13.5)
+        assert item.boundingRect() == QRectF(0, 0, plot_bottom_right, 13.5)
         self._widget._plot_area._onLogYChanged(True)
         if dtype == float:
             _display()
         assert item.boundingRect().topLeft() == QPointF(0, 0)
-        assert item.boundingRect().bottomRight().x() == 1.0
+        assert item.boundingRect().bottomRight().x() == plot_bottom_right
         assert 1.2 > item.boundingRect().bottomRight().y() > 1.1
 
         # clear data

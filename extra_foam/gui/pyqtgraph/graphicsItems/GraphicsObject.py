@@ -129,7 +129,7 @@ class PlotItem(GraphicsObject):
         """Convert array result to logarithmic scale."""
         ret = np.nan_to_num(arr)
         ret[ret < 0] = 0
-        return np.log10(ret + 1)
+        return np.log10(ret, where=(ret > 0))
 
     def name(self):
         """An identity of the PlotItem.
