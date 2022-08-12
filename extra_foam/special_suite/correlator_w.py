@@ -181,7 +181,7 @@ class ViewWidget(QStackedWidget):
         self._plots = { }
         self._error_plots = { }
         self._max_points = 5000
-        self._xs = SimpleSequence(max_len=self._max_points)
+        self._xs = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
         self._ys = defaultdict(lambda: SimpleSequence(max_len=self._max_points))
         self._fit_parameter_widgets = { }
         self._fit_plots = { }
@@ -395,7 +395,7 @@ class ViewWidget(QStackedWidget):
             x_data, y_stats = self._scalar_ys[series_label].data()
             y_data = y_stats.avg
         else:
-            x_data = self._xs.data()
+            x_data = self._xs[series_label].data()
             y_data = self._ys[series_label].data()
 
         x_count = len(x_data)
@@ -476,7 +476,7 @@ class ViewWidget(QStackedWidget):
         """
         Clear all plot data.
         """
-        self._xs.reset()
+        self._xs.clear()
 
         self._scalar_ys.clear()
         for label in list(self._ys.keys()):
@@ -544,9 +544,11 @@ class ViewWidget(QStackedWidget):
     def _curve_plot_factory(self):
         return self._plot_widget.plotCurve(pen=FColor.mkPen(next(self._next_color)))
 
-    def _deletePlot(self, label, plot_dict, data_dict=None):
+    def _deletePlot(self, label, plot_dict, data_dict=None, delete_xs=False):
         if data_dict is not None:
             del data_dict[label]
+        if delete_xs:
+            del self._xs[label]
 
         self._plot_widget.removeItem(plot_dict[label])
         del plot_dict[label]
@@ -560,7 +562,7 @@ class ViewWidget(QStackedWidget):
         self._resize_buffers()
 
     def _resize_buffers(self):
-        for buf in [*self._ys.values(), *self._errors.values(), self._xs]:
+        for buf in [*self._ys.values(), *self._errors.values(), *self._xs.values()]:
             if buf.capacity() != self._max_points:
                 buf.resize(self._max_points)
 
@@ -575,12 +577,12 @@ class ViewWidget(QStackedWidget):
         # Helper lambda to generate nan's for the previous X values. Note that
         # the length of the array is N - 1, since the new value goes at the N'th
         # spot.
-        nan_xs = lambda: np.full((len(self._xs) - 1, ), np.nan)
+        nan_xs = lambda: np.full((len(self._xs[label]) - 1, ), np.nan)
 
         # If the label is new, initialize it with NaNs for the
         # previous elements so the label data is the right size to
         # match self._xs.
-        if label not in self._ys and len(self._xs) > 0:
+        if label not in self._ys and len(self._xs[label]) > 0:
             self._ys[label].extend(nan_xs())
 
         self._ys[label].append(value)
@@ -588,16 +590,16 @@ class ViewWidget(QStackedWidget):
         if self.xbinning_enabled:
             # Ensure that we've recorded the data with the right resolution
             if self._scalar_ys[label].resolution != self.xbinning_resolution:
-                self._scalar_ys[label] = OneWayAccuPairSequence.from_array(self._xs.data(),
+                self._scalar_ys[label] = OneWayAccuPairSequence.from_array(self._xs[label].data(),
                                                                            self._ys[label].data(),
                                                                            self.xbinning_resolution,
                                                                            max_len=self._max_points)
             else:
-                self._scalar_ys[label].append((self._xs[-1], value))
+                self._scalar_ys[label].append((self._xs[label][-1], value))
 
             # Update the error bars
             xs, ys_stats = self._scalar_ys[label].data()
-            if label not in self._errors and len(self._xs) > 0:
+            if label not in self._errors and len(self._xs[label]) > 0:
                 y_stdev = (ys_stats.max - ys_stats.min) / 2
                 self._errors[label].extend(y_stdev)
             elif len(ys_stats.avg) > 0:
@@ -650,19 +652,19 @@ class ViewWidget(QStackedWidget):
                 if data.ndim == 1:
                     if len(data) == 1:
                         label = y_series_labels[0]
-                        self._xs.append(len(self._xs))
+                        self._xs[label].append(len(self._xs[label]))
                         self.update_scalar_series(label, data.values[0])
                     else:
-                        self._xs.append(data.values[0])
-
                         for i, value in enumerate(data.values[1:]):
                             label = y_series_labels[i]
+
+                            self._xs[label].append(data.values[0])
                             self.update_scalar_series(label, value)
 
                             # TODO: move this block of code into update_scalar_series()
                             if label in series_errors and not self.xbinning_enabled:
-                                if label not in self._errors and len(self._xs) > 0:
-                                    self._errors[label].extend(np.full((len(self._xs), ), np.nan))
+                                if label not in self._errors and len(self._xs[label]) > 0:
+                                    self._errors[label].extend(np.full((len(self._xs[label]), ), np.nan))
                                 self._errors[label].append(series_errors[label])
 
 
@@ -674,17 +676,18 @@ class ViewWidget(QStackedWidget):
                         y_data = data.values[0]
                         x_data = np.arange(len(y_data))
                         x_data, y_data = self.downsample(x_data, y_data)
-                        self._xs.extend(x_data)
+                        self._xs[y_series_labels[0]].extend(x_data)
                         self._ys[y_series_labels[0]].extend(y_data)
 
                     # Otherwise, we treat the first vector slice as the X axis,
                     # and the rest as Y axis series.
                     else:
-                        self._xs.extend(data.values[0])
-
                         for i, vector in enumerate(data.values[1:]):
                             label = y_series_labels[i]
-                            self._ys[label].extend(vector)
+
+                            x_data, y_data = self.downsample(data.values[0], vector)
+                            self._xs[label].extend(x_data)
+                            self._ys[label].extend(y_data)
 
                             if label in series_errors:
                                 self._errors[label].extend(series_errors[label])
@@ -695,7 +698,7 @@ class ViewWidget(QStackedWidget):
                 # Remove old plots
                 for label in list(self._ys.keys()):
                     if label not in y_series_labels:
-                        self._deletePlot(label, self._plots, self._ys)
+                        self._deletePlot(label, self._plots, self._ys, delete_xs=True)
 
                         if label in self._errors:
                             self._deletePlot(label, self._error_plots, self._errors)
@@ -706,7 +709,7 @@ class ViewWidget(QStackedWidget):
             # Update stored data
             if view_type == ViewOutput.SCALAR:
                 if np.isscalar(data):
-                    self._xs.append(len(self._xs))
+                    self._xs["y0"].append(len(self._xs["y0"]))
                     self.update_scalar_series("y0", data)
 
                     # Remove old error plots. TODO: merge this with the similar
@@ -727,7 +730,7 @@ class ViewWidget(QStackedWidget):
                     x_data = np.arange(len(data))
                     x_data, y_data = self.downsample(x_data, data)
 
-                    self._xs.extend(x_data)
+                    self._xs["y0"].extend(x_data)
                     self._ys["y0"].extend(y_data)
                 elif is_xarray:
                     handle_rich_output()
@@ -735,7 +738,7 @@ class ViewWidget(QStackedWidget):
                     logger.error(f"Cannot handle Vector data of type: {type(data)}")
                     return
             elif view_type == ViewOutput.POINTS:
-                self._xs.append(data[0][0])
+                self._xs["y0"].append(data[0][0])
                 self._ys["y0"].append(data[0][1])
             elif view_type == ViewOutput.COMPUTE:
                 if is_xarray:
@@ -801,7 +804,7 @@ class ViewWidget(QStackedWidget):
                         xs_data, ys_stats = self._scalar_ys[label].data()
                         ys_data = ys_stats.avg
                     else:
-                        xs_data = self._xs.data()
+                        xs_data = self._xs[label].data()
                         ys_data = ys_data.data()
 
                     self._plots[label].setData(xs_data, ys_data)
