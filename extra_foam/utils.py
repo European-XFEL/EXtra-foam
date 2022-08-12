@@ -294,7 +294,8 @@ def get_available_port(default_port):
 #: :param float/np.ndarray data: The series data for the current train.
 #: :param str name: The name of the series, to be displayed in a legend (optional).
 #: :param float/np.ndarray error: The error of :code:`data`, shown as ± :code:`error` (optional).
-Series = namedtuple("Series", ["data", "name", "error"], defaults=[None, None])
+#: :param float/np.ndarray error_beam_width: The
+Series = namedtuple("Series", ["data", "name", "error", "error_beam_width"], defaults=[None, None, None])
 
 
 def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs):
@@ -356,6 +357,7 @@ def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs
         "ylabel": ylabel,
         "y_series_labels": [],
         "series_errors": { },
+        "series_errors_beam_widths": { }
     }
 
     # Copy optional arguments without a default value
@@ -375,6 +377,8 @@ def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs
 
                 if data.error is not None:
                     xr_attrs["series_errors"][label] = data.error
+                if data.error_beam_width is not None:
+                    xr_attrs["series_errors_beam_widths"][label] = data.error_beam_width
             else:
                 y_series_labels.append(key)
                 full_data.append(data)

@@ -812,7 +812,15 @@ class ViewWidget(QStackedWidget):
                     if label in self._errors:
                         error_data = self._errors[label].data()
 
+                        # Set a default beam width
                         beam_width = self.xbinning_resolution if self.xbinning_enabled else 1
+
+                        # But override it if the user set it manually
+                        for data in data_list:
+                            if isinstance(data, xr.DataArray):
+                                if label in data.attrs["series_errors_beam_widths"]:
+                                    beam_width = data.attrs["series_errors_beam_widths"][label]
+
                         if label not in self._error_plots:
                             self._error_plots[label] = self._plot_widget.plotStatisticsBar(pen=self._plots[label]._pen,
                                                                                            beam=beam_width)
