@@ -754,14 +754,19 @@ class ViewWidget(QStackedWidget):
             if view.annotations is not None:
                 for idx, roi_name in enumerate(view.annotations):
                     if roi_name not in self._annotations:
-                        roi = self._image_view.rois[idx + 1] if is_image else LinearROI(self._plot_widget)
-                        if not is_image:
-                            self._plot_widget.addItem(roi)
+                        metro_roi = self._main_window.context.parameters[roi_name]
+                        is_rect_roi = isinstance(metro_roi, MetroRectROI)
+
+                        roi = self._image_view.rois[idx + 1] if is_rect_roi else LinearROI(self._plot_widget)
+
+                        if is_rect_roi:
+                            roi = self._image_view.rois[idx + 1]
+                        else:
+                            self._currentPlotWidget().addItem(roi)
 
                         self._annotations[roi_name] = roi
 
                         # Update parameters from context
-                        metro_roi = self._main_window.context.parameters[roi_name]
                         roi.configureFromMetroROI(metro_roi)
 
                         roi.setLabel(roi_name)
