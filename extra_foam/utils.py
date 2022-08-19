@@ -429,8 +429,8 @@ class VectorWithROIsView(AnnotatedView, output=ViewOutput.VECTOR):
         super().__init__(*args, annotations=rois, **kwargs)
 
 class ImageAspectUnlockedView(AnnotatedView, output=ViewOutput.IMAGE):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, aspect_unlocked=True, **kwargs)
+    def __init__(self, *args, rois=None, **kwargs):
+        super().__init__(*args, aspect_unlocked=True, annotations=rois, **kwargs)
 
 ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=ImageWithROIsView))
 ViewDecorator.kwargs_symbols.update(WithROIs=dict(view_impl=VectorWithROIsView))
