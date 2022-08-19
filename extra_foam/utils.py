@@ -414,6 +414,9 @@ class LinearROI():
 
         return data[lower_bound:upper_bound]
 
+    def slice(self):
+        return slice(round(self.lower_bound), round(self.upper_bound))
+
 class AnnotatedView(View, abstract=True):
     def __init__(self, *args, annotations=None, aspect_unlocked=False, **kwargs):
         super().__init__(*args, **kwargs)
