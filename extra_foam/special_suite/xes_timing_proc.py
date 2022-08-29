@@ -10,13 +10,13 @@ All rights reserved.
 from enum import Enum
 from dataclasses import dataclass, field
 from collections import defaultdict
-
+from scipy.integrate import trapezoid
 import numpy as np
 
 from PyQt5.QtCore import pyqtSignal
 
 from ..geometries import JungFrauGeometryFast
-from ..algorithms import movingAvgImageData
+from ..algorithms import movingAvgImageData, find_peaks_1d
 
 from .special_analysis_base import profiler, QThreadWorker
 
@@ -140,8 +140,6 @@ class XesTimingProcessor(QThreadWorker):
         JungFrauGeometryFast.mask_module_py(img)
 
         delay_data = self._xes_curves[target_delay]
-        digitizer_data = self.getPropertyData(data, *self._digitizer_device)
-        print(digitizer_data.shape)
         is_pumped = (tid % 2 == 0 and self._even_trains_pumped) or \
                     (tid % 2 != 0 and not self._even_trains_pumped)
         img_avg = delay_data.pumped_train_avg if is_pumped else delay_data.unpumped_train_avg
@@ -182,6 +180,16 @@ class XesTimingProcessor(QThreadWorker):
         refresh_plots = self._refresh_plots
         if refresh_plots:
             self._refresh_plots = False
+            
+        # Get the digitizer data, find peaks i.e #pulses in one train
+        digitizer_data = self.getPropertyData(data, *self._digitizer_device)
+        digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
+        idx_digitizer_peaks = digitizer_peaks[0]
+        width_peak = 300 # width given in samples 
+        # integrate each peak
+        intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) for idx_digitizer_peaks in idx_digitizer_peaks]
+        # Average the integral of the peaks to obtain the train intensity
+        train_intensity = np.mean(intensity_peak)
 
         self.log.info(f"Train {tid} processed")
         return {
@@ -189,7 +197,7 @@ class XesTimingProcessor(QThreadWorker):
             "delay": target_delay,
             "xes": self._xes_curves,
             "refresh_plots": refresh_plots,
-            "digitizer_data": digitizer_data
+            "digi_int_avg": train_intensity
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):

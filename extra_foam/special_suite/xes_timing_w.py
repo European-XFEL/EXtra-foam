@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (QSplitter, QComboBox, QTabWidget, QStackedWidget,
 
 from ..gui.pyqtgraph import LinearRegionItem
 from ..gui.gui_helpers import center_window
-from ..gui.misc_widgets import SequentialColor
+from ..gui.misc_widgets import SequentialColor, FColor
 from ..gui.plot_widgets import ImageViewF, PlotWidgetF
 from ..algorithms import SimpleVectorSequence
 
@@ -161,13 +161,16 @@ class CorrelatorPlot(PlotWidgetF):
         self.setLabel("bottom", "I0 Digitizer")
         self.setTitle("Correlation JNGF vs Digitizer")
 
-        self._plot = self.plotCurve()
-    
+        self._plot = self.plotScatter(brush=FColor.mkBrush("w"))
+        
+        self.digitizer_data = []
+
     def updateF(self, data):
         if data is None:
             return
-        digitizer = data["digitizer_data"]
-        self._plot.setData(digitizer, digitizer)
+        
+        self.digitizer_data.append(data["digi_int_avg"])
+        self._plot.setData(self.digitizer_data, self.digitizer_data)
 
 
 
