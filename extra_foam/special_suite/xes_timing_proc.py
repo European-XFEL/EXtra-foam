@@ -31,6 +31,7 @@ class XesData:
     unpumped_train_avg: np.ndarray = None
     difference: defaultdict = field(default_factory=defaultdict_none)
     train_count: int = 1
+    digitizer: defaultdict = defaultdict_ndarray()
 
 
 class DisplayOption(Enum):
@@ -57,6 +58,7 @@ class XesTimingProcessor(QThreadWorker):
         self._detector = None
         self._delay_device = None
         self._target_delay_device = None
+        self._digitizer_device = None
 
         self.reset()
 
@@ -106,6 +108,10 @@ class XesTimingProcessor(QThreadWorker):
 
         super().onRoiGeometryChange(roi_params)
         self._refresh_plots = True
+    
+    def setDigitizerDevice(self, device, prop):
+        self._digitizer_device = (device, prop)
+       
 
     @profiler("XES timing processor")
     def process(self, data):
@@ -113,9 +119,8 @@ class XesTimingProcessor(QThreadWorker):
         data, meta = data["raw"], data["meta"]
         tid = self.getTrainId(meta)
         self.new_train_data_sgn.emit(data)
-
-        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device]):
-            self.log.info("Either the detector, delay property, or target delay property have not been set.")
+        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device, self._digitizer_device]):
+            self.log.info("Either the detector, digitizer, delay property, or target delay property have not been set.")
             return None
 
         # Get the actual and target delays, and round them to 3 decimal places
@@ -123,19 +128,20 @@ class XesTimingProcessor(QThreadWorker):
         delay = np.around(delay, 3)
         target_delay = self.getPropertyData(data, *self._target_delay_device)
         target_delay = np.around(target_delay, 3)
-
         # We ignore trains where the delay motor hasn't reached its target
         if delay != target_delay:
             self.log.info(f"Skipping train, delay is not equal to target delay")
             return None
 
         img = self.squeezeToImage(tid, self.getPropertyData(data, *self._detector))
-
+        
         # Set all negative values to 0 and mask ASIC edges
         img[img < 0] = 0
         JungFrauGeometryFast.mask_module_py(img)
 
         delay_data = self._xes_curves[target_delay]
+        digitizer_data = self.getPropertyData(data, *self._digitizer_device)
+        print(digitizer_data.shape)
         is_pumped = (tid % 2 == 0 and self._even_trains_pumped) or \
                     (tid % 2 != 0 and not self._even_trains_pumped)
         img_avg = delay_data.pumped_train_avg if is_pumped else delay_data.unpumped_train_avg
@@ -182,7 +188,8 @@ class XesTimingProcessor(QThreadWorker):
             "img_avg": img_avg,
             "delay": target_delay,
             "xes": self._xes_curves,
-            "refresh_plots": refresh_plots
+            "refresh_plots": refresh_plots,
+            "digitizer_data": digitizer_data
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):

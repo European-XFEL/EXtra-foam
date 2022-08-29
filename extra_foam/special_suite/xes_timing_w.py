@@ -153,6 +153,23 @@ class DelayScanSlice(PlotWidgetF):
         self._x_min = x_min
         self._x_max = x_max
 
+class CorrelatorPlot(PlotWidgetF):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.setLabel("left", "AUC JNGF")
+        self.setLabel("bottom", "I0 Digitizer")
+        self.setTitle("Correlation JNGF vs Digitizer")
+
+        self._plot = self.plotCurve()
+    
+    def updateF(self, data):
+        if data is None:
+            return
+        digitizer = data["digitizer_data"]
+        self._plot.setData(digitizer, digitizer)
+
+
 
 class DelayScanView(ImageViewF):
     linear_roi_changed_sgn = pyqtSignal(int, int)
@@ -417,8 +434,10 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
                                              property_keywords=["actualPosition"])
         self.target_delay_cb = FuzzyCombobox(device_keywords=["ppodl"],
                                              property_keywords=["targetPosition"])
+        self.digitizer_cb = FuzzyCombobox(device_keywords=["ADC"],
+                                             property_keywords=["digitizers", "raw", "samples"])
 
-        for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb]:
+        for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
             cb.setToolTip("This property will be auto-selected if possible (click the Start button).<br><br> <b>Warning:</b> changing this property will force the program to reset.")
 
         self.save_btn = QPushButton("Save XES data")
@@ -427,7 +446,8 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
             self.detector_cb,
             self.delay_cb,
             self.target_delay_cb,
-            self.save_btn
+            self.save_btn,
+            self.digitizer_cb
         ]
 
         self.initUI()
@@ -442,6 +462,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Detector: ", self.detector_cb)
         layout.addRow("Delay property: ", self.delay_cb)
         layout.addRow("Target delay property: ", self.target_delay_cb)
+        layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.setItem(layout.count(), QFormLayout.SpanningRole, QSpacerItem(0, 20))
         layout.addRow(self.save_btn)
 
@@ -458,7 +479,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.detector_cb.updateSources(fast_data)
         self.delay_cb.updateSources(slow_data)
         self.target_delay_cb.updateSources(slow_data)
-
+        self.digitizer_cb.updateSources(fast_data)
 
 @create_special(XesCtrlWidget, XesTimingProcessor)
 class XesTimingWindow(_SpecialAnalysisBase):
@@ -525,6 +546,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
         ctrl.detector_cb.currentIndexChanged.connect(self.onDetectorChanged)
         ctrl.delay_cb.currentIndexChanged.connect(self.onDelayDeviceChanged)
         ctrl.target_delay_cb.currentIndexChanged.connect(self.onTargetDelayDeviceChanged)
+        ctrl.digitizer_cb.currentIndexChanged.connect(self.onDigitizerDeviceChanged)
         ctrl.save_btn.clicked.connect(self.onSaveData)
 
         for roi_ctrl in self._com_ctrl_st.roi_ctrls:
@@ -544,6 +566,10 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onTargetDelayDeviceChanged(self, index):
         key = self._ctrl_widget_st.target_delay_cb.currentData()
         self._worker_st.setTargetDelayDevice(*key.split())
+
+    def onDigitizerDeviceChanged(self, index):
+        key = self._ctrl_widget_st.digitizer_cb.currentData()
+        self._worker_st.setDigitizerDevice(*key.split())
 
     def onSaveData(self):
         file_path = QFileDialog.getSaveFileName(filter="HDF5 (*.h5)")[0]
@@ -615,6 +641,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
             xes_plot = XesSignalPlot(idx, parent=self)
             delay_scan = DelayScanView(self._view.rois[idx - 1], parent=self)
             delay_slice = DelayScanSlice(delay_scan, parent=self)
+            correlator = CorrelatorPlot(parent=self)
 
             vsplitter = QSplitter(Qt.Vertical)
             vsplitter.addWidget(delay_slice)
@@ -623,6 +650,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
             vsplitter.setStretchFactor(1, 1)
 
             hsplitter = QSplitter()
+            hsplitter.addWidget(correlator)
             hsplitter.addWidget(xes_plot)
             hsplitter.addWidget(vsplitter)
             hsplitter.setStretchFactor(0, 10)
@@ -631,8 +659,11 @@ class XesTimingWindow(_SpecialAnalysisBase):
             roi_ctrl = self._com_ctrl_st.roi_ctrls[idx - 1]
             roi_ctrl.roi_geometry_change_sgn.connect(delay_scan.onRoiChanged)
             roi_ctrl.roi_geometry_change_sgn.connect(xes_plot.onRoiChanged)
+            # roi_ctrl.roi_geometry_change_sgn.connect(correlator.onRoiChanged)
             xes_plot.onRoiChanged(roi_ctrl.params())
             delay_scan.onRoiChanged(roi_ctrl.params())
+            # correlator.onRoiChanged(roi_ctrl.params())
+
             delay_scan.linear_roi_changed_sgn.connect(delay_slice.onLinearRoiChanged)
 
             self._visualized_rois.add(idx)
