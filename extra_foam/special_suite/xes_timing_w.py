@@ -491,7 +491,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     @pyqtSlot(dict)
     def onNewTrainData(self, data):
-        keys = set(key for key in data.keys() if not key.endswith(".timestamp"))
+        keys = set(key for key in data.keys() if not key.endswith(".timestamp") and not key.endswith(".timestamp.tid"))
         fast_data = set(key for key in keys if ":" in key)
         slow_data = keys - fast_data
 
