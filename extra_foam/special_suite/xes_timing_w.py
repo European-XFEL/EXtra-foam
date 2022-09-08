@@ -162,17 +162,33 @@ class CorrelatorPlot(PlotWidgetF):
         self.setTitle("Correlation JNGF vs Digitizer")
 
         self._plot = self.plotScatter(brush=FColor.mkBrush("w"))
-        
+        # self._plot = self.plotCurve()
         self.digitizer_data = []
+        self.auc_data = []
+        self.train_count = 0
+        self.train_array = []
 
     def updateF(self, data):
         if data is None:
             return
-        
+
         self.digitizer_data.append(data["digi_int_avg"])
-        self._plot.setData(self.digitizer_data, self.digitizer_data)
 
+        if data["auc"]:
+            self.auc_data.append(data["auc"])
+        else:
+            self.auc_data.append(np.nan)
+        self.train_count+=1
+        
+        self.train_array.append(self.train_count)
+        self._plot.setData(self.digitizer_data, self.auc_data)
 
+    def reset(self):
+        super().reset()
+
+        self.auc_data.clear()
+        self.digitizer_data.clear()
+        self.train_array.clear()
 
 class DelayScanView(ImageViewF):
     linear_roi_changed_sgn = pyqtSignal(int, int)

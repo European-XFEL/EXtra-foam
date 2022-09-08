@@ -32,7 +32,7 @@ class XesData:
     difference: defaultdict = field(default_factory=defaultdict_none)
     train_count: int = 1
     digitizer: defaultdict = defaultdict_ndarray()
-
+    auc: defaultdict = defaultdict_ndarray()
 
 class DisplayOption(Enum):
     PUMPED = "Pumped trains (avg)"
@@ -138,6 +138,7 @@ class XesTimingProcessor(QThreadWorker):
         # Set all negative values to 0 and mask ASIC edges
         img[img < 0] = 0
         JungFrauGeometryFast.mask_module_py(img)
+        self.img_current = img
 
         delay_data = self._xes_curves[target_delay]
         is_pumped = (tid % 2 == 0 and self._even_trains_pumped) or \
@@ -180,8 +181,8 @@ class XesTimingProcessor(QThreadWorker):
         refresh_plots = self._refresh_plots
         if refresh_plots:
             self._refresh_plots = False
-            
-        # Get the digitizer data, find peaks i.e #pulses in one train
+
+        # Get the digitizer raw data & find peaks in its trace i.e #pulses in one train
         digitizer_data = self.getPropertyData(data, *self._digitizer_device)
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
@@ -190,6 +191,18 @@ class XesTimingProcessor(QThreadWorker):
         intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) for idx_digitizer_peaks in idx_digitizer_peaks]
         # Average the integral of the peaks to obtain the train intensity
         train_intensity = np.mean(intensity_peak)
+        delay_data.digitizer = train_intensity
+        
+        # Compute Area Under Curve
+        if self.img_current is None:
+            return
+
+        if self.img_current is not None:
+            activated_rois = [(idx, geom) for idx, geom in self._rois_geom_st.items()
+                              if geom is not None]
+            for roi_idx, roi_geom in activated_rois:
+                self.updateAUC(delay_data, roi_geom)
+        auc_avg = delay_data.auc
 
         self.log.info(f"Train {tid} processed")
         return {
@@ -197,16 +210,16 @@ class XesTimingProcessor(QThreadWorker):
             "delay": target_delay,
             "xes": self._xes_curves,
             "refresh_plots": refresh_plots,
-            "digi_int_avg": train_intensity
+            "digi_int_avg": delay_data.digitizer,
+            "auc": auc_avg
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):
         img_avg = delay_data.pumped_train_avg if update_pumped else delay_data.unpumped_train_avg
-
         # Extract the ROI
         x, y, w, h = roi_geom
         roi = img_avg[y:y + h, x:x + w]
-
+    
         # Compute normalized XES curve
         xes = np.nansum(roi, axis=0) / np.nansum(roi)
 
@@ -225,3 +238,17 @@ class XesTimingProcessor(QThreadWorker):
         # these fields are updated.
         if len(pumped[roi_idx]) == len(unpumped[roi_idx]):
             delay_data.difference[roi_idx] = pumped[roi_idx] - unpumped[roi_idx]
+
+    def updateAUC(self, delay_data, roi_geom):
+        # Extract the ROI
+        x, y, w, h = roi_geom
+        roi = self.img_current[y:y + h, x:x + w]
+
+        #1D projection to calculate Area Under Curve
+        spectra_1D = np.nansum(roi, axis=1)
+        background = np.nanmean(spectra_1D[:int(h/4)])
+        integral = trapezoid(spectra_1D-background)
+        delay_data.auc = integral
+
+        
+
