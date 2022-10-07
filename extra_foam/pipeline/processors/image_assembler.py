@@ -338,7 +338,7 @@ class ImageAssemblerFactory(ABC):
                 # only happens when ndim == 4
                 raise AssemblingError(f"Number of memory cells is zero!")
 
-            if ndim == 2 and self._detector != "ePix100":
+            if ndim == 2:
                 data['assembled'] = {'data': self._preprocess(modules_data)}
             else:
                 data['assembled'] = {'data': self._assemble(modules_data)}

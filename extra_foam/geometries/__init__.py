@@ -15,10 +15,8 @@ import h5py
 from extra_geom import AGIPD_1MGeometry as _geom_AGIPD_1MGeometry
 from extra_geom import LPD_1MGeometry as _geom_LPD_1MGeometry
 from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
-from extra_geom import Epix100Geometry as _geom_Epix100Geometry
 
-from ..algorithms.geometry import JungFrauGeometry
-from ..algorithms.geometry import EPix100Geometry as _EPix100Geometry
+from ..algorithms.geometry import EPix100Geometry, JungFrauGeometry
 from ..algorithms.geometry_1m import AGIPD_1MGeometry as _AGIPD_1MGeometry
 from ..algorithms.geometry_1m import LPD_1MGeometry as _LPD_1MGeometry
 from ..algorithms.geometry_1m import DSSC_1MGeometry as _DSSC_1MGeometry
@@ -61,8 +59,6 @@ def module_grid_shape(n_modules, *, detector=None, topic=None):
         return 2, 2
     if n_modules == 2:
         return 2, 1
-    if n_modules == 1 and detector == "ePix100":
-        return 1, 1
 
     raise NotImplementedError(
         f"Grid layout with {n_modules} modules is not supported!")
@@ -321,35 +317,11 @@ class JungFrauGeometryFast(JungFrauGeometry, _GeometryPyMixin):
         return cls(n_rows, n_columns, modules)
 
 
-class EPix100GeometryFast(_geom_Epix100Geometry, _GeometryPyMixin):
+class EPix100GeometryFast(EPix100Geometry, _GeometryPyMixin):
     """EPix100GeometryFast.
 
     Extend the functionality of EPix100Geometry implementation in C++.
     """
-    _asic_mask = _geom_Epix100Geometry.asic_seams()
-
-    @property
-    def module_shape(self):
-        return (704, 768)
-
-    def nModules(self):
-        return 1
-
-    def dismantleAllModules(self, assembled, out):
-        half_height = self.module_shape[0] // 2
-        half_width = self.module_shape[1] // 2
-        v_gap = 24
-        h_gap = 5
-
-        # Top left
-        out[0, :half_height, :half_width] = assembled[:half_height, :half_width]
-        # Bottom left
-        out[0, half_height:, :half_width] = assembled[half_height + v_gap:, :half_width]
-        # Top right
-        out[0, :half_height, half_width:] = assembled[:half_height, half_width + h_gap:]
-        # Bottom right
-        out[0, half_height:, half_width:] = assembled[half_height + v_gap:, half_width + h_gap:]
-
     @classmethod
     def mask_module_py(cls, image):
         """Override.
@@ -359,19 +331,6 @@ class EPix100GeometryFast(_geom_Epix100Geometry, _GeometryPyMixin):
         """
         image[0, :] = np.nan
         image[-1, :] = np.nan
-
-    def position_all_modules(self, modules, out, ignore_tile_edge=False, ignore_asic_edge=False):
-        modules = super().normalize_data(modules)
-
-        # Raw data can be of type int16, which doesn't support nans, so we need
-        # to convert it to a float value first.
-        if modules.dtype != np.float32 or modules.dtype != np.float16:
-            modules = modules.astype(np.float32)
-
-        if ignore_asic_edge:
-            modules[self._asic_mask] = np.nan
-
-        super().position_modules(modules, out=out)
 
 
 def load_geometry(detector, *,
@@ -441,9 +400,7 @@ def load_geometry(detector, *,
     if detector == "ePix100":
         shape = module_grid_shape(n_modules, detector=detector)
         if stack_only:
-            return EPix100GeometryFast.from_relative_positions(
-                top=[386.5, 364.5, 0.], bottom=[386.5, -12.5, 0.]
-            )
+            return EPix100GeometryFast(*shape)
 
         raise NotImplementedError(
             "ePix100 detector does not support loading geometry from file!")
