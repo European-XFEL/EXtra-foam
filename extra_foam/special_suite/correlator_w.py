@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
 from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs
 
 from metropc.client import ViewOutput
-from metropc import error as mpc_error
+from metropc import ViewStage, error as mpc_error
 
 from .. import ROOT_PATH
 from ..utils import RectROI as MetroRectROI
@@ -996,6 +996,7 @@ class ElidedLabel(QLabel):
 
 class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
     open_file_sgn = pyqtSignal(str)
+    trigger_action_sgn = pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1021,10 +1022,16 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
             item = QTreeWidgetItem([path_type, "", "", path_type])
             self._paths_treewidget.addTopLevelItem(item)
 
+        self._actions_group_box = QGroupBox("Actions")
+        self._actions_layout = QVBoxLayout()
+        self._actions_group_box.setLayout(self._actions_layout)
+        self._action_btns = { }
+
         self.layout().addRow(self.open_btn, self._path_label)
         self.layout().addRow(self.save_btn)
         self.layout().addRow(self.reload_btn)
         self.layout().addRow(self._paths_treewidget)
+        self.layout().addRow(self._actions_group_box)
 
     def onOpenFile(self):
         path = QFileDialog.getOpenFileName(self, "Open context", filter="Python (*.py)")[0]
@@ -1087,6 +1094,20 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
             if not self._findPathItem(path):
                 item = self._createPathItem(path, views[path])
                 parent.addChild(item)
+
+        action_views = [path.split("#")[1] for path, view in views.items()
+                        if view.stage == ViewStage.ACTION]
+        for path in action_views:
+            if path not in self._action_btns:
+                btn = QPushButton(path)
+                btn.clicked.connect(lambda c, _path=path: self.trigger_action_sgn.emit(_path))
+                self._actions_layout.addWidget(btn)
+                self._action_btns[path] = btn
+
+        for path in list(self._action_btns.keys()):
+            if path not in action_views:
+                self._actions_layout.removeWidget(self._action_btns[path])
+                del self._action_btns[path]
 
     def _createPathItem(self, path, data, item_name=None, item_type="", item_shape=""):
         if item_name is None:
@@ -1366,6 +1387,7 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         )
         ctrl.save_btn.clicked.connect(self._saveContext)
         ctrl.open_file_sgn.connect(self._openContext)
+        ctrl.trigger_action_sgn.connect(worker.triggerAction)
 
         self._com_ctrl_st.hostname_changed_sgn.connect(self._onHostnameChanged)
         self._com_ctrl_st.port_changed_sgn.connect(self._onPortChanged)

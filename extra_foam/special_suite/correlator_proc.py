@@ -291,6 +291,9 @@ class CorrelatorProcessor(QThreadWorker):
     def set_parameter(self, name, value):
         self._pipeline.queue_to_all(b"params", {name: value})
 
+    def triggerAction(self, name):
+        self._pipeline.queue_to("reduce", b"action", { "view_name": name })
+
     # Helper function to inspect an object and create a PathData object
     # for it.
     def inspect_data(self, data):
