@@ -319,9 +319,10 @@ class FuzzyCombobox(QComboBox):
 
             # If possible, filter by property
             if len(self.property_keywords) > 0:
+                print(self.property_keywords)
                 candidates = [source for source in candidates
                               if any(kw.lower() in source.split()[1].lower() for kw in self.property_keywords)]
-
+            
             # If we find some candidates, just use the first one
             if len(candidates) > 0:
                 self.setCurrentText(self.format_source(candidates[0]))
@@ -454,7 +455,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.target_delay_cb = FuzzyCombobox(device_keywords=["ppodl"],
                                              property_keywords=["targetPosition"])
         self.digitizer_cb = FuzzyCombobox(device_keywords=["ADC"],
-                                             property_keywords=["digitizers", "raw", "samples"])
+                                             property_keywords=["samples"])
 
         for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
             cb.setToolTip("This property will be auto-selected if possible (click the Start button).<br><br> <b>Warning:</b> changing this property will force the program to reset.")
@@ -491,14 +492,16 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     @pyqtSlot(dict)
     def onNewTrainData(self, data):
-        keys = set(key for key in data.keys() if not key.endswith(".timestamp") and not key.endswith(".timestamp.tid"))
-        fast_data = set(key for key in keys if ":" in key)
-        slow_data = keys - fast_data
-
+        keys = set(key for key in data.keys() if not key.endswith(".timestamp") 
+        and not key.endswith(".timestamp.tid") )
+        fast_data = set(key for key in keys if ":" in key and not "digitizer" in key)
+        slow_data = set(key for key in keys if not ":" in key and not "digitizer" in key)
+        digitizer_data = set(key for key in keys if "raw.samples" in key)
+   
         self.detector_cb.updateSources(fast_data)
         self.delay_cb.updateSources(slow_data)
         self.target_delay_cb.updateSources(slow_data)
-        self.digitizer_cb.updateSources(fast_data)
+        self.digitizer_cb.updateSources(digitizer_data)
 
 @create_special(XesCtrlWidget, XesTimingProcessor)
 class XesTimingWindow(_SpecialAnalysisBase):
@@ -669,9 +672,9 @@ class XesTimingWindow(_SpecialAnalysisBase):
             vsplitter.setStretchFactor(1, 1)
 
             hsplitter = QSplitter()
-            hsplitter.addWidget(correlator)
             hsplitter.addWidget(xes_plot)
             hsplitter.addWidget(vsplitter)
+            hsplitter.addWidget(correlator)
             hsplitter.setStretchFactor(0, 10)
             hsplitter.setStretchFactor(1, 1)
 
