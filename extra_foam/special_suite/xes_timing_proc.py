@@ -39,7 +39,6 @@ class DisplayOption(Enum):
     UNPUMPED = "Unpumped trains (avg)"
     DIFFERENCE = "Difference (avg(pumped) - avg(unpumped))"
 
-
 class XesTimingProcessor(QThreadWorker):
     """XES timing processor.
 
@@ -59,6 +58,7 @@ class XesTimingProcessor(QThreadWorker):
         self._delay_device = None
         self._target_delay_device = None
         self._digitizer_device = None
+        self._digitizer_analysis = True
 
         self.reset()
 
@@ -71,7 +71,6 @@ class XesTimingProcessor(QThreadWorker):
 
     def onEvenTrainsPumpedChanged(self, value: int):
         self._even_trains_pumped = bool(value)
-
         # If this setting has changed, then we need to swap all the
         # pumped/unpumped data.
         for data in self._xes_curves.values():
@@ -111,7 +110,11 @@ class XesTimingProcessor(QThreadWorker):
     
     def setDigitizerDevice(self, device, prop):
         self._digitizer_device = (device, prop)
-       
+    
+    def onDigitizerAnalysisTypeChanged(self, value: str):
+        self._digitizer_analysis = bool(value)
+        print("DIGITIZER ANALYSIS TYPE", self._digitizer_analysis )
+
 
     @profiler("XES timing processor")
     def process(self, data):
@@ -119,7 +122,8 @@ class XesTimingProcessor(QThreadWorker):
         data, meta = data["raw"], data["meta"]
         tid = self.getTrainId(meta)
         self.new_train_data_sgn.emit(data)
-        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device, self._digitizer_device]):
+        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device, 
+        self._digitizer_device]):
             self.log.info("Either the detector, digitizer, delay property, or target delay property have not been set.")
             return None
 
@@ -186,12 +190,27 @@ class XesTimingProcessor(QThreadWorker):
         digitizer_data = np.array(self.getPropertyData(data, *self._digitizer_device)).squeeze()
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
-        width_peak = 300 # width given in samples 
-        # integrate each peak
-        intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) for idx_digitizer_peaks in idx_digitizer_peaks]
-        # Average the integral of the peaks to obtain the train intensity
-        train_intensity = np.mean(intensity_peak)
-        delay_data.digitizer = train_intensity
+        width_peak = 1000 # width given in samples 
+        
+        if digitizer_data is None:
+            return
+    
+        if self._digitizer_analysis:
+            # integrate each peak in train
+            print("INTEGRAL", self._digitizer_analysis)
+            intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
+            for idx_digitizer_peaks in idx_digitizer_peaks]
+            # Average the integral of the peaks to obtain the train intensity
+            train_intensity = np.mean(intensity_peak)
+            delay_data.digitizer = train_intensity
+        else:
+            #Amplitude each peak in train
+            print("AMPLITUDE", self._digitizer_analysis)
+            amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
+            for idx_digitizer_peaks in idx_digitizer_peaks]
+            # Average train amplitude
+            train_amplitude = np.nanmean(amplitude_peak)
+            delay_data.digitizer = train_amplitude
         
         # Compute Area Under Curve
         if self.img_current is None:

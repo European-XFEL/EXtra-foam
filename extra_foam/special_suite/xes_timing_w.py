@@ -162,7 +162,6 @@ class CorrelatorPlot(PlotWidgetF):
         self.setTitle("Correlation JNGF vs Digitizer")
 
         self._plot = self.plotScatter(brush=FColor.mkBrush("w"))
-        # self._plot = self.plotCurve()
         self.digitizer_data = []
         self.auc_data = []
         self.train_count = 0
@@ -319,7 +318,6 @@ class FuzzyCombobox(QComboBox):
 
             # If possible, filter by property
             if len(self.property_keywords) > 0:
-                print(self.property_keywords)
                 candidates = [source for source in candidates
                               if any(kw.lower() in source.split()[1].lower() for kw in self.property_keywords)]
             
@@ -448,6 +446,11 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.pumped_train_cb.addItem("Odd")
         self.pumped_train_cb.addItem("Even")
 
+        self.digitizer_type_analysis_cb = QComboBox()
+        self.digitizer_type_analysis_cb.addItem("Digitizer amplitude peaks")
+        self.digitizer_type_analysis_cb.addItem("Digitizer integral peaks")
+
+
         self.detector_cb = FuzzyCombobox(device_keywords=["jf", "jngfr", "jungfrau"],
                                          property_keywords=["data.adc"])
         self.delay_cb = FuzzyCombobox(device_keywords=["ppodl"],
@@ -467,7 +470,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
             self.delay_cb,
             self.target_delay_cb,
             self.save_btn,
-            self.digitizer_cb
+            self.digitizer_cb,
         ]
 
         self.initUI()
@@ -483,8 +486,10 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Delay property: ", self.delay_cb)
         layout.addRow("Target delay property: ", self.target_delay_cb)
         layout.addRow("Digitizer: ", self.digitizer_cb)
+        layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
         layout.setItem(layout.count(), QFormLayout.SpanningRole, QSpacerItem(0, 20))
         layout.addRow(self.save_btn)
+
 
     def initConnections(self):
         """Override."""
@@ -565,11 +570,17 @@ class XesTimingWindow(_SpecialAnalysisBase):
         pumped_train.currentIndexChanged.connect(worker.onEvenTrainsPumpedChanged)
         pumped_train.currentIndexChanged.emit(pumped_train.currentIndex())
 
+        # Tell the worker whether integral or amplitude of digitizer peaks
+        digitizer_type_analysis = ctrl.digitizer_type_analysis_cb
+        digitizer_type_analysis.currentIndexChanged.connect(worker.onDigitizerAnalysisTypeChanged)
+        digitizer_type_analysis.currentIndexChanged.emit(digitizer_type_analysis.currentIndex())
+
         ctrl.detector_cb.currentIndexChanged.connect(self.onDetectorChanged)
         ctrl.delay_cb.currentIndexChanged.connect(self.onDelayDeviceChanged)
         ctrl.target_delay_cb.currentIndexChanged.connect(self.onTargetDelayDeviceChanged)
         ctrl.digitizer_cb.currentIndexChanged.connect(self.onDigitizerDeviceChanged)
         ctrl.save_btn.clicked.connect(self.onSaveData)
+
 
         for roi_ctrl in self._com_ctrl_st.roi_ctrls:
             roi_ctrl.roi_geometry_change_sgn.connect(self.onRoiChanged)
