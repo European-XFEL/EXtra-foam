@@ -154,6 +154,14 @@ class DelayScanSlice(PlotWidgetF):
         self._x_max = x_max
 
 class CorrelatorPlot(PlotWidgetF):
+    """ 
+    Correlation plot class.
+
+    Correlation between the AUC of JNGF projection vs average integral(or amplitude) 
+    of the peaks in one train
+    
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
@@ -188,6 +196,21 @@ class CorrelatorPlot(PlotWidgetF):
         self.auc_data.clear()
         self.digitizer_data.clear()
         self.train_array.clear()
+
+class DigitizerPlot(PlotWidgetF):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.setLabel("left", "Amplitude")
+        self.setLabel("bottom", "Samples")
+        self.setTitle("Digitizer " )
+        self._plot = self.plotCurve()
+
+    def updateF(self, data):
+        if data is None:
+            return
+        self._plot.setData(np.arange(len(data["digi_data"])), data["digi_data"])
+
 
 class DelayScanView(ImageViewF):
     linear_roi_changed_sgn = pyqtSignal(int, int)
@@ -547,9 +570,12 @@ class XesTimingWindow(_SpecialAnalysisBase):
         right_panel.addWidget(self._view)
         right_panel.addWidget(self._stacked_widget)
         right_panel.setSizes([int(2 * self._TOTAL_H / 5), int(3 * self._TOTAL_H / 5)])
-
+        hsplitter = QSplitter()
+        hsplitter.addWidget(DigitizerPlot(parent=self))
+        hsplitter.setSizes([1, 1])
         cw = self.centralWidget()
         cw.addWidget(right_panel)
+        cw.addWidget(hsplitter)
         cw.setSizes([int(self._TOTAL_W / 4), int(3 * self._TOTAL_W / 4)])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
@@ -675,10 +701,12 @@ class XesTimingWindow(_SpecialAnalysisBase):
             delay_scan = DelayScanView(self._view.rois[idx - 1], parent=self)
             delay_slice = DelayScanSlice(delay_scan, parent=self)
             correlator = CorrelatorPlot(parent=self)
+            # digitizer = DigitizerPlot(parent=self)
 
             vsplitter = QSplitter(Qt.Vertical)
             vsplitter.addWidget(delay_slice)
             vsplitter.addWidget(delay_scan)
+            # vsplitter.addWidget(digitizer)
             vsplitter.setStretchFactor(0, 10)
             vsplitter.setStretchFactor(1, 1)
 
@@ -695,7 +723,6 @@ class XesTimingWindow(_SpecialAnalysisBase):
             # roi_ctrl.roi_geometry_change_sgn.connect(correlator.onRoiChanged)
             xes_plot.onRoiChanged(roi_ctrl.params())
             delay_scan.onRoiChanged(roi_ctrl.params())
-            # correlator.onRoiChanged(roi_ctrl.params())
 
             delay_scan.linear_roi_changed_sgn.connect(delay_slice.onLinearRoiChanged)
 

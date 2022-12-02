@@ -188,10 +188,11 @@ class XesTimingProcessor(QThreadWorker):
 
         # Get the digitizer raw data & find peaks in its trace i.e #pulses in one train
         digitizer_data = np.array(self.getPropertyData(data, *self._digitizer_device)).squeeze()
+        print("DIGITIZERDATA", np.shape(digitizer_data))
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
         width_peak = 1000 # width given in samples 
-        
+
         if digitizer_data is None:
             return
     
@@ -230,6 +231,7 @@ class XesTimingProcessor(QThreadWorker):
             "xes": self._xes_curves,
             "refresh_plots": refresh_plots,
             "digi_int_avg": delay_data.digitizer,
+            "digi_data": digitizer_data,
             "auc": auc_avg
         }
 
