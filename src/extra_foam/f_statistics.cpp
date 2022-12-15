@@ -54,5 +54,6 @@ PYBIND11_MODULE(statistics, m)
 
   FOAM_NAN_REDUCER(nansum)
   FOAM_NAN_REDUCER(nanmean)
-
+  FOAM_NAN_REDUCER(nanvar)
+  FOAM_NAN_REDUCER(nanstd)
 }
