@@ -59,7 +59,7 @@ class XesTimingProcessor(QThreadWorker):
         self._target_delay_device = None
         self._digitizer_device = None
         self._digitizer_analysis = True
-
+        self._digitizer_range = 0
         self.reset()
 
     def reset(self):
@@ -113,8 +113,9 @@ class XesTimingProcessor(QThreadWorker):
     
     def onDigitizerAnalysisTypeChanged(self, value: str):
         self._digitizer_analysis = bool(value)
-        print("DIGITIZER ANALYSIS TYPE", self._digitizer_analysis )
 
+    def SetDigitizerSlice(self, value: int):
+        self._digitizer_range = int(value)
 
     @profiler("XES timing processor")
     def process(self, data):
@@ -188,7 +189,6 @@ class XesTimingProcessor(QThreadWorker):
 
         # Get the digitizer raw data & find peaks in its trace i.e #pulses in one train
         digitizer_data = np.array(self.getPropertyData(data, *self._digitizer_device)).squeeze()
-        print("DIGITIZERDATA", np.shape(digitizer_data))
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
         width_peak = 1000 # width given in samples 
@@ -198,15 +198,13 @@ class XesTimingProcessor(QThreadWorker):
     
         if self._digitizer_analysis:
             # integrate each peak in train
-            print("INTEGRAL", self._digitizer_analysis)
             intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
             for idx_digitizer_peaks in idx_digitizer_peaks]
             # Average the integral of the peaks to obtain the train intensity
             train_intensity = np.mean(intensity_peak)
             delay_data.digitizer = train_intensity
-        else:
+        if not self._digitizer_analysis:
             #Amplitude each peak in train
-            print("AMPLITUDE", self._digitizer_analysis)
             amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
             for idx_digitizer_peaks in idx_digitizer_peaks]
             # Average train amplitude
