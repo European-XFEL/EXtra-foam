@@ -59,7 +59,7 @@ class XesTimingProcessor(QThreadWorker):
         self._target_delay_device = None
         self._digitizer_device = None
         self._digitizer_analysis = True
-        self._digitizer_range = 0
+        self._digitizer_range = str("0:40000")
         self.reset()
 
     def reset(self):
@@ -114,8 +114,16 @@ class XesTimingProcessor(QThreadWorker):
     def onDigitizerAnalysisTypeChanged(self, value: str):
         self._digitizer_analysis = bool(value)
 
-    def SetDigitizerSlice(self, value: int):
-        self._digitizer_range = int(value)
+    def SetDigitizerSlice(self, value: str):
+        # self.digitizer_range = value.split(":")
+        if value is None:
+            self._digitizer_range = self._digitizer_range
+        else:    
+            self._digitizer_range = value
+        print('DIGITIZER RANGE PROC:', self._digitizer_range)
+        # self.digitizer_range_min = int(self.digitizer_range[0])
+        # self.digitizer_range_max = int(self.digitizer_range[1])
+
 
     @profiler("XES timing processor")
     def process(self, data):
@@ -123,8 +131,8 @@ class XesTimingProcessor(QThreadWorker):
         data, meta = data["raw"], data["meta"]
         tid = self.getTrainId(meta)
         self.new_train_data_sgn.emit(data)
-        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device, 
-        self._digitizer_device]):
+
+        if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device]):
             self.log.info("Either the detector, digitizer, delay property, or target delay property have not been set.")
             return None
 
@@ -189,13 +197,14 @@ class XesTimingProcessor(QThreadWorker):
 
         # Get the digitizer raw data & find peaks in its trace i.e #pulses in one train
         digitizer_data = np.array(self.getPropertyData(data, *self._digitizer_device)).squeeze()
+
+        if digitizer_data is None:
+            return
+
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
         width_peak = 1000 # width given in samples 
 
-        if digitizer_data is None:
-            return
-    
         if self._digitizer_analysis:
             # integrate each peak in train
             intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
@@ -230,7 +239,8 @@ class XesTimingProcessor(QThreadWorker):
             "refresh_plots": refresh_plots,
             "digi_int_avg": delay_data.digitizer,
             "digi_data": digitizer_data,
-            "auc": auc_avg
+            "auc": auc_avg,
+            "digi_range": self._digitizer_range
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):

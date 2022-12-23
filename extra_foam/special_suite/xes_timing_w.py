@@ -199,28 +199,31 @@ class CorrelatorPlot(PlotWidgetF):
         self.train_array.clear()
 
 class DigitizerPlot(PlotWidgetF):
-    def __init__(self, sample_min, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.setLabel("left", "Amplitude")
         self.setLabel("bottom", "Samples")
         self.setTitle("Digitizer " )
         self._plot = self.plotCurve()
-        self.digi_sample_min = sample_min
+        self.digitizer_range = []
 
     def updateF(self, data):
         if data is None:
             return
+        
+        if not data["digi_range"]:
+            self.digitizer_range = [0,40000]
+        else:
+            self.digitizer_range = data["digi_range"].split(":")
+            
+        self.digi_sample_min = int(self.digitizer_range[0])
+        self.digi_sample_max = int(self.digitizer_range[1])
+
         digitizer_data = data["digi_data"]
-        # self.min_digi_samples =10000
-        self.max_digi_samples = 30000
-        print("MIN SAMPLE THAT GOES TO PLOT!!", self.digi_sample_min)
-
-        if self.digi_sample_min is None:
-            self.digi_sample_min = 0
-
-        self._plot.setData(np.arange(len(digitizer_data[self.digi_sample_min:self.max_digi_samples])), 
-        digitizer_data[self.digi_sample_min:self.max_digi_samples])
+       
+        self._plot.setData(np.arange(len(digitizer_data[self.digi_sample_min:self.digi_sample_max])), 
+        digitizer_data[self.digi_sample_min:self.digi_sample_max])
 
 
 class DelayScanView(ImageViewF):
@@ -300,8 +303,7 @@ class DelayScanView(ImageViewF):
         # If this is the first image we get, set the linear ROI to a reasonable
         # default.
         if first_image:
-            width = self._buffer.size
-            self.linear_roi.setRegion([width / 4, 3 * width / 4])
+            width = self._buffer.sizesplit
 
     @pyqtSlot(tuple)
     def onRoiChanged(self, roi_params):
@@ -318,8 +320,6 @@ class DelayScanView(ImageViewF):
         super().reset()
 
         self._delays.clear()
-        self._buffer.reset()
-
 
 class FuzzyCombobox(QComboBox):
     def __init__(self, device_keywords=[], property_keywords=[]):
@@ -340,7 +340,7 @@ class FuzzyCombobox(QComboBox):
                 display_name = self.format_source(source)
                 self.addItem(display_name, userData=source)
 
-        # If no item is currently selected, attempt to automatically select one
+        # If no item is currently selected, attempt to automatically select splitone
         if self.currentText() == "" and len(self.device_keywords) > 0:
             # Note that we skip the first (empty) row when iterating
             all_sources = [model.data(model.index(row, 0), role=Qt.UserRole)
@@ -493,12 +493,8 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.digitizer_cb = FuzzyCombobox(device_keywords=["ADC"],
                                              property_keywords=["samples"])
 
-        self._digitizer_min = SmartLineEdit()
-        self._digitizer_min.setValidator(QIntValidator(1, 10000))
-        # self.digitizer_wd = QHBoxLayout()
-        # self.digitizer_wd.addWidget(self.digitizer_cb)
-        # self.digitizer_wd.addWidget(self.digitizer_type_analysis_cb)
-        # self.digitizer_wd.addStretch()
+        self.digitizer_range_cb = SmartLineEdit()
+        # self._digitizer_min.setValidator(QIntValidator(1, 10000))
 
         for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
             cb.setToolTip("This property will be auto-selected if possible (click the Start button).<br><br> <b>Warning:</b> changing this property will force the program to reset.")
@@ -526,7 +522,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Target delay property: ", self.target_delay_cb)
         layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
-        layout.addRow("Digitizer slice:", self._digitizer_min)
+        layout.addRow("Digitizer slice(min:max):", self.digitizer_range_cb)
 #    hbox.addWidget(r1)
 #    hbox.addWidget(r2)
 #    hbox.addStretch()
@@ -538,6 +534,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def initConnections(self):
         """Override."""
         pass
+
 
     @pyqtSlot(dict)
     def onNewTrainData(self, data):
@@ -566,6 +563,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
 
         self._view = DetectorView(parent=self)
         self._visualized_rois = set()
+        # self.digitizer_range = "0:100000"
 
         self.initUI()
         self.initConnections()
@@ -588,13 +586,14 @@ class XesTimingWindow(_SpecialAnalysisBase):
         self._stacked_widget.addWidget(self._tab_widget)
         
         correlator = CorrelatorPlot(parent=self)
-        digitizer = DigitizerPlot(1000, parent=self)
+        digitizer = DigitizerPlot(parent=self)
         digitizer_ui = QSplitter(Qt.Vertical)
         digitizer_ui.addWidget(digitizer)
         digitizer_ui.addWidget(correlator)
         hsplitter = QSplitter()
         hsplitter.addWidget(self._view)
         hsplitter.addWidget(digitizer_ui)
+        hsplitter.setStretchFactor(0, 10)
 
         right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(hsplitter)
@@ -628,18 +627,13 @@ class XesTimingWindow(_SpecialAnalysisBase):
         digitizer_type_analysis.currentIndexChanged.connect(worker.onDigitizerAnalysisTypeChanged)
         digitizer_type_analysis.currentIndexChanged.emit(digitizer_type_analysis.currentIndex())
         
-        # digitizer_min_value = ctrl._digitizer_min
-        # digitizer_min_value.value_changed_sgn.connect(worker.onDigitizerSliceChanged)
-        # digitizer_min_value.value_changed_sgn.emit(digitizer_min_value.currentText())
-
 
         ctrl.detector_cb.currentIndexChanged.connect(self.onDetectorChanged)
         ctrl.delay_cb.currentIndexChanged.connect(self.onDelayDeviceChanged)
         ctrl.target_delay_cb.currentIndexChanged.connect(self.onTargetDelayDeviceChanged)
         ctrl.digitizer_cb.currentIndexChanged.connect(self.onDigitizerDeviceChanged)
-        ctrl._digitizer_min.value_changed_sgn.connect(self.onDigitizerSliceChanged)
-        # ctrl._digitizer_min.value_changed_sgn.emit(ctrl._digitizer_min.text())
-        # print("INIT connections, emit", int(ctrl._digitizer_min.text()))
+        ctrl.digitizer_range_cb.value_changed_sgn.connect(self.onDigitizerSliceChanged)
+        ctrl.digitizer_range_cb.value_changed_sgn.emit(ctrl.digitizer_range_cb.text())
         ctrl.save_btn.clicked.connect(self.onSaveData)
 
         for roi_ctrl in self._com_ctrl_st.roi_ctrls:
@@ -651,7 +645,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onDetectorChanged(self, index):
         key = self._ctrl_widget_st.detector_cb.currentData()
         self._worker_st.setDetectorDevice(*key.split())
-
+  
     def onDelayDeviceChanged(self, index):
         key = self._ctrl_widget_st.delay_cb.currentData()
         self._worker_st.setDelayDevice(*key.split())
@@ -664,11 +658,9 @@ class XesTimingWindow(_SpecialAnalysisBase):
         key = self._ctrl_widget_st.digitizer_cb.currentData()
         self._worker_st.setDigitizerDevice(*key.split())
 
-    @pyqtSlot()
     def onDigitizerSliceChanged(self):
-        self.digitizer_range_min = int(self._ctrl_widget_st._digitizer_min.text())
-        self._worker_st.SetDigitizerSlice(*[self.digitizer_range_min])
-        print("MINIMUM DIGITIZER RANGE CHANGED", self.digitizer_range_min)
+        digitizer_range = self._ctrl_widget_st.digitizer_range_cb.text()
+        self._worker_st.SetDigitizerSlice(*[digitizer_range])
 
     def onSaveData(self):
         file_path = QFileDialog.getSaveFileName(filter="HDF5 (*.h5)")[0]
@@ -739,23 +731,16 @@ class XesTimingWindow(_SpecialAnalysisBase):
             xes_plot = XesSignalPlot(idx, parent=self)
             delay_scan = DelayScanView(self._view.rois[idx - 1], parent=self)
             delay_slice = DelayScanSlice(delay_scan, parent=self)
-            correlator = CorrelatorPlot(parent=self)
-            digitizer = DigitizerPlot(self.digitizer_range_min, parent=self)
-
+        
             vsplitter = QSplitter(Qt.Vertical)
             vsplitter.addWidget(delay_slice)
             vsplitter.addWidget(delay_scan)
             vsplitter.setStretchFactor(0, 10)
             vsplitter.setStretchFactor(1, 1)
 
-            digitizer_ui = QSplitter(Qt.Vertical)
-            digitizer_ui.addWidget(digitizer)
-            digitizer_ui.addWidget(correlator)
-
             hsplitter = QSplitter()
             hsplitter.addWidget(xes_plot)
             hsplitter.addWidget(vsplitter)
-            hsplitter.addWidget(digitizer_ui)
             hsplitter.setStretchFactor(0, 10)
             hsplitter.setStretchFactor(1, 1)
 
