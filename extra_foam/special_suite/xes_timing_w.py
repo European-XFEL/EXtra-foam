@@ -216,7 +216,8 @@ class DigitizerPlot(PlotWidgetF):
             self.digitizer_range = [0,40000]
         else:
             self.digitizer_range = data["digi_range"].split(":")
-            
+
+        print("RANGE THAT GOES TO PLOT", self.digitizer_range)    
         self.digi_sample_min = int(self.digitizer_range[0])
         self.digi_sample_max = int(self.digitizer_range[1])
 
@@ -494,6 +495,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
                                              property_keywords=["samples"])
 
         self.digitizer_range_cb = SmartLineEdit()
+        self.digitizer_width_cb = SmartLineEdit()
         # self._digitizer_min.setValidator(QIntValidator(1, 10000))
 
         for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
@@ -523,6 +525,8 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
         layout.addRow("Digitizer slice(min:max):", self.digitizer_range_cb)
+        layout.addRow("Digitizer width in samples:", self.digitizer_width_cb)
+
 #    hbox.addWidget(r1)
 #    hbox.addWidget(r2)
 #    hbox.addStretch()
@@ -634,6 +638,8 @@ class XesTimingWindow(_SpecialAnalysisBase):
         ctrl.digitizer_cb.currentIndexChanged.connect(self.onDigitizerDeviceChanged)
         ctrl.digitizer_range_cb.value_changed_sgn.connect(self.onDigitizerSliceChanged)
         ctrl.digitizer_range_cb.value_changed_sgn.emit(ctrl.digitizer_range_cb.text())
+        ctrl.digitizer_width_cb.value_changed_sgn.connect(self.onDigitizerWidthChanged)
+        ctrl.digitizer_width_cb.value_changed_sgn.emit(ctrl.digitizer_width_cb.text())
         ctrl.save_btn.clicked.connect(self.onSaveData)
 
         for roi_ctrl in self._com_ctrl_st.roi_ctrls:
@@ -661,6 +667,12 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onDigitizerSliceChanged(self):
         digitizer_range = self._ctrl_widget_st.digitizer_range_cb.text()
         self._worker_st.SetDigitizerSlice(*[digitizer_range])
+    
+    def onDigitizerWidthChanged(self):
+        digitizer_width = self._ctrl_widget_st.digitizer_width_cb.text()
+        self._worker_st.SetDigitizerWidth(*[digitizer_width])
+        print("DIGITIZER WIDTH given",digitizer_width)
+
 
     def onSaveData(self):
         file_path = QFileDialog.getSaveFileName(filter="HDF5 (*.h5)")[0]

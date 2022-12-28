@@ -59,7 +59,8 @@ class XesTimingProcessor(QThreadWorker):
         self._target_delay_device = None
         self._digitizer_device = None
         self._digitizer_analysis = True
-        self._digitizer_range = str("0:40000")
+        self._digitizer_range = None
+        self._digitizer_width_peak = None
         self.reset()
 
     def reset(self):
@@ -114,15 +115,13 @@ class XesTimingProcessor(QThreadWorker):
     def onDigitizerAnalysisTypeChanged(self, value: str):
         self._digitizer_analysis = bool(value)
 
-    def SetDigitizerSlice(self, value: str):
-        # self.digitizer_range = value.split(":")
-        if value is None:
-            self._digitizer_range = self._digitizer_range
-        else:    
-            self._digitizer_range = value
-        print('DIGITIZER RANGE PROC:', self._digitizer_range)
-        # self.digitizer_range_min = int(self.digitizer_range[0])
-        # self.digitizer_range_max = int(self.digitizer_range[1])
+    def SetDigitizerSlice(self, value: str):  
+        self._digitizer_range = value
+        print("DIgitizer Slice PROC:", self._digitizer_range)
+    
+    def SetDigitizerWidth(self, value:int):
+        self._digitizer_width_peak = int(value)
+        print("Digitizer WIDTH Proc", self._digitizer_width_peak)
 
 
     @profiler("XES timing processor")
@@ -203,18 +202,24 @@ class XesTimingProcessor(QThreadWorker):
 
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
-        width_peak = 1000 # width given in samples 
+        if not self._digitizer_width_peak:
+            digitizer_width = 1000
+        else:
+            digitizer_width = self._digitizer_width_peak # width given in samples 
 
+        print("Digitizer WIDTH proc", digitizer_width)
+        
         if self._digitizer_analysis:
             # integrate each peak in train
-            intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
+            intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
             for idx_digitizer_peaks in idx_digitizer_peaks]
             # Average the integral of the peaks to obtain the train intensity
             train_intensity = np.mean(intensity_peak)
             delay_data.digitizer = train_intensity
         if not self._digitizer_analysis:
             #Amplitude each peak in train
-            amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-width_peak:idx_digitizer_peaks+width_peak]) 
+            amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-digitizer_width:
+            idx_digitizer_peaks+digitizer_width]) 
             for idx_digitizer_peaks in idx_digitizer_peaks]
             # Average train amplitude
             train_amplitude = np.nanmean(amplitude_peak)
