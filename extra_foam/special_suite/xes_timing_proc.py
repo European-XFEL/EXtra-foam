@@ -118,10 +118,8 @@ class XesTimingProcessor(QThreadWorker):
 
     def SetDigitizerSlice(self, value: str):  
         self._digitizer_range = value
-        # print("Digitizer SLICE Proc:", self._digitizer_range)
     
     def SetDigitizerWidth(self, value:int):
-        print("Digitizer WIDTH Proc", value)
         if self._digitizer_width_peak is None:
             return
         else:
@@ -211,7 +209,6 @@ class XesTimingProcessor(QThreadWorker):
         else:
             digitizer_width = self._digitizer_width_peak # width given in samples 
 
-        print("Digitizer WIDTH proc", digitizer_width)
         
         if self._digitizer_analysis:
             # integrate each peak in train

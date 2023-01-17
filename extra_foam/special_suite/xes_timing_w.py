@@ -684,8 +684,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onDigitizerWidthChanged(self):
         digitizer_width = self._ctrl_widget_st.digitizer_width_cb.text()
         self._worker_st.SetDigitizerWidth(*[digitizer_width])
-        # print("DIGITIZER WIDTH given",digitizer_width)
-
+        
 
     def onSaveData(self):
         file_path = QFileDialog.getSaveFileName(filter="HDF5 (*.h5)")[0]
