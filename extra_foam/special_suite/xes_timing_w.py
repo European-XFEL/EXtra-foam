@@ -78,12 +78,14 @@ class XesSignalPlot(PlotWidgetF):
 
         self.setLabel('left', "Difference")
         self.setLabel('bottom', "X axis (pixels)")
+        self.setLabel('right', "XES (JNGF projection)")
         self.setTitle("XES signal")
 
         self._roi_idx = roi_idx
         self._roi_x = 0
         self._plots = { }
         self._pens = list(SequentialColor.mkPen(len(SequentialColor.pool)))
+        self._plot_xes = self.plotCurve()
 
         self._legend = self.addLegend(offset=(-10, -10))
         self.hideLegend()
@@ -101,9 +103,12 @@ class XesSignalPlot(PlotWidgetF):
             for delay, delay_data in data["xes"].items():
                 self.plot_delay(delay, delay_data)
         else:
-            # Otherwise just update the plot for the current delay
+            # Otherwise just update
+            #  the plot for the current delay
             current_delay = data["delay"]
             self.plot_delay(current_delay, data["xes"][current_delay])
+
+        # self._plot_xes.setData(self._roi_x + np.arange(len(data["xes_proj"])), (data["xes_proj"]/np.nanmax(data["xes_proj"]))*10000)
 
     def plot_delay(self, delay, delay_data):
         diff = delay_data.difference[self._roi_idx]
@@ -113,8 +118,8 @@ class XesSignalPlot(PlotWidgetF):
         if delay not in self._plots:
             self._plots[delay] = self.plotCurve(pen=self._pens[len(self._plots) % len(self._pens)])
             self._legend.addItem(self._plots[delay], f"Delay: {delay}")
-
-        self._plots[delay].setData(self._roi_x + np.arange(len(diff)), diff)
+        
+        self._plots[delay].setData(self._roi_x + np.arange(len(diff)), diff/np.sum(diff))
 
     @pyqtSlot(tuple)
     def onRoiChanged(self, roi_params):
@@ -217,7 +222,6 @@ class DigitizerPlot(PlotWidgetF):
         else:
             self.digitizer_range = data["digi_range"].split(":")
 
-        print("RANGE THAT GOES TO PLOT", self.digitizer_range)    
         self.digi_sample_min = int(self.digitizer_range[0])
         self.digi_sample_max = int(self.digitizer_range[1])
 
@@ -517,6 +521,14 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def initUI(self):
         """Override."""
         layout = self.layout()
+        ## Dummy implementation for displaying proposal & run numbers
+        run_info = QHBoxLayout()
+        run_info.addWidget(QLabel("Proposal number:"))
+        run_info.addWidget(SmartLineEdit())
+        run_info.addWidget(QLabel("Run:"))
+        run_info.addWidget(SmartLineEdit())
+        layout.addRow(run_info)
+        ## Dummy implementation for displaying proposal & run numbers
         layout.addRow("Display: ", self.img_display_cb)
         layout.addRow("Pumped trains are: ", self.pumped_train_cb)
         layout.addRow("Detector: ", self.detector_cb)
@@ -524,13 +536,14 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Target delay property: ", self.target_delay_cb)
         layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
-        layout.addRow("Digitizer slice(min:max):", self.digitizer_range_cb)
-        layout.addRow("Digitizer width in samples:", self.digitizer_width_cb)
+    
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel("Digitizer slice(min:max):"))
+        hbox.addWidget(self.digitizer_range_cb)
+        hbox.addWidget(QLabel("width in samples:"))
+        hbox.addWidget(self.digitizer_width_cb)
+        layout.addRow(hbox)
 
-#    hbox.addWidget(r1)
-#    hbox.addWidget(r2)
-#    hbox.addStretch()
-#    fbox.addRow(QLabel("sex"),hbox)
         layout.setItem(layout.count(), QFormLayout.SpanningRole, QSpacerItem(0, 20))
         layout.addRow(self.save_btn)
 
@@ -671,7 +684,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onDigitizerWidthChanged(self):
         digitizer_width = self._ctrl_widget_st.digitizer_width_cb.text()
         self._worker_st.SetDigitizerWidth(*[digitizer_width])
-        print("DIGITIZER WIDTH given",digitizer_width)
+        # print("DIGITIZER WIDTH given",digitizer_width)
 
 
     def onSaveData(self):

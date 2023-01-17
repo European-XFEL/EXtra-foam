@@ -33,6 +33,7 @@ class XesData:
     train_count: int = 1
     digitizer: defaultdict = defaultdict_ndarray()
     auc: defaultdict = defaultdict_ndarray()
+    xes_proj: defaultdict = defaultdict_ndarray()
 
 class DisplayOption(Enum):
     PUMPED = "Pumped trains (avg)"
@@ -117,11 +118,14 @@ class XesTimingProcessor(QThreadWorker):
 
     def SetDigitizerSlice(self, value: str):  
         self._digitizer_range = value
-        print("DIgitizer Slice PROC:", self._digitizer_range)
+        # print("Digitizer SLICE Proc:", self._digitizer_range)
     
     def SetDigitizerWidth(self, value:int):
-        self._digitizer_width_peak = int(value)
-        print("Digitizer WIDTH Proc", self._digitizer_width_peak)
+        print("Digitizer WIDTH Proc", value)
+        if self._digitizer_width_peak is None:
+            return
+        else:
+            self._digitizer_width_peak = int(value)
 
 
     @profiler("XES timing processor")
@@ -235,7 +239,8 @@ class XesTimingProcessor(QThreadWorker):
             for roi_idx, roi_geom in activated_rois:
                 self.updateAUC(delay_data, roi_geom)
         auc_avg = delay_data.auc
-
+        xes_projection = delay_data.xes_proj # XES for ANY delay
+        
         self.log.info(f"Train {tid} processed")
         return {
             "img_avg": img_avg,
@@ -245,7 +250,8 @@ class XesTimingProcessor(QThreadWorker):
             "digi_int_avg": delay_data.digitizer,
             "digi_data": digitizer_data,
             "auc": auc_avg,
-            "digi_range": self._digitizer_range
+            "digi_range": self._digitizer_range,
+            "xes_proj": xes_projection
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):
@@ -279,9 +285,10 @@ class XesTimingProcessor(QThreadWorker):
         roi = self.img_current[y:y + h, x:x + w]
 
         #1D projection to calculate Area Under Curve
-        spectra_1D = np.nansum(roi, axis=1)
+        spectra_1D = np.nansum(roi, axis=0)/ np.nansum(roi)
         background = np.nanmean(spectra_1D[:int(h/4)])
-        integral = trapezoid(spectra_1D-background)
+        delay_data.xes_proj = spectra_1D-background
+        integral = trapezoid(delay_data.xes_proj)
         delay_data.auc = integral
 
         
