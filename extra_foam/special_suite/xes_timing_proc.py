@@ -201,7 +201,6 @@ class XesTimingProcessor(QThreadWorker):
 
         if digitizer_data is None:
             return
-
         digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
         idx_digitizer_peaks = digitizer_peaks[0]
         if not self._digitizer_width_peak:
@@ -209,22 +208,27 @@ class XesTimingProcessor(QThreadWorker):
         else:
             digitizer_width = self._digitizer_width_peak # width given in samples 
 
-        
-        if self._digitizer_analysis:
-            # integrate each peak in train
-            intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
-            for idx_digitizer_peaks in idx_digitizer_peaks]
-            # Average the integral of the peaks to obtain the train intensity
-            train_intensity = np.mean(intensity_peak)
-            delay_data.digitizer = train_intensity
-        if not self._digitizer_analysis:
-            #Amplitude each peak in train
-            amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-digitizer_width:
-            idx_digitizer_peaks+digitizer_width]) 
-            for idx_digitizer_peaks in idx_digitizer_peaks]
-            # Average train amplitude
-            train_amplitude = np.nanmean(amplitude_peak)
-            delay_data.digitizer = train_amplitude
+        if idx_digitizer_peaks[0]-digitizer_width < 0:
+            delay_data.digitizer = np.nan
+            self.log.info(f"Bad digitizer data")
+
+        else:
+
+            if self._digitizer_analysis:
+                # integrate each peak in train
+                intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
+                for idx_digitizer_peaks in idx_digitizer_peaks]
+                # Average the integral of the peaks to obtain the train intensity
+                train_intensity = np.nanmean(intensity_peak)
+                delay_data.digitizer = train_intensity
+            if not self._digitizer_analysis:
+                #Amplitude each peak in train
+                amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-digitizer_width:
+                idx_digitizer_peaks+digitizer_width]) 
+                for idx_digitizer_peaks in idx_digitizer_peaks]
+                # Average train amplitude
+                train_amplitude = np.nanmean(amplitude_peak)
+                delay_data.digitizer = train_amplitude
         
         # Compute Area Under Curve
         if self.img_current is None:
