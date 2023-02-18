@@ -113,6 +113,11 @@ class XesTimingProcessor(QThreadWorker):
     def setDigitizerDevice(self, device, prop):
         self._digitizer_device = (device, prop)
     
+    def enableDigitizer(self, value: bool):
+        self.digitizer_enabled = bool(value)
+        print("is digitizer enabled", self.digitizer_enabled)
+        return 
+    
     def onDigitizerAnalysisTypeChanged(self, value: str):
         self._digitizer_analysis = bool(value)
 
@@ -134,7 +139,7 @@ class XesTimingProcessor(QThreadWorker):
         self.new_train_data_sgn.emit(data)
 
         if any(attr is None for attr in [self._detector, self._delay_device, self._target_delay_device]):
-            self.log.info("Either the detector, digitizer, delay property, or target delay property have not been set.")
+            self.log.info("Either the detector, delay property, or target delay property have not been set.")
             return None
 
         # Get the actual and target delays, and round them to 3 decimal places

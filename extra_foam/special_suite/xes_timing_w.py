@@ -15,7 +15,7 @@ import numpy as np
 
 from PyQt5.QtGui import QCursor, QIntValidator
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
-from PyQt5.QtWidgets import (QSplitter, QComboBox, QTabWidget, QStackedWidget,
+from PyQt5.QtWidgets import (QSplitter, QComboBox, QCheckBox, QTabWidget, QStackedWidget,
                              QLabel, QHBoxLayout, QWidget, QStyle, QToolTip,
                              QTabBar, QToolButton, QPushButton, QApplication,
                              QSpacerItem, QFormLayout, QFileDialog, QMessageBox)
@@ -502,6 +502,9 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.digitizer_width_cb = SmartLineEdit()
         # self._digitizer_min.setValidator(QIntValidator(1, 10000))
 
+        self.enable_digitizer_cb = QCheckBox("Enable/Disable Digitizer")
+        self.enable_digitizer_cb.setChecked(True)
+
         for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
             cb.setToolTip("This property will be auto-selected if possible (click the Start button).<br><br> <b>Warning:</b> changing this property will force the program to reset.")
 
@@ -528,12 +531,14 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         run_info.addWidget(QLabel("Run:"))
         run_info.addWidget(SmartLineEdit())
         layout.addRow(run_info)
-        ## Dummy implementation for displaying proposal & run numbers
+
         layout.addRow("Display: ", self.img_display_cb)
         layout.addRow("Pumped trains are: ", self.pumped_train_cb)
         layout.addRow("Detector: ", self.detector_cb)
         layout.addRow("Delay property: ", self.delay_cb)
         layout.addRow("Target delay property: ", self.target_delay_cb)
+
+        layout.addRow(self.enable_digitizer_cb)
         layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
     
@@ -653,6 +658,10 @@ class XesTimingWindow(_SpecialAnalysisBase):
         ctrl.digitizer_range_cb.value_changed_sgn.emit(ctrl.digitizer_range_cb.text())
         ctrl.digitizer_width_cb.value_changed_sgn.connect(self.onDigitizerWidthChanged)
         ctrl.digitizer_width_cb.value_changed_sgn.emit(ctrl.digitizer_width_cb.text())
+    
+        # enable_digitizer = ctrl.enable_digitizer_cb
+        ctrl.enable_digitizer_cb.toggled.connect(self.onEnableDigitizerChanged)
+
         ctrl.save_btn.clicked.connect(self.onSaveData)
 
         for roi_ctrl in self._com_ctrl_st.roi_ctrls:
@@ -672,6 +681,10 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onTargetDelayDeviceChanged(self, index):
         key = self._ctrl_widget_st.target_delay_cb.currentData()
         self._worker_st.setTargetDelayDevice(*key.split())
+    
+    def onEnableDigitizerChanged(self):
+        enable = self._ctrl_widget_st.enable_digitizer_cb.isChecked()
+        self._worker_st.enableDigitizer(enable)
 
     def onDigitizerDeviceChanged(self, index):
         key = self._ctrl_widget_st.digitizer_cb.currentData()
