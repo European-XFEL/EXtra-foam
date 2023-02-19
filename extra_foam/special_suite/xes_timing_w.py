@@ -119,7 +119,7 @@ class XesSignalPlot(PlotWidgetF):
             self._plots[delay] = self.plotCurve(pen=self._pens[len(self._plots) % len(self._pens)])
             self._legend.addItem(self._plots[delay], f"Delay: {delay}")
         
-        self._plots[delay].setData(self._roi_x + np.arange(len(diff)), diff/np.sum(diff))
+        self._plots[delay].setData(self._roi_x + np.arange(len(diff)), diff)
 
     @pyqtSlot(tuple)
     def onRoiChanged(self, roi_params):
