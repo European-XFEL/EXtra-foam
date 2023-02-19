@@ -78,7 +78,7 @@ class XesSignalPlot(PlotWidgetF):
 
         self.setLabel('left', "Difference")
         self.setLabel('bottom', "X axis (pixels)")
-        self.setLabel('right', "XES (JNGF projection)")
+        # self.setLabel('right', "Normalized XES (JNGF projection)")
         self.setTitle("XES signal")
 
         self._roi_idx = roi_idx
@@ -108,7 +108,7 @@ class XesSignalPlot(PlotWidgetF):
             current_delay = data["delay"]
             self.plot_delay(current_delay, data["xes"][current_delay])
 
-        # self._plot_xes.setData(self._roi_x + np.arange(len(data["xes_proj"])), (data["xes_proj"]/np.nanmax(data["xes_proj"]))*10000)
+        # self._plot_xes.setData(self._roi_x + np.arange(len(data["xes_proj"])), (data["xes_proj"]/np.nanmax(data["xes_proj"])))
 
     def plot_delay(self, delay, delay_data):
         diff = delay_data.difference[self._roi_idx]
@@ -218,7 +218,7 @@ class DigitizerPlot(PlotWidgetF):
             return
         
         if not data["digi_range"]:
-            self.digitizer_range = [0,40000]
+            self.digitizer_range = [0,80000]
         else:
             self.digitizer_range = data["digi_range"].split(":")
 
