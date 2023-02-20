@@ -62,7 +62,7 @@ class XesTimingProcessor(QThreadWorker):
         self._digitizer_analysis = True
         self._digitizer_range = None
         self._digitizer_width_peak = None
-        self.digitizer_enabled = True
+        self.digitizer_enabled = False
         self.reset()
 
     def reset(self):
@@ -116,7 +116,6 @@ class XesTimingProcessor(QThreadWorker):
     
     def enableDigitizer(self, value: bool):
         self.digitizer_enabled = bool(value)
-        print("is digitizer enabled?", self.digitizer_enabled)
         self.log.info(f"is digitizer enabled? {self.digitizer_enabled}")
         return 
     

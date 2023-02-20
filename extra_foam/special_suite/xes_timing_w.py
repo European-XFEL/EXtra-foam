@@ -503,7 +503,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         # self._digitizer_min.setValidator(QIntValidator(1, 10000))
 
         self.enable_digitizer_cb = QCheckBox("Enable/Disable Digitizer")
-        self.enable_digitizer_cb.setChecked(True)
+        self.enable_digitizer_cb.setChecked(False)
 
         for cb in [self.detector_cb, self.delay_cb, self.target_delay_cb, self.digitizer_cb]:
             cb.setToolTip("This property will be auto-selected if possible (click the Start button).<br><br> <b>Warning:</b> changing this property will force the program to reset.")
@@ -659,7 +659,6 @@ class XesTimingWindow(_SpecialAnalysisBase):
         ctrl.digitizer_width_cb.value_changed_sgn.connect(self.onDigitizerWidthChanged)
         ctrl.digitizer_width_cb.value_changed_sgn.emit(ctrl.digitizer_width_cb.text())
     
-        # enable_digitizer = ctrl.enable_digitizer_cb
         ctrl.enable_digitizer_cb.toggled.connect(self.onEnableDigitizerChanged)
 
         ctrl.save_btn.clicked.connect(self.onSaveData)
