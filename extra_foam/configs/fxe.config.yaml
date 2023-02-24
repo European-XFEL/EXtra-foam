@@ -26,6 +26,11 @@ SOURCE:
                 FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput:
                     - data.adc
 
+        Digitizer:
+            PIPELINE:
+                FXE_RR_DAQ/ADC/1:network:
+                    - digitizers.channel_1_A.raw.samples
+                    - digitizers.channel_1_A.apd.pulseIntegral
         XGM:
             CONTROL:
                 SA1_XTD2_XGM/DOOCS/MAIN:
