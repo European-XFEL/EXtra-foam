@@ -309,6 +309,7 @@ class DelayScanView(ImageViewF):
         # default.
         if first_image:
             width = self._buffer.sizesplit
+            self.linear_roi.setRegion([width / 4, 3 * width / 4])
 
     @pyqtSlot(tuple)
     def onRoiChanged(self, roi_params):
@@ -325,6 +326,8 @@ class DelayScanView(ImageViewF):
         super().reset()
 
         self._delays.clear()
+        self._buffer.reset()
+
 
 class FuzzyCombobox(QComboBox):
     def __init__(self, device_keywords=[], property_keywords=[]):

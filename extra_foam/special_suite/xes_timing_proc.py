@@ -218,12 +218,16 @@ class XesTimingProcessor(QThreadWorker):
         if self.digitizer_enabled:
             # Get the digitizer raw data
             digitizer_data = np.array(self.getPropertyData(data, *self._digitizer_device)).squeeze()
-
+            
             if digitizer_data is None:
                 return
+            
+            #remove background
+            background= np.nanmean(digitizer_data[0:1000])
+            digitizer = -digitizer_data-background
         
             # Find peaks in digitizer i.e #pulses in one train
-            digitizer_peaks = find_peaks_1d(-digitizer_data, height=np.nanmax(-digitizer_data)*0.5, distance=100)
+            digitizer_peaks = find_peaks_1d(digitizer, height=np.nanmax(digitizer)*0.5, distance=100)
             idx_digitizer_peaks = digitizer_peaks[0]
         
             if not self._digitizer_width_peak:
@@ -239,14 +243,14 @@ class XesTimingProcessor(QThreadWorker):
                 #Check which type of analysis is done to the digitizer trace
                 if self._digitizer_analysis:
                     # integrate each peak in train
-                    intensity_peak = [trapezoid(-digitizer_data[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
+                    intensity_peak = [trapezoid(digitizer[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
                     for idx_digitizer_peaks in idx_digitizer_peaks]
                     # Average the integral of the peaks to obtain the train intensity
                     train_intensity = np.nanmean(intensity_peak)
                     delay_data.digitizer = train_intensity
                 if not self._digitizer_analysis:
                     #Amplitude each peak in train
-                    amplitude_peak = [np.nanmax(-digitizer_data[idx_digitizer_peaks-digitizer_width:
+                    amplitude_peak = [np.nanmax(digitizer[idx_digitizer_peaks-digitizer_width:
                     idx_digitizer_peaks+digitizer_width]) 
                     for idx_digitizer_peaks in idx_digitizer_peaks]
                     # Average train amplitude
@@ -254,7 +258,7 @@ class XesTimingProcessor(QThreadWorker):
                     delay_data.digitizer = train_amplitude
         else:
             delay_data.digitizer = np.nan
-            digitizer_data = np.zeros((100))
+            digitizer = np.zeros((100))
 
 
         self.log.info(f"Train {tid} processed")
@@ -264,7 +268,7 @@ class XesTimingProcessor(QThreadWorker):
             "xes": self._xes_curves,
             "refresh_plots": refresh_plots,
             "digi_int_avg": delay_data.digitizer,
-            "digi_data": digitizer_data,
+            "digi_data": digitizer,
             "auc": auc_avg,
             "digi_range": self._digitizer_range,
             "xes_proj": xes_projection
