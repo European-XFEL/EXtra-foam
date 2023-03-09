@@ -28,12 +28,32 @@ from ..algorithms import SimpleVectorSequence
 from ..gui.ctrl_widgets import SmartLineEdit
 
 from . import logger
-from .xes_timing_proc import XesTimingProcessor, DisplayOption
+from .xes_timing_proc import XesTimingProcessor, DisplayOption, NormOption
 from .special_analysis_base import (
     create_special, ClientType, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
 
+
+class XesNormalization:
+    
+    def norm_option(self, option, data):
+        match option:
+            case NormOption.NONE:
+                self.norm = float(1)
+                
+            case NormOption.AUC_JF:
+                self.norm = data["auc"]
+
+            case NormOption.DIGI_I0:
+                if data["digi_data"][0:5].mean() == 0:
+                    raise RuntimeError(f"Digitizer is not enabled")
+
+                else:
+                    self.norm = data["digi_int_avg"]
+            case x:
+                raise RuntimeError(f"Unsupported normalization type: {x}")
+        return self.norm
 
 class DetectorView(ImageViewF):
     """DetectorView class.
@@ -66,7 +86,6 @@ class DetectorView(ImageViewF):
     def onImgDisplayChanged(self, _):
         self._auto_level = True
 
-
 class XesSignalPlot(PlotWidgetF):
     """XesSignalPlot class.
 
@@ -76,9 +95,8 @@ class XesSignalPlot(PlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setLabel('left', "Difference")
+        self.setLabel('left', "Difference/Normvalue")
         self.setLabel('bottom', "X axis (pixels)")
-        # self.setLabel('right', "Normalized XES (JNGF projection)")
         self.setTitle("XES signal")
 
         self._roi_idx = roi_idx
@@ -86,7 +104,7 @@ class XesSignalPlot(PlotWidgetF):
         self._plots = { }
         self._pens = list(SequentialColor.mkPen(len(SequentialColor.pool)))
         self._plot_xes = self.plotCurve()
-
+        self._norm_xes = XesNormalization()
         self._legend = self.addLegend(offset=(-10, -10))
         self.hideLegend()
 
@@ -97,7 +115,9 @@ class XesSignalPlot(PlotWidgetF):
 
         if not self._legend.isVisible():
             self.showLegend()
-
+        
+        self.norm = self._norm_xes.norm_option(data["xes_norm"], data)
+        print("NORMVALUE",self.norm )
         # If necessary, redraw the plots for all the delays
         if data["refresh_plots"]:
             for delay, delay_data in data["xes"].items():
@@ -108,10 +128,9 @@ class XesSignalPlot(PlotWidgetF):
             current_delay = data["delay"]
             self.plot_delay(current_delay, data["xes"][current_delay])
 
-        # self._plot_xes.setData(self._roi_x + np.arange(len(data["xes_proj"])), (data["xes_proj"]/np.nanmax(data["xes_proj"])))
 
     def plot_delay(self, delay, delay_data):
-        diff = delay_data.difference[self._roi_idx]
+        diff = delay_data.difference[self._roi_idx]/self.norm
         if diff is None:
             return
 
@@ -131,7 +150,7 @@ class XesSignalPlot(PlotWidgetF):
         self._plots.clear()
         self._legend.clear()
         self.hideLegend()
-
+    
 
 class DelayScanSlice(PlotWidgetF):
     def __init__(self, delay_scan_view, parent=None):
@@ -201,7 +220,8 @@ class CorrelatorPlot(PlotWidgetF):
 
         self.auc_data.clear()
         self.digitizer_data.clear()
-        self.train_array.clear()
+        self.train_array.clear()    
+        
 
 class DigitizerPlot(PlotWidgetF):
     def __init__(self, parent=None):
@@ -216,7 +236,7 @@ class DigitizerPlot(PlotWidgetF):
     def updateF(self, data):
         if data is None:
             return
-        
+
         if not data["digi_range"]:
             self.digitizer_range = [0,80000]
         else:
@@ -308,7 +328,7 @@ class DelayScanView(ImageViewF):
         # If this is the first image we get, set the linear ROI to a reasonable
         # default.
         if first_image:
-            width = self._buffer.sizesplit
+            width = self._buffer.size
             self.linear_roi.setRegion([width / 4, 3 * width / 4])
 
     @pyqtSlot(tuple)
@@ -488,9 +508,14 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.pumped_train_cb.addItem("Odd")
         self.pumped_train_cb.addItem("Even")
 
+        self.norm_xes_cb = QComboBox()
+        self.norm_xes_cb.addItem(NormOption.NONE.value)
+        self.norm_xes_cb.addItem(NormOption.AUC_JF.value)
+        self.norm_xes_cb.addItem(NormOption.DIGI_I0.value)
+
         self.digitizer_type_analysis_cb = QComboBox()
-        self.digitizer_type_analysis_cb.addItem("Digitizer amplitude peaks")
-        self.digitizer_type_analysis_cb.addItem("Digitizer integral peaks")
+        self.digitizer_type_analysis_cb.addItem("Amplitude peaks")
+        self.digitizer_type_analysis_cb.addItem("Integral peaks")
 
         self.detector_cb = FuzzyCombobox(device_keywords=["jf", "jngfr", "jungfrau"],
                                          property_keywords=["data.adc"])
@@ -519,6 +544,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
             self.target_delay_cb,
             self.save_btn,
             self.digitizer_cb,
+            self.norm_xes_cb
         ]
 
         self.initUI()
@@ -540,7 +566,6 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         layout.addRow("Detector: ", self.detector_cb)
         layout.addRow("Delay property: ", self.delay_cb)
         layout.addRow("Target delay property: ", self.target_delay_cb)
-
         layout.addRow(self.enable_digitizer_cb)
         layout.addRow("Digitizer: ", self.digitizer_cb)
         layout.addRow("Digitizer analysis:", self.digitizer_type_analysis_cb)
@@ -551,6 +576,9 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         hbox.addWidget(QLabel("width in samples:"))
         hbox.addWidget(self.digitizer_width_cb)
         layout.addRow(hbox)
+                
+        layout.addRow("XES Normalization:", self.norm_xes_cb)
+
 
         layout.setItem(layout.count(), QFormLayout.SpanningRole, QSpacerItem(0, 20))
         layout.addRow(self.save_btn)
@@ -588,8 +616,6 @@ class XesTimingWindow(_SpecialAnalysisBase):
 
         self._view = DetectorView(parent=self)
         self._visualized_rois = set()
-        # self.digitizer_range = "0:100000"
-
         self.initUI()
         self.initConnections()
         self.startWorker()
@@ -646,6 +672,11 @@ class XesTimingWindow(_SpecialAnalysisBase):
         pumped_train = ctrl.pumped_train_cb
         pumped_train.currentIndexChanged.connect(worker.onEvenTrainsPumpedChanged)
         pumped_train.currentIndexChanged.emit(pumped_train.currentIndex())
+        
+        #Type of normalization
+        norm_xes = ctrl.norm_xes_cb
+        norm_xes.currentTextChanged.connect(worker.onXesNormChanged)
+        norm_xes.currentTextChanged.emit(norm_xes.currentText())
 
         # Tell the worker whether integral or amplitude of digitizer peaks
         digitizer_type_analysis = ctrl.digitizer_type_analysis_cb
@@ -683,7 +714,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
     def onTargetDelayDeviceChanged(self, index):
         key = self._ctrl_widget_st.target_delay_cb.currentData()
         self._worker_st.setTargetDelayDevice(*key.split())
-    
+
     def onEnableDigitizerChanged(self):
         enable = self._ctrl_widget_st.enable_digitizer_cb.isChecked()
         self._worker_st.enableDigitizer(enable)
@@ -818,3 +849,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
                 return i
 
         return -1
+
+
+
+

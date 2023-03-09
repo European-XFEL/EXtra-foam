@@ -40,6 +40,11 @@ class DisplayOption(Enum):
     UNPUMPED = "Unpumped trains (avg)"
     DIFFERENCE = "Difference (avg(pumped) - avg(unpumped))"
 
+class NormOption(Enum):
+    NONE = "None: normvalue=1"
+    AUC_JF = "AUC JF"
+    DIGI_I0 = "Digitizer Integral or Amplitude (depends on digitizer analysis)"
+
 class XesTimingProcessor(QThreadWorker):
     """XES timing processor.
 
@@ -111,6 +116,9 @@ class XesTimingProcessor(QThreadWorker):
         super().onRoiGeometryChange(roi_params)
         self._refresh_plots = True
     
+    def onXesNormChanged(self, value: str):
+        self._xes_norm_option = NormOption(value)
+        
     def setDigitizerDevice(self, device, prop):
         self._digitizer_device = (device, prop)
     
@@ -221,21 +229,21 @@ class XesTimingProcessor(QThreadWorker):
             
             if digitizer_data is None:
                 return
-            
+
             #remove background
             background= np.nanmean(digitizer_data[0:1000])
-            digitizer = -digitizer_data-background
-        
+            digitizer = -digitizer_data+background
+
             # Find peaks in digitizer i.e #pulses in one train
             digitizer_peaks = find_peaks_1d(digitizer, height=np.nanmax(digitizer)*0.5, distance=100)
             idx_digitizer_peaks = digitizer_peaks[0]
-        
+
             if not self._digitizer_width_peak:
                 digitizer_width = 1000
             else:
                 digitizer_width = self._digitizer_width_peak # width given in samples 
 
-            if idx_digitizer_peaks[0]-digitizer_width < 0:
+            if not idx_digitizer_peaks[0] or idx_digitizer_peaks[0]-digitizer_width < 0:
                 delay_data.digitizer = np.nan
                 self.log.info(f"Bad digitizer data")
 
@@ -260,7 +268,6 @@ class XesTimingProcessor(QThreadWorker):
             delay_data.digitizer = np.nan
             digitizer = np.zeros((100))
 
-
         self.log.info(f"Train {tid} processed")
         return {
             "img_avg": img_avg,
@@ -271,7 +278,8 @@ class XesTimingProcessor(QThreadWorker):
             "digi_data": digitizer,
             "auc": auc_avg,
             "digi_range": self._digitizer_range,
-            "xes_proj": xes_projection
+            "xes_proj": xes_projection,
+            "xes_norm": self._xes_norm_option
         }
 
     def updateXES(self, delay_data, update_pumped, roi_idx, roi_geom):
