@@ -14,8 +14,7 @@ from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
 from ...database import Metadata as mt
 from ...utils import profiler
-from ...algorithms import find_peaks_1d
-from scipy.integrate import trapezoid
+from ...algorithms import digi_integral
 
 
 class DigitizerProcessor(_BaseProcessor):
@@ -111,14 +110,11 @@ class DigitizerProcessor(_BaseProcessor):
                 if "raw" in ppt:
                     channel_raw = [char for char in ppt if char.isupper()][0]
                     # Raw data - we find peaks in digitizer i.e #pulses in one train
-                    # and integrate each peak to give a pulse_integral array
-                    digitizer_width = 800
+                    # and integrate each peak to give a pulse_integral array: see ..algorithms/digitizer_integ
                     raw_data = np.array(arr[catalog.get_slicer(src)])
-                    digitizer_peaks = find_peaks_1d(-raw_data, height=np.nanmax(raw_data)*0.5, distance=100)
-                    idx_digitizer_peaks = digitizer_peaks[0]
-                    integral_peaks = [trapezoid(-raw_data[idx_digitizer_peaks-digitizer_width:
-                    idx_digitizer_peaks+digitizer_width]) 
-                    for idx_digitizer_peaks in idx_digitizer_peaks]
+                    digitizer_width = 800
+                    distance = 100
+                    integral_peaks = digi_integral(raw_data, digitizer_width, distance)
 
                     self.__class__.__dict__[attr_name].__set__(self, integral_peaks)
 

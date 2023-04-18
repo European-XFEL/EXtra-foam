@@ -313,7 +313,7 @@ class XesTimingProcessor(QThreadWorker):
         roi = self.img_current[y:y + h, x:x + w]
 
         #1D projection to calculate Area Under Curve
-        spectra_1D = np.nansum(roi, axis=0)/ np.nansum(roi)
+        spectra_1D = np.nansum(roi, axis=0)
         background = np.nanmean(spectra_1D[:int(h/4)])
         delay_data.xes_proj = spectra_1D-background
         integral = trapezoid(delay_data.xes_proj)
