@@ -364,6 +364,7 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
                     ai_reference = integ1d(reference_image, integ_points, mask=mask)
                     ai.reference = ai_reference
 
+
             self._process_fom(ai)
 
         # ------------------------------------
