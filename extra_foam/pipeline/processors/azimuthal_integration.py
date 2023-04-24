@@ -22,6 +22,8 @@ from ...algorithms import slice_curve
 from ...config import AnalysisType, Normalizer
 from ...database import Metadata as mt
 from ...utils import profiler
+from ...logger import logger
+
 
 from extra_foam.algorithms import (
     energy2wavelength, find_peaks_1d, mask_image_data
@@ -89,10 +91,12 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._peak_prominence = None
         self._peak_slicer = slice(None, None)
 
+        self._use_reference = False
+
     def update(self):
         """Override."""
-        g_cfg, cfg = self._meta.hget_all_multi(
-            [mt.GLOBAL_PROC, mt.AZIMUTHAL_INTEG_PROC])
+        g_cfg, cfg, rfg = self._meta.hget_all_multi(
+            [mt.GLOBAL_PROC, mt.AZIMUTHAL_INTEG_PROC, mt.REFERENCE_IMAGE_PROC])
 
         self._sample_dist = float(g_cfg['sample_distance'])
         self._wavelength = energy2wavelength(1e3 * float(g_cfg['photon_energy']))
@@ -113,6 +117,7 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._find_peaks = cfg['peak_finding'] == 'True'
         self._peak_prominence = float(cfg['peak_prominence'])
         self._peak_slicer = self.str2slice(cfg['peak_slicer'])
+        self._use_reference = rfg['reference_used']
 
     def _update_integrator(self):
         if self._integrator is None:
@@ -174,7 +179,7 @@ class AzimuthalIntegProcessorPulse(_AzimuthalIntegProcessorBase):
 
         threshold_mask = processed.image.threshold_mask
         image_mask = processed.image.image_mask
-
+        
         def _integrate1d_imp(i):
             masked = assembled[i].copy()
             mask = np.zeros_like(image_mask)
@@ -339,7 +344,6 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         if self._meta.has_any_analysis(self._analysis_types):
             mask = processed.image.mask
             mean_ret = integ1d(processed.image.masked_mean, integ_points, mask=mask)
-
             momentum = mean_ret.radial
             intensity = self._normalize_fom(
                 processed, mean_ret.intensity, self._normalizer,
@@ -350,6 +354,15 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
             ai.x = momentum
             ai.y = self._intensity_ma
             ai.q_map = self._q_map
+
+            if self._use_reference:
+                reference_image = processed.image.reference
+                if reference_image is None or not reference_image.any():
+                    logger.error(f"No reference has been set. Please set Reference in Reference Tab")
+                    
+                else:
+                    ai_reference = integ1d(reference_image, integ_points, mask=mask)
+                    ai.reference = ai_reference
 
             self._process_fom(ai)
 

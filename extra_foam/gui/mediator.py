@@ -81,6 +81,9 @@ class Mediator(QObject):
         else:
             self._meta.remove_data_source(item)
 
+    def onUseReferenceChange(self, value: bool):
+        self._meta.hset(mt.REFERENCE_IMAGE_PROC, "reference_used", str(value))
+
     def onPhotonBinningChange(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "photon_binning", str(value))
 

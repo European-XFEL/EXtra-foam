@@ -136,6 +136,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._peak_prominence_le.setValidator(QDoubleValidator())
         self._peak_slicer_le = SmartSliceLineEdit(":")
 
+        self._reference_cb = QCheckBox("Use Reference")
+        self._reference_cb.setChecked(False)
+
         self._non_reconfigurable_widgets = [
         ]
 
@@ -188,6 +191,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         param_layout.addWidget(self._auc_range_le, row, 3)
         param_layout.addWidget(QLabel("FOM range (1/A): "), row, 4, AR)
         param_layout.addWidget(self._fom_integ_range_le, row, 5)
+        param_layout.addWidget(self._reference_cb, row, 6, AR)
 
         param_widget.setLayout(param_layout)
 
@@ -223,6 +227,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
 
         self._fitter.fit_btn.clicked.connect(self.fit_curve_sgn)
         self._fitter.clear_btn.clicked.connect(self.clear_fitting_sgn)
+
+        self._reference_cb.toggled.connect(mediator.onUseReferenceChange)
 
         self._photon_energy_le.value_changed_sgn.connect(
             lambda x: mediator.onPhotonEnergyChange(float(x)))
@@ -262,7 +268,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
 
         self._peak_finding_cb.toggled.connect(
             mediator.onAiPeakFindingChange)
-
+        
         self._peak_prominence_le.value_changed_sgn.connect(
             mediator.onAiPeakProminenceChange)
 
@@ -297,12 +303,14 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._peak_finding_cb.toggled.emit(self._peak_finding_cb.isChecked())
         self._peak_prominence_le.returnPressed.emit()
         self._peak_slicer_le.returnPressed.emit()
+        self._reference_cb.toggled.emit(self._reference_cb.isChecked())
 
         return True
 
     def loadMetaData(self):
         """Override."""
         cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        rfg = self._meta.hget_all(mt.REFERENCE_IMAGE_PROC)
         self._photon_energy_le.setText(cfg["photon_energy"])
         self._sample_dist_le.setText(cfg["sample_distance"])
 
@@ -323,6 +331,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._updateWidgetValue(
             self._peak_prominence_le, cfg, "peak_prominence")
         self._updateWidgetValue(self._peak_slicer_le, cfg, "peak_slicer")
+        self._updateWidgetValue(self._reference_cb, rfg, "reference_used")
 
     def fitCurve(self, x, y):
         return self._fitter.fit(x, y)

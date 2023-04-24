@@ -61,6 +61,7 @@ class Metadata(metaclass=MetaMetadata):
     HISTOGRAM_PROC = "meta:proc:histogram"
     FOM_FILTER_PROC = "meta:proc:fom_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
+    REFERENCE_IMAGE_PROC = "meta:proc:reference_image"
 
     DATA_SOURCE_ITEMS = "meta:data_source_items"
 

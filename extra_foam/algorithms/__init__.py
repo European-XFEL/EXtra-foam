@@ -53,3 +53,7 @@ from .peak_finding import (
 from .curve_fitting import (
     CurveFitting, FittingType
 )
+
+from .digitizer_integ import(
+    digi_integral
+)
