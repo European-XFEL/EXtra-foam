@@ -308,6 +308,7 @@ class _ThreadLogger(QObject):
         self.error_sgn.connect(instance.onErrorReceivedST)
 
 
+
 class QThreadWorker(QObject):
     """Base class of worker running in a thread.
 
