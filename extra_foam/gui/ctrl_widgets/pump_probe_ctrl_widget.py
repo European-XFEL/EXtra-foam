@@ -60,6 +60,8 @@ class PumpProbeCtrlWidget(_AbstractCtrlWidget):
         self._abs_difference_cb.setChecked(True)
 
         self._reset_btn = QPushButton("Reset")
+        self.save_btn = QPushButton("Save to file")
+        self.save_btn.setFixedWidth(150)
 
         self.initUI()
         self.initConnections()
@@ -83,6 +85,7 @@ class PumpProbeCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._off_pulse_le, 1, 3)
 
         layout.addWidget(self._abs_difference_cb, 0, 4, AR)
+        layout.addWidget(self.save_btn, 2, 4, AR)
 
         self.setLayout(layout)
 

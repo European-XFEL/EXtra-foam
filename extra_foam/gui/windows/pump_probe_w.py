@@ -7,8 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from enum import Enum
+import os
+import os.path as osp
+
+import numpy as np
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QSplitter
+from PyQt5.QtWidgets import QFileDialog, QFrame, QVBoxLayout, QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..ctrl_widgets import PumpProbeCtrlWidget
@@ -91,6 +96,11 @@ class PumpProbeFomPlot(TimedPlotWidgetF):
         self._plot.setData(x, y)
 
 
+class SaveFile(Enum):
+    NPZ = "NumPy Binary File (*.npz)"
+    TXT = "Text File (*.txt)"
+
+
 class PumpProbeWindow(_AbstractPlotWindow):
     """PumpProbeWindow class."""
     _title = "Pump-probe"
@@ -138,8 +148,61 @@ class PumpProbeWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.save_btn.clicked.connect(self.saveToFile)
 
     def closeEvent(self, QCloseEvent):
         self._ctrl_widget.resetAnalysisType()
         super().closeEvent(QCloseEvent)
+
+    def saveToFile(self):
+        # Get the current data
+        if not len(self._queue):
+            return
+        data = self._queue[0]
+
+        # Open file dialog
+        filepath, filter = QFileDialog.getSaveFileName(
+            caption="Save image",
+            directory=osp.expanduser("~"),
+            filter=f"{SaveFile.NPZ.value};;{SaveFile.TXT.value}")
+        filter = SaveFile(filter)
+
+        # Validate filepath
+        if not filepath:
+            return
+        suffix = f".{filter.name.lower()}"
+        if not filepath.lower().endswith(suffix):
+            filepath += suffix
+
+        # Copy reference file from tmp folder to desired destination
+        os.makedirs(osp.dirname(filepath), exist_ok=True)
+
+        # Save the data
+        pp = data.pp
+        train_id = data.tid
+        position = pp.x
+        intensity_on = pp.y_on
+        intensity_off = pp.y_off
+        intensity_sub = pp.y
+
+        if position is None:
+            return
+
+        if filter is SaveFile.NPZ:
+            np.savez(filepath,
+                     trainId=train_id,
+                     position=position,
+                     intensity_on=intensity_on,
+                     intensity_off=intensity_off,
+                     intensity_subtracted=intensity_sub)
+        elif filter is SaveFile.TXT:
+            # write out conversion to tabular ASCII
+            with open(filepath, 'w') as f:
+                f.write(f" Train-ID: {train_id}\n\n")
+                f.write('       q            I_on     '
+                        '       I_off           I_diff\n\n')
+                for i, q in enumerate(position):
+                    f.write(f"{q:12f}"
+                            f"{intensity_on[i]:16f}"
+                            f"{intensity_off[i]:16f}"
+                            f"{intensity_sub[i]:16f}\n")
