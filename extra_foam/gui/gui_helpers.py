@@ -206,6 +206,10 @@ def parse_slice_inv(text):
     raise ValueError(err_msg)
 
 
+def get_icon_path(filename):
+    root_dir = osp.dirname(osp.abspath(__file__))
+    return osp.join(root_dir, "icons", filename)
+
 def create_icon_button(filename, size, *, description=""):
     """Create a QPushButton with icon.
 
@@ -213,9 +217,8 @@ def create_icon_button(filename, size, *, description=""):
     :param int size: size of the icon (button).
     :param str description: tool tip of the button.
     """
-    root_dir = osp.dirname(osp.abspath(__file__))
     btn = QPushButton()
-    icon = QIcon(osp.join(root_dir, "icons/" + filename))
+    icon = QIcon(get_icon_path(filename))
     btn.setIcon(icon)
     btn.setIconSize(QSize(size, size))
     btn.setFixedSize(btn.minimumSizeHint())
