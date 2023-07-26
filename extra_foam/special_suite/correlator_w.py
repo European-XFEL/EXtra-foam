@@ -1,21 +1,26 @@
-import sys
 import time
 import textwrap
 import itertools
 import traceback
 import os.path as osp
 from enum import Enum
+from io import StringIO
 from collections import defaultdict
 
 import lttbc
 import libcst as cst
 import libcst.matchers as m
 import libcst.metadata as cstmeta
+
+from pyflakes.reporter import Reporter
+from pyflakes.api import check as pyflakes_check
+
 import numpy as np
 import xarray as xr
 
-from PyQt5.QtGui import QFont, QBrush, QDoubleValidator, QFontMetrics
-from PyQt5.QtCore import Qt, QSettings, pyqtSlot, pyqtSignal, QSize
+from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtGui import QFont, QBrush, QDoubleValidator, QFontMetrics, QKeySequence
+from PyQt5.QtCore import Qt, QSettings, pyqtSlot, pyqtSignal, QSize, QTimer
 from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
                              QFrame, QStackedWidget, QComboBox, QLabel, QAction,
                              QMenu, QStyle, QTabBar, QToolButton, QFileDialog,
@@ -23,7 +28,7 @@ from PyQt5.QtWidgets import (QSplitter, QPushButton, QWidget, QTabWidget,
                              QTreeWidget, QTreeWidgetItem, QAbstractItemView,
                              QApplication, QGroupBox, QVBoxLayout,
                              QDoubleSpinBox, QLineEdit, QScrollArea)
-from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs
+from PyQt5.Qsci import QsciScintilla, QsciLexerPython, QsciAbstractAPIs, QsciCommand
 
 from metropc.client import ViewOutput
 from metropc import ViewStage, error as mpc_error
@@ -36,7 +41,7 @@ from ..pipeline.data_model import ProcessedData
 from ..gui.plot_widgets import LinearROI
 from ..gui.plot_widgets.image_items import RectROI
 from ..gui.misc_widgets import FColor
-from ..gui.gui_helpers import center_window
+from ..gui.gui_helpers import center_window, get_icon_path
 from ..gui.plot_widgets import ImageViewF, PlotWidgetF
 from .special_analysis_base import ( create_special, ClientType,
                                      _BaseAnalysisCtrlWidgetS,
@@ -1006,6 +1011,10 @@ class CorrelatorCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.reload_btn = QPushButton("Reload context")
         self._path_label = ElidedLabel("")
 
+        # Save with Ctrl + S
+        self.save_btn.setToolTip("Ctrl + S")
+        self.save_btn.setShortcut(QKeySequence(Qt.ControlModifier | Qt.Key_S))
+
         menu = QMenu()
         menu.addSeparator()
         self.open_btn.setMenu(menu)
@@ -1327,6 +1336,12 @@ class CorrelatorWindow(_SpecialAnalysisBase):
 
         self._ctrl_widget_st.setRecentFiles(self.settings.recentFilePaths())
 
+        # Validation timer
+        self._validation_timer = QTimer()
+        self._validation_timer.setInterval(500)
+        self._validation_timer.setSingleShot(True)
+        self._validation_timer.timeout.connect(self._validateContext)
+
     def initUI(self):
         cw = self.centralWidget()
 
@@ -1353,7 +1368,35 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         self._editor.setMarginWidth(1, "0000")
         self._editor.setMarginType(1, QsciScintilla.MarginType.SymbolMargin)
 
-        self._tab_widget.addTab(self._editor, "Context")
+        # Set Ctrl + D to delete a line
+        commands = self._editor.standardCommands()
+        ctrl_d = commands.boundTo(Qt.ControlModifier | Qt.Key_D)
+        ctrl_d.setKey(0)
+        line_del = commands.find(QsciCommand.LineDelete)
+        line_del.setKey(Qt.ControlModifier | Qt.Key_D)
+
+        # Create error editor
+        self._error_widget = QsciScintilla()
+        self._error_widget_lexer = QsciLexerPython()
+        self._error_widget_lexer.setDefaultFont(font)
+        self._error_widget.setReadOnly(True)
+        self._error_widget.setCaretWidth(0)
+        self._error_widget.setLexer(self._error_widget_lexer)
+
+        test_widget = QWidget()
+        test_widget_hbox = QHBoxLayout()
+        test_widget.setLayout(test_widget_hbox)
+        self._context_status_icon = QSvgWidget()
+        test_widget_hbox.addWidget(self._context_status_icon)
+        test_widget_hbox.addWidget(self._error_widget)
+        test_widget_hbox.setStretch(0, 1)
+        test_widget_hbox.setStretch(1, 15)
+
+        self._editor_splitter = QSplitter(Qt.Vertical)
+        self._editor_splitter.addWidget(self._editor)
+        self._editor_splitter.addWidget(test_widget)
+
+        self._tab_widget.addTab(self._editor_splitter, "Context")
 
         # Add fake tab to add create new tabs
         self._new_tab_btn = QToolButton()
@@ -1382,9 +1425,7 @@ class CorrelatorWindow(_SpecialAnalysisBase):
 
         self._new_tab_btn.clicked.connect(self._addTab)
 
-        ctrl.reload_btn.clicked.connect(
-            lambda: self._worker_st.setContext(self._editor.text())
-        )
+        ctrl.reload_btn.clicked.connect(self._reloadContext)
         ctrl.save_btn.clicked.connect(self._saveContext)
         ctrl.open_file_sgn.connect(self._openContext)
         ctrl.trigger_action_sgn.connect(worker.triggerAction)
@@ -1394,7 +1435,6 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         self._com_ctrl_st.client_type_changed_sgn.connect(self._onClientTypeChanged)
 
         worker.reloaded_sgn.connect(self._clearMarkers)
-        worker.context_error_sgn.connect(self._onContextError)
         worker.updated_views_sgn.connect(self._onViewsUpdated)
         worker.updated_data_paths_sgn.connect(self._completer.setDataPaths)
         worker.updated_data_paths_sgn.connect(self._ctrl_widget_st.setDataPaths)
@@ -1413,8 +1453,7 @@ class CorrelatorWindow(_SpecialAnalysisBase):
         elif isinstance(error, mpc_error.ContextSyntaxError):
             lineno = error.orig_error.lineno
         elif isinstance(error, Exception):
-            tb = sys.exc_info()[2]
-            for frame in traceback.extract_tb(tb):
+            for frame in traceback.extract_tb(error.__traceback__):
                 if frame.filename == "<ctx>":
                     lineno = frame.lineno
                     break
@@ -1447,6 +1486,62 @@ class CorrelatorWindow(_SpecialAnalysisBase):
     @pyqtSlot()
     def _onContextModified(self):
         self._markContextSaved(False)
+        self._validation_timer.start()
+
+    def _reloadContext(self):
+        if self._validateContext():
+            self._worker_st.setContext(self._editor.text())
+
+    def _validateContext(self):
+        ctx, ex, tb = self._worker_st.validateContext(self._editor.text())
+
+        if ex is not None:
+            self._setErrorText(tb)
+            self._setErrorIcon("red")
+            self._onContextError(ex)
+
+            # Enlarge the error window
+            height_unit = self._editor_splitter.height() // 4
+            self._editor_splitter.setSizes([3 * height_unit, height_unit])
+
+            return False
+
+        out_buffer = StringIO()
+        reporter = Reporter(out_buffer, out_buffer)
+        pyflakes_check(self._editor.text(), "<ctx>", reporter)
+
+        # Disgusting hack to avoid getting warnings for various type annotations
+        pyflakes_output = "\n".join([line for line in out_buffer.getvalue().split("\n")
+                                     if not line.endswith("undefined name 'View'") \
+                                     and not line.endswith("undefined name 'view'") \
+                                     and not line.endswith("undefined name 'foam'") \
+                                     and not line.endswith("undefined name 'internal'") \
+                                     and not line.endswith("undefined name 'karabo'")])
+
+        if len(pyflakes_output) > 0:
+            self._setErrorText(pyflakes_output)
+            self._setErrorIcon("yellow")
+        else:
+            self._setErrorText("Valid context.")
+            self._setErrorIcon("green")
+
+        self._clearMarkers()
+
+        # Shrink the error window
+        height_unit = self._editor_splitter.height() // 7
+        self._editor_splitter.setSizes([6 * height_unit, height_unit])
+
+        return True
+
+    def _setErrorIcon(self, icon):
+        self._context_status_icon.load(get_icon_path(f"{icon}_circle.svg"))
+        self._context_status_icon.renderer().setAspectRatioMode(Qt.KeepAspectRatio)
+
+    def _setErrorText(self, text):
+        # Clear the widget and wait for a bit to visually indicate to the
+        # user that something happened.
+        self._error_widget.setText("")
+        QTimer.singleShot(100, lambda: self._error_widget.setText(text))
 
     @pyqtSlot(dict)
     def _onViewsUpdated(self, views):
@@ -1483,7 +1578,7 @@ class CorrelatorWindow(_SpecialAnalysisBase):
 
             marker_exists = self._editor.markerFindNext(e.raw_line - 1, 1) == e.raw_line - 1
             if not marker_exists:
-                self._onContextError(e)
+                self._validateContext()
                 active_window = QApplication.activeWindow()
                 QMessageBox.warning(active_window,
                                     "Syntax error in context",
