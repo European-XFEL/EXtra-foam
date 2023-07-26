@@ -23,6 +23,7 @@ from PyQt5.QtCore import pyqtSignal
 from . import logger
 from .special_analysis_base import QThreadWorker, ClientType
 
+
 def traverse_slots(current, prefix=""):
     """
     This generator yields the name and value of every slot in an object,
@@ -156,9 +157,6 @@ class CorrelatorProcessor(QThreadWorker):
     # Emitted when incoming data is processed, only contains paths generated
     # from the incoming data (not including e.g. view paths).
     updated_data_paths_sgn = pyqtSignal(dict)
-
-    # Emitted upon a ContextError
-    context_error_sgn = pyqtSignal(object)
 
     # Emitted upon a successful reload
     reloaded_sgn = pyqtSignal()
@@ -426,26 +424,35 @@ class CorrelatorProcessor(QThreadWorker):
 
         return outputs
 
+    def validateContext(self, source: str):
+        ctx, ex, tb = None, None, None
+
+        try:
+            ctx = Context(source, version=self._next_ctx_version,
+                          features=["karabo"], event_alias="train")
+        except ContextError as e:
+            # ContextError's have their own functions for pretty printing
+            tb = e.format_for_context(source)
+            ex = e
+        except Exception as e:
+            # For all other exceptions we log the traceback and error
+            tb = "".join([*traceback.format_tb(e.__traceback__), repr(e)])
+            ex = e
+
+        return ctx, ex, tb
+
     def setContext(self, source: str):
         """
         Update the pipeline context with the given source code.
 
         :param str source: The updated source code.
         """
-        try:
-            self._ctx = Context(source, version=self._next_ctx_version,
-                                features=["karabo"], event_alias="train")
-        except ContextError as e:
-            # ContextError's have their own functions for pretty printing
-            logger.error(e.format_for_context(source))
-            self.context_error_sgn.emit(e)
-            return
-        except Exception as e:
-            # For all other exceptions we log the traceback and error
-            logger.error("".join([*traceback.format_tb(e.__traceback__), repr(e)]))
-            self.context_error_sgn.emit(e)
+        ctx, ex, traceback = self.validateContext(source)
+        if ex is not None:
+            logger.error(traceback)
             return
 
+        self._ctx = ctx
         self._next_ctx_version += 1
         self._paths = self._ctx.get_paths()
         self._pipeline.set_context(self._ctx)

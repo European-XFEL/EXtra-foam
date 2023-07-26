@@ -317,6 +317,7 @@ setup(
         "qscintilla",
         "libcst",
         "lttbc",
+        "pyflakes",
         # These dependencies are not directly used, but are needed to satisfy
         # pip's resolver:
         'pygments',
