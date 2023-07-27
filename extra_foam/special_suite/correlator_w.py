@@ -663,15 +663,14 @@ class ViewWidget(QStackedWidget):
                         for i, value in enumerate(data.values[1:]):
                             label = y_series_labels[i]
 
-                            self._xs[label].append(data.values[0])
-                            self.update_scalar_series(label, value)
-
                             # TODO: move this block of code into update_scalar_series()
                             if label in series_errors and not self.xbinning_enabled:
                                 if label not in self._errors and len(self._xs[label]) > 0:
                                     self._errors[label].extend(np.full((len(self._xs[label]), ), np.nan))
                                 self._errors[label].append(series_errors[label])
 
+                            self._xs[label].append(data.values[0])
+                            self.update_scalar_series(label, value)
 
                 # If we're dealing with Vector data
                 elif data.ndim == 2:

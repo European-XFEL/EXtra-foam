@@ -1,6 +1,7 @@
 import time
 import tempfile
 import textwrap
+from pathlib import Path
 from unittest.mock import patch, ANY
 
 import pytest
@@ -72,7 +73,7 @@ class TestCorrelatorWindow:
         """
         ctx = textwrap.dedent(ctx)
 
-        with tempfile.NamedTemporaryFile() as ctx_file:
+        with tempfile.NamedTemporaryFile(suffix=".py") as ctx_file:
             # Save the context to a file
             ctx_file.write(ctx.encode())
             ctx_file.flush()
@@ -80,12 +81,11 @@ class TestCorrelatorWindow:
 
             # Helper function to read the current contents of the context file
             def saved_ctx():
-                ctx_file.seek(0)
-                return ctx_file.read().decode()
+                return Path(path).read_text()
 
             with patch.object(QFileDialog, "getOpenFileName", return_value=(path, )):
                 # Open the context file
-                win._openContext()
+                win._ctrl_widget_st.onOpenFile()
 
                 # Check the path and source is displayed correctly
                 assert win._ctrl_widget_st._path_label.text() == path
@@ -284,7 +284,7 @@ class TestCorrelatorWindow:
 
     def testViewWidget(self, win, initial_context):
         widget = win._tab_widget.widget(1).widget(0)
-        plot_widget = widget._plot_widget
+        plot_widget_splitter = widget._plot_widget_splitter
         view_picker = widget.view_picker
         view_picker_widget = view_picker.parent()
         assert type(widget) == ViewWidget
@@ -298,11 +298,11 @@ class TestCorrelatorWindow:
         # Selecting the image view should show the image view widget, everything
         # else should show the plot widget.
         view_picker.setCurrentText("view#compute")
-        assert widget.currentWidget() == plot_widget, "Wrong widget displayed for View.Compute"
+        assert widget.currentWidget() == plot_widget_splitter, "Wrong widget displayed for View.Compute"
         view_picker.setCurrentText("view#scalar")
-        assert widget.currentWidget() == plot_widget, "Wrong widget displayed for View.Scalar"
+        assert widget.currentWidget() == plot_widget_splitter, "Wrong widget displayed for View.Scalar"
         view_picker.setCurrentText("view#vector")
-        assert widget.currentWidget() == plot_widget, "Wrong widget displayed for View.Vector"
+        assert widget.currentWidget() == plot_widget_splitter, "Wrong widget displayed for View.Vector"
         view_picker.setCurrentText("view#image")
         assert widget.currentWidget() == widget._image_widget, "Wrong widget displayed for View.Image"
 
@@ -365,7 +365,7 @@ class TestCorrelatorWindow:
             setTitle.assert_called_with("Baz")
 
             # There should be 'max_points' points
-            assert len(widget._xs) == max_points
+            assert len(widget._xs["y0"]) == max_points
             assert len(widget._ys["y0"]) == max_points
 
         widget.reset()
@@ -383,7 +383,7 @@ class TestCorrelatorWindow:
         # rather than how many trains in total have been processed.
         output_len = len(output_data[0]) if is_vector else len(output_data)
 
-        assert len(widget._xs) == output_len
+        assert len(widget._xs["Foo"]) == output_len
         for series in ["Foo", "Bar"]:
             assert len(widget._ys[series]) == output_len
             assert len(widget._errors[series]) == output_len
