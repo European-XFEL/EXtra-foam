@@ -54,14 +54,17 @@ class TestFileIO(unittest.TestCase):
         self._assert_write_read(img, '.tif')
         self._assert_write_read(img, '.npy')
 
-        # test read and write .png file
-        self._assert_write_read(img, '.png', scale=255)
+        # Test writing .png files. We don't test reading because Pillow can't
+        # write floating-point PNG images.
+        self._assert_write_read(img, '.png', scale=255, check=False)
 
-    def _assert_write_read(self, img, file_type, *, scale=1):
+    def _assert_write_read(self, img, file_type, *, scale=1, check=True):
         with tempfile.NamedTemporaryFile(suffix=file_type) as fp:
             write_image(fp.name, img)
+
             ref = read_image(fp.name)
-            np.testing.assert_array_equal(scale * img, ref)
+            if check:
+                np.testing.assert_array_equal(scale * img, ref)
 
     def testReadNumpyArray(self):
         # test wrong file suffix

@@ -73,7 +73,7 @@ class MetaProxy(_AbstractProxy):
 
         :param AnalysisType analysis_type: analysis type.
         """
-        return int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type))
+        return int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type.value))
 
     def has_any_analysis(self, analysis_types):
         """Check if any of the listed analysis types has been registered.
@@ -84,7 +84,7 @@ class MetaProxy(_AbstractProxy):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_types:
-            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) > 0:
+            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type.value)) > 0:
                 return True
         return False
 
@@ -97,7 +97,7 @@ class MetaProxy(_AbstractProxy):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_types:
-            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) <= 0:
+            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type.value)) <= 0:
                 return False
         return True
 
@@ -115,15 +115,15 @@ class MetaProxy(_AbstractProxy):
 
         :param AnalysisType analysis_type: analysis type.
         """
-        return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type, 1)
+        return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type.value, 1)
 
     def unregister_analysis(self, analysis_type):
         """Unregister the given analysis type.
 
         :param AnalysisType analysis_type: analysis type.
         """
-        if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) > 0:
-            return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type, -1)
+        if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type.value)) > 0:
+            return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type.value, -1)
         return 0
 
     @redis_except_handler

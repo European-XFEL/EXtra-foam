@@ -131,7 +131,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
         # TODO: find a better place to do the initialization
         # Prevent 'has_analysis', 'has_any_analysis' and
         # 'has_all_analysis' from getting None when querying.
-        client.hset(mt.ANALYSIS_TYPE, mapping={t: 0 for t in AnalysisType})
+        client.hset(mt.ANALYSIS_TYPE, mapping={t.value: 0 for t in AnalysisType})
 
         logger.info(f"Redis server started at {host}:{port}")
 

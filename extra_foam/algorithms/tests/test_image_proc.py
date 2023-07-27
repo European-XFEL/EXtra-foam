@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 import pytest
 
@@ -84,8 +85,8 @@ class TestImageProc(unittest.TestCase):
                          [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
                          [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
 
-        with np.warnings.catch_warnings():
-            np.warnings.simplefilter("ignore", category=RuntimeWarning)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
 
             # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
             expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
