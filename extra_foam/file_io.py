@@ -10,6 +10,8 @@ All rights reserved.
 import os.path as osp
 
 import numpy as np
+
+from PIL import Image
 import imageio
 
 
@@ -33,6 +35,12 @@ def write_image(filepath, img):
             # But as long as it does not crash the app and 'imageio' can
             # handle it, it is the users to responsibility for the correctness
             # of the result.
+
+            # But we do special-case writing float images to PNGs, since that
+            # will probably come up a lot.
+            if '.png' == suffix and np.issubdtype(img.dtype, np.floating):
+                img = Image.fromarray(img, mode="L")
+
             imageio.imwrite(filepath, img)
     except Exception as e:
         raise ValueError(f"Failed to write image to {filepath}: {str(e)}")

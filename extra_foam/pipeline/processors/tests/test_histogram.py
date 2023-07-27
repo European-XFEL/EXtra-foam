@@ -7,6 +7,7 @@ Author: Ebad Kamil <ebad.kamil@xfel.eu>, Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import warnings
 from unittest.mock import patch
 import pytest
 
@@ -16,7 +17,7 @@ from extra_foam.pipeline.processors.histogram import HistogramProcessor, Process
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.config import AnalysisType
 
-np.warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _analysis_types = [
     AnalysisType.PUMP_PROBE,
