@@ -19,3 +19,6 @@ dependencies:
   - gtest==1.10.0
   - gmock==1.10.0
   - pip
+  - pyqt
+  - pyqt5-sip
+  - qscintilla2
