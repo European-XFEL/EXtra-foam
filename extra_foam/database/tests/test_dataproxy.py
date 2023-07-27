@@ -70,7 +70,7 @@ class TestDataProxy(unittest.TestCase):
         # register an analysis type twice
         self._meta.register_analysis(type2)
         self.assertTrue(self._meta.has_all_analysis([type1, type2]))
-        self.assertEqual('2', self._meta.hget(Metadata.ANALYSIS_TYPE, type2))
+        self.assertEqual('2', self._meta.hget(Metadata.ANALYSIS_TYPE, type2.value))
 
         # unregister an analysis type
         self._meta.unregister_analysis(type1)
@@ -78,7 +78,7 @@ class TestDataProxy(unittest.TestCase):
 
         # unregister an analysis type which has not been registered
         self._meta.unregister_analysis(type3)
-        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, type3))
+        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, type3.value))
 
     def testMetaMetadata(self):
         class Dummy(metaclass=MetaMetadata):

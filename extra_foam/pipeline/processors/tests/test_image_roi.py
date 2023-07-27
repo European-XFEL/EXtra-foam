@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import warnings
 import random
 from unittest.mock import MagicMock, patch, PropertyMock
 
@@ -174,8 +175,8 @@ class TestImageRoiPulse(_TestDataMixin):
                         fom1_gt / fom2_gt, processed.pulse.roi.fom, decimal=4)
 
             if combo == RoiCombo.ROI1_DIV_ROI2:
-                with np.warnings.catch_warnings():
-                    np.warnings.simplefilter("ignore", category=RuntimeWarning)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
 
                     # test some of ROI2 FOM are nan
                     data, processed = self._get_data()
@@ -425,8 +426,8 @@ class TestImageRoiTrain(_TestDataMixin):
                     assert (fom1_gt / fom2_gt) / norm == pytest.approx(processed.roi.fom)
 
                 if fom_combo == RoiCombo.ROI1_DIV_ROI2:
-                    with np.warnings.catch_warnings():
-                        np.warnings.simplefilter("ignore", category=RuntimeWarning)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
 
                         # test ROI1 FOM is a number and ROI2 FOM equals to 0, which produces inf
                         # However, inf/inf produces nan
@@ -649,8 +650,8 @@ class TestImageRoiTrain(_TestDataMixin):
             assert fom_on_gt - fom_off_gt == pytest.approx(processed.pp.fom, rel=1e-3)
 
             if fom_combo == RoiCombo.ROI1_DIV_ROI2:
-                with np.warnings.catch_warnings():
-                    np.warnings.simplefilter("ignore", category=RuntimeWarning)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
 
                     # test ROI1 FOM is a number and ROI2 FOM equals to 0, which produces inf
                     # However, inf/inf produces nan

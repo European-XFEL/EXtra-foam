@@ -7,6 +7,7 @@ Author: Ebad Kamil <ebad.kamil@xfel.eu>, Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -15,7 +16,7 @@ from extra_foam.pipeline.processors.image_transform import ImageTransformProcess
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.config import ImageTransformType
 
-np.warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 class TestImageTransform(_TestDataMixin):

@@ -1074,7 +1074,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onItCrProminenceChange("33.3")
         mediator.onItCrDistanceChange("444")
         mediator.onItCrMinCountChange("555")
-        mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM)
+        mediator.onItTransformTypeChange(ImageTransformType.FOURIER_TRANSFORM.value)
         mediator.onItFftLogrithmicScaleChange(True)
         mediator.onItEdKernelSizeChange("3")
         mediator.onItEdSigmaChange("2.1")
@@ -1114,10 +1114,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertFalse(record_btn.isChecked())
 
         # switch to "azimuthal integration 1D"
-        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG.value))
         tab.tabBarClicked.emit(TabIndex.AZIMUTHAL_INTEG_1D)
         tab.setCurrentIndex(TabIndex.AZIMUTHAL_INTEG_1D)
-        self.assertEqual('1', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('1', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG.value))
 
         # switch to "geometry"
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)
