@@ -169,6 +169,7 @@ class XesTimingProcessor(QThreadWorker):
         self.img_current = img
 
         delay_data = self._xes_curves[target_delay]
+
         is_pumped = (tid % 2 == 0 and self._even_trains_pumped) or \
                     (tid % 2 != 0 and not self._even_trains_pumped)
         img_avg = delay_data.pumped_train_avg if is_pumped else delay_data.unpumped_train_avg
