@@ -43,10 +43,10 @@ class XesNormalization:
                 self.norm = float(1)
                 
             case NormOption.AUC_JF:
-                self.norm = data["auc"]
+                self.norm = data["auc_avg"]
 
             case NormOption.DIGI_I0:
-                if data["digi_data"][0:5].mean() == 0:
+                if data["digi_data"][0:1000].mean() == 0:
                     raise RuntimeError(f"Digitizer is not enabled")
 
                 else:
@@ -103,21 +103,20 @@ class XesSignalPlot(PlotWidgetF):
         self._roi_x = 0
         self._plots = { }
         self._pens = list(SequentialColor.mkPen(len(SequentialColor.pool)))
-        self._plot_xes = self.plotCurve()
         self._norm_xes = XesNormalization()
         self._legend = self.addLegend(offset=(-10, -10))
+        self._plot_proj = self.plotCurve()
         self.hideLegend()
 
     def updateF(self, data):
         """Override."""
         if data is None:
             return
-
-        if not self._legend.isVisible():
-            self.showLegend()
         
         self.norm = self._norm_xes.norm_option(data["xes_norm"], data)
-        print("NORMVALUE",self.norm )
+        if not self._legend.isVisible():
+            self.showLegend() 
+
         # If necessary, redraw the plots for all the delays
         if data["refresh_plots"]:
             for delay, delay_data in data["xes"].items():
@@ -127,10 +126,11 @@ class XesSignalPlot(PlotWidgetF):
             #  the plot for the current delay
             current_delay = data["delay"]
             self.plot_delay(current_delay, data["xes"][current_delay])
-
+            # self._plot_proj.setData(self._roi_x + np.arange(len(data["xes_proj"][self._roi_idx])), data["xes_proj"][self._roi_idx])
 
     def plot_delay(self, delay, delay_data):
         diff = delay_data.difference[self._roi_idx]/self.norm
+
         if diff is None:
             return
 
@@ -139,7 +139,7 @@ class XesSignalPlot(PlotWidgetF):
             self._legend.addItem(self._plots[delay], f"Delay: {delay}")
         
         self._plots[delay].setData(self._roi_x + np.arange(len(diff)), diff)
-
+        
     @pyqtSlot(tuple)
     def onRoiChanged(self, roi_params):
         self._roi_x = roi_params[3]
@@ -150,7 +150,31 @@ class XesSignalPlot(PlotWidgetF):
         self._plots.clear()
         self._legend.clear()
         self.hideLegend()
-    
+
+
+class XesProjectionPlot(PlotWidgetF):
+    def __init__(self, roi_idx, parent=None):
+        super().__init__(parent=parent)
+
+        self.setLabel("left", "Amplitude")
+        self.setLabel("bottom", "X axis (pixels)")
+        self.setTitle("XES Projection" )
+        self._plot = self.plotCurve()
+        self._roi_idx = roi_idx
+        self._roi_x = 0
+
+
+    def updateF(self, data):
+        if data is None:
+            return
+        
+        xes_proj_data = data["xes_proj"][self._roi_idx]
+        self._plot.setData(self._roi_x + np.arange(len(xes_proj_data)), xes_proj_data)
+
+    @pyqtSlot(tuple)
+    def onRoiChanged(self, roi_params):
+        self._roi_x = roi_params[3]
+        
 
 class DelayScanSlice(PlotWidgetF):
     def __init__(self, delay_scan_view, parent=None):
@@ -190,38 +214,38 @@ class CorrelatorPlot(PlotWidgetF):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.setLabel("left", "AUC JNGF")
+        self.setLabel("left", "AUC JNGF (ROI 1)")
         self.setLabel("bottom", "I0 Digitizer")
-        self.setTitle("Correlation JNGF vs Digitizer")
+        self.setTitle("Correlation JNGF (ROI 1) vs Digitizer")
 
         self._plot = self.plotScatter(brush=FColor.mkBrush("w"))
         self.digitizer_data = []
         self.auc_data = []
-        self.train_count = 0
         self.train_array = []
 
-    def updateF(self, data):
+    def updateF(self, data):        
+        if not data["digi_enabled"]:
+            self.reset()
+            return
+        
         if data is None:
             return
-
+        
         self.digitizer_data.append(data["digi_int_avg"])
 
         if data["auc"]:
             self.auc_data.append(data["auc"])
         else:
             self.auc_data.append(np.nan)
-        self.train_count+=1
         
-        self.train_array.append(self.train_count)
         self._plot.setData(self.digitizer_data, self.auc_data)
 
     def reset(self):
         super().reset()
 
         self.auc_data.clear()
-        self.digitizer_data.clear()
-        self.train_array.clear()    
-        
+        self.digitizer_data.clear()        
+
 
 class DigitizerPlot(PlotWidgetF):
     def __init__(self, parent=None):
@@ -602,6 +626,7 @@ class XesCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.target_delay_cb.updateSources(slow_data)
         self.digitizer_cb.updateSources(digitizer_data)
 
+
 @create_special(XesCtrlWidget, XesTimingProcessor)
 class XesTimingWindow(_SpecialAnalysisBase):
     """Main GUI for XES timing."""
@@ -619,7 +644,6 @@ class XesTimingWindow(_SpecialAnalysisBase):
         self.initUI()
         self.initConnections()
         self.startWorker()
-
         center_window(self)
 
     def initUI(self):
@@ -635,7 +659,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
         self._stacked_widget = QStackedWidget()
         self._stacked_widget.addWidget(default_widget)
         self._stacked_widget.addWidget(self._tab_widget)
-        
+
         correlator = CorrelatorPlot(parent=self)
         digitizer = DigitizerPlot(parent=self)
         digitizer_ui = QSplitter(Qt.Vertical)
@@ -798,7 +822,9 @@ class XesTimingWindow(_SpecialAnalysisBase):
 
         # If a ROI has been activated, add a tab for it
         if activated and idx not in self._visualized_rois:
+
             xes_plot = XesSignalPlot(idx, parent=self)
+            xes_proj_plot = XesProjectionPlot(idx, parent=self)
             delay_scan = DelayScanView(self._view.rois[idx - 1], parent=self)
             delay_slice = DelayScanSlice(delay_scan, parent=self)
         
@@ -809,6 +835,7 @@ class XesTimingWindow(_SpecialAnalysisBase):
             vsplitter.setStretchFactor(1, 1)
 
             hsplitter = QSplitter()
+            hsplitter.addWidget(xes_proj_plot)
             hsplitter.addWidget(xes_plot)
             hsplitter.addWidget(vsplitter)
             hsplitter.setStretchFactor(0, 10)
@@ -817,7 +844,10 @@ class XesTimingWindow(_SpecialAnalysisBase):
             roi_ctrl = self._com_ctrl_st.roi_ctrls[idx - 1]
             roi_ctrl.roi_geometry_change_sgn.connect(delay_scan.onRoiChanged)
             roi_ctrl.roi_geometry_change_sgn.connect(xes_plot.onRoiChanged)
+            roi_ctrl.roi_geometry_change_sgn.connect(xes_proj_plot.onRoiChanged)
+
             xes_plot.onRoiChanged(roi_ctrl.params())
+            xes_proj_plot.onRoiChanged(roi_ctrl.params())
             delay_scan.onRoiChanged(roi_ctrl.params())
 
             delay_scan.linear_roi_changed_sgn.connect(delay_slice.onLinearRoiChanged)

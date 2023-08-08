@@ -33,7 +33,8 @@ class XesData:
     train_count: int = 1
     digitizer: defaultdict = defaultdict_ndarray()
     auc: defaultdict = defaultdict_ndarray()
-    xes_proj: defaultdict = defaultdict_ndarray()
+    auc_avg: defaultdict = defaultdict_ndarray()
+    xes_proj: defaultdict = field(default_factory=defaultdict_none)
 
 class DisplayOption(Enum):
     PUMPED = "Pumped trains (avg)"
@@ -211,17 +212,20 @@ class XesTimingProcessor(QThreadWorker):
         if refresh_plots:
             self._refresh_plots = False
 
-        # Compute Area Under Curve
+        # Compute Area Under Curve per train for ROI 1
         if self.img_current is None:
             return
 
         if self.img_current is not None:
-            activated_rois = [(idx, geom) for idx, geom in self._rois_geom_st.items()
-                              if geom is not None]
-            for roi_idx, roi_geom in activated_rois:
+            roi_geom = self._rois_geom_st[1] # ROI 1 only
+            
+            if roi_geom is not None:
                 self.updateAUC(delay_data, roi_geom)
+                
         
-        auc_avg = delay_data.auc
+        auc_per_train = delay_data.auc
+        auc_avg = delay_data.auc_avg
+
         xes_projection = delay_data.xes_proj # XES for ANY delay
         
         if self.digitizer_enabled:
@@ -230,9 +234,11 @@ class XesTimingProcessor(QThreadWorker):
             
             if digitizer_data is None:
                 return
+            
+            is_digitizer_enabled = self.digitizer_enabled
 
             #remove background
-            background= np.nanmean(digitizer_data[0:1000])
+            background = np.nanmean(digitizer_data[0:1000])
             digitizer = -digitizer_data+background
 
             # Find peaks in digitizer i.e #pulses in one train
@@ -252,15 +258,15 @@ class XesTimingProcessor(QThreadWorker):
                 #Check which type of analysis is done to the digitizer trace
                 if self._digitizer_analysis:
                     # integrate each peak in train
-                    intensity_peak = [trapezoid(digitizer[idx_digitizer_peaks-digitizer_width:idx_digitizer_peaks+digitizer_width]) 
+                    intensity_peak = [trapezoid(digitizer[idx_digitizer_peaks-(digitizer_width//2):idx_digitizer_peaks+(digitizer_width//2)]) 
                     for idx_digitizer_peaks in idx_digitizer_peaks]
                     # Average the integral of the peaks to obtain the train intensity
                     train_intensity = np.nanmean(intensity_peak)
                     delay_data.digitizer = train_intensity
                 if not self._digitizer_analysis:
                     #Amplitude each peak in train
-                    amplitude_peak = [np.nanmax(digitizer[idx_digitizer_peaks-digitizer_width:
-                    idx_digitizer_peaks+digitizer_width]) 
+                    amplitude_peak = [np.nanmax(digitizer[idx_digitizer_peaks-(digitizer_width//2):
+                    idx_digitizer_peaks+(digitizer_width//2)]) 
                     for idx_digitizer_peaks in idx_digitizer_peaks]
                     # Average train amplitude
                     train_amplitude = np.nanmean(amplitude_peak)
@@ -268,6 +274,7 @@ class XesTimingProcessor(QThreadWorker):
         else:
             delay_data.digitizer = np.nan
             digitizer = np.zeros((100))
+            is_digitizer_enabled = self.digitizer_enabled
 
         self.log.info(f"Train {tid} processed")
         return {
@@ -277,7 +284,9 @@ class XesTimingProcessor(QThreadWorker):
             "refresh_plots": refresh_plots,
             "digi_int_avg": delay_data.digitizer,
             "digi_data": digitizer,
-            "auc": auc_avg,
+            "digi_enabled":is_digitizer_enabled,
+            "auc": auc_per_train,
+            "auc_avg": auc_avg,
             "digi_range": self._digitizer_range,
             "xes_proj": xes_projection,
             "xes_norm": self._xes_norm_option
@@ -300,6 +309,9 @@ class XesTimingProcessor(QThreadWorker):
         else:
             unpumped[roi_idx] = xes
 
+        delay_data.xes_proj[roi_idx] =  xes
+        delay_data.auc_avg = trapezoid(delay_data.xes_proj[1])
+
         # Check that both the current pumped/unpumped array are the same
         # length. These are only updated every train, so when the width
         # of a ROI (and thus length of the [un]pumped arrays) is changed
@@ -316,8 +328,8 @@ class XesTimingProcessor(QThreadWorker):
         #1D projection to calculate Area Under Curve
         spectra_1D = np.nansum(roi, axis=0)
         background = np.nanmean(spectra_1D[:int(h/4)])
-        delay_data.xes_proj = spectra_1D-background
-        integral = trapezoid(delay_data.xes_proj)
+        xes_projection = spectra_1D-background
+        integral = trapezoid(xes_projection)
         delay_data.auc = integral
 
         
