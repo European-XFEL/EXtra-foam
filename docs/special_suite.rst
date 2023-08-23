@@ -157,10 +157,15 @@ Correlator
    :width: 800
 
 The Correlator is a special suite that embeds `metropc
-<https://desy.de/~schmidtp/metropc-docs/>`_. The purpose is to allow the user to
+<https://rtd.xfel.eu/docs/metropc/en/latest/>`_. The purpose is to allow the user to
 write custom analysis code on-the-fly and have it visualized immediately. The
 suite supports reading either raw data from a Karabo bridge, or processed data
 from a main EXtra-foam instance.
+
+.. warning::
+   EXtra-foam must have been installed with the ``'.[correlator]'`` target for this
+   to work. See the :ref:`installation instructions <install-extra-foam>` for
+   more information.
 
 The interface is organized by tabs, in the first tab there is a text editor
 where you can write the context code. All other tabs are for visualizing the

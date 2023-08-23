@@ -8,6 +8,7 @@ If you want to use **EXtra-foam** on the online or `Maxwell` cluster, please che
 To install **EXtra-foam** in your own environment, you are encouraged to use Anaconda_ to run
 and build **EXtra-foam**.
 
+.. _install-extra-foam:
 
 Install **EXtra-foam**
 ----------------------
@@ -35,9 +36,10 @@ Install **EXtra-foam**
     $ conda deactivate
     $ conda activate extra_foam
 
-    # Install extra-foam
+    # Install extra-foam. If you don't have access to our Gitlab, you can also
+    # install the default '.' target.
     $ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
-    $ pip install .
+    $ pip install '.[correlator]'
 
 
 Install your own **EXtra-foam** kernel on the Maxwell cluster for offline analysis

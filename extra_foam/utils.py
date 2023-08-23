@@ -294,7 +294,7 @@ def get_available_port(default_port):
 #: :param float/np.ndarray data: The series data for the current train.
 #: :param str name: The name of the series, to be displayed in a legend (optional).
 #: :param float/np.ndarray error: The error of :code:`data`, shown as ± :code:`error` (optional).
-#: :param float/np.ndarray error_beam_width: The
+#: :param float/np.ndarray error_beam_width: The width of the error bar beams on the plot (optional).
 Series = namedtuple("Series", ["data", "name", "error", "error_beam_width"], defaults=[None, None, None])
 
 
@@ -321,17 +321,26 @@ def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs
        from extra_foam.utils import rich_output, Series as S
 
        # Single series
-       rich_output(42)
+       @View.Scalar
+       def foo(_: "internal#train_id"):
+           rich_output(42)
 
        # Multiple series
-       rich_output(42, y1=2.81, y2=3.14)
+       @View.Scalar
+       def bar(_: "internal#train_id"):
+           rich_output(42, y1=2.81, y2=3.14)
 
        # Multiple series with all the metadata
-       rich_output(42, y1=S(2.81, name="e", error=0.1), y2=S(3.14, "Pi", 0.2),
-                   title="Foo",
-                   xlabel="Bar",
-                   ylabel="Baz",
-                   max_points=100)
+       @View.Scalar
+       def baz(_: "internal#train_id"):
+           rich_output(42,
+                       y1=S(2.81, name="e", error=0.1),
+                       y2=S(3.14, "Pi", 0.2),
+                       # Plotting settings
+                       title="Foo",
+                       xlabel="Bar",
+                       ylabel="Baz",
+                       max_points=100)
 
     :param float/np.ndarray x: Only required argument, treated as either an X or
                                Y coordinate depending on whether any other
