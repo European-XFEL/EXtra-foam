@@ -695,6 +695,10 @@ class ViewWidget(QStackedWidget):
 
                             if label in series_errors:
                                 self._errors[label].extend(series_errors[label])
+
+                # If we're dealing with images
+                elif data.ndim == 3:
+                    pass
                 else:
                     logger.error(f"Cannot handle data with dimension: {data.ndim}")
                     return
@@ -796,14 +800,35 @@ class ViewWidget(QStackedWidget):
             if view_type == ViewOutput.IMAGE:
                 self._image_view.setAspectLocked(not view.aspect_unlocked)
 
-                if not is_ndarray:
+                if not is_ndarray and not is_xarray:
                     logger.error(f"Cannot handle Image data of type: {type(data)}")
                     return
-                elif data.ndim != 2:
+                elif is_ndarray and data.ndim != 2:
                     logger.error(f"Image data has wrong number of dimensions: {data.ndim} (expected 2)")
                     return
 
-                self._image_view.setImage(data)
+                if is_ndarray:
+                    self._image_view.setImage(data)
+                else:
+                    image = data[0].data
+                    if "image_xaxis" in data.attrs:
+                        height, width = image.shape
+                        x_axis = data.attrs["image_xaxis"]
+                        y_axis = data.attrs["image_yaxis"]
+
+                        if "title" in data.attrs:
+                            self._image_view.setTitle(data.attrs["title"])
+                        if "xlabel" in data.attrs:
+                            self._image_view.setLabel("bottom", data.attrs["xlabel"])
+                        if "ylabel" in data.attrs:
+                            self._image_view.setLabel("left", data.attrs["ylabel"])
+
+                        self._image_view.setImage(image,
+                                                  pos=[x_axis[0], y_axis[0]],
+                                                  scale=[(x_axis[-1] - x_axis[0]) / width,
+                                                         (y_axis[-1] - y_axis[0]) / height])
+                    else:
+                        self._image_view.setImage(image)
             else:
                 self._legend.clear()
                 for label, ys_data in self._ys.items():

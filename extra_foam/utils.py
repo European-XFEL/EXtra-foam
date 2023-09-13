@@ -298,7 +298,8 @@ def get_available_port(default_port):
 Series = namedtuple("Series", ["data", "name", "error", "error_beam_width"], defaults=[None, None, None])
 
 
-def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs):
+def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None,
+                image_xaxis=None, image_yaxis=None, **kwargs):
     """
     A helper function to wrap scalars and arrays in :code:`DataArray`'s, with
     metadata for plotting.
@@ -374,6 +375,10 @@ def rich_output(x, xlabel="x", ylabel="y", title=None, max_points=None, **kwargs
         xr_attrs["title"] = title
     if max_points is not None:
         xr_attrs["max_points"] = max_points
+    if image_xaxis is not None:
+        xr_attrs["image_xaxis"] = image_xaxis
+    if image_yaxis is not None:
+        xr_attrs["image_yaxis"] = image_yaxis
 
     full_data = [x]
     y_series_labels = xr_attrs["y_series_labels"]
