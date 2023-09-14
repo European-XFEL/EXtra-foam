@@ -306,7 +306,10 @@ class ImageAssemblerFactory(ABC):
                 if src_type == DataSource.FILE:
                     modules_data = self._get_modules_file(raw, src, modules)
                 else:
-                    modules_data = self._get_modules_bridge(raw, src, modules).squeeze()
+                    modules_data = self._get_modules_bridge(raw, src, modules)
+
+                if self._detector == "ePix100":
+                    modules_data = modules_data.squeeze()
 
                 # Remove raw detector data since we do not want to serialize
                 # it and send around.
