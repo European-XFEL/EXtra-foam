@@ -39,6 +39,10 @@ class DigitizerProcessor(_BaseProcessor):
         'digitizers.channel_1_B.apd.pulseIntegral': 'B',
         'digitizers.channel_1_C.apd.pulseIntegral': 'C',
         'digitizers.channel_1_D.apd.pulseIntegral': 'D',
+        'digitizers.channel_2_A.apd.pulseIntegral': 'A',
+        'digitizers.channel_2_B.apd.pulseIntegral': 'B',
+        'digitizers.channel_2_C.apd.pulseIntegral': 'C',
+        'digitizers.channel_2_D.apd.pulseIntegral': 'D',
         'data.peaks': 'ADC'
     }
 
