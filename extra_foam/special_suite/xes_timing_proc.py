@@ -165,7 +165,7 @@ class XesTimingProcessor(QThreadWorker):
         img = self.squeezeToImage(tid, self.getPropertyData(data, *self._detector))
         
         # Set all negative values to 0 and mask ASIC edges
-        img[img < 0] = 0
+        img[img < 2] = 0
         JungFrauGeometryFast.mask_module_py(img)
         self.img_current = img
 
