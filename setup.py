@@ -288,6 +288,7 @@ setup(
     package_data={
         'extra_foam': [
             'gui/icons/*.png',
+            'gui/icons/*.svg',
             'gui/icons/*.jpg',
             'geometries/*.h5',
             'geometries/*.geom',
