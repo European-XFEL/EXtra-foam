@@ -311,7 +311,7 @@ setup(
         'imageio',
         'Pillow',
         'pyyaml',
-        "metropc @ git+ssh://git@git.xfel.eu:10022/karaboDevices/metropc.git@high_high_water_mark",
+        "metropc @ git+ssh://git@git.xfel.eu:10022/karaboDevices/metropc.git@master",
         "libcst",
         "lttbc",
         "pyflakes",
