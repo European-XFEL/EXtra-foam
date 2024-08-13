@@ -20,12 +20,6 @@ class ModuleScanProcessor(QThreadWorker):
 
         pass
 
-    def sources(self):
-        """Override."""
-        return {
-
-        }
-
     @profiler("Module scan Processor")
     def process(self, data):
         """Override."""

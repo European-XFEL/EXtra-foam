@@ -13,7 +13,7 @@ import weakref
 
 import numpy as np
 
-from PyQt5.QtGui import QColor, QImage, QPainter, QPicture, QTransform
+from PyQt5.QtGui import QColor, QImage, QPainter, QPicture, QTransform, QFont, QPen
 from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QPoint, QPointF, QRectF, Qt
 )
@@ -26,6 +26,7 @@ from ..misc_widgets import FColor
 from ...algorithms import quick_min_max
 from ...config import config, MaskState
 from ...ipc import ImageMaskPub
+from ...utils import RectROI as MetroRectROI
 
 
 class ImageItem(pg.GraphicsObject):
@@ -523,7 +524,7 @@ class RectROI(pg.ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, idx, *, pos=(0, 0), size=(1, 1), pen=None, parent=None):
+    def __init__(self, idx, *, pos=(0, 0), size=(1, 1), label="", pen=None, parent=None):
         """Initialization.
 
         :param int idx: index of the ROI.
@@ -536,8 +537,34 @@ class RectROI(pg.ROI):
                          scaleSnap=True,
                          pen=pen,
                          parent=parent)
+        if pen is None:
+            pen = QPen(Qt.SolidLine)
 
         self._index = idx
+        self._label = None
+
+        self._label_item = pg.TextItem(color=pen.color())
+        font = QFont()
+        font.setPointSizeF(20)
+        self._label_item.setFont(font)
+        self._label_item.setParentItem(self)
+        self.setLabel(label)
+
+        if len(label) == 0:
+            self._label_item.hide()
+
+    def label(self):
+        return self._label
+
+    def setLabel(self, label):
+        self._label_item.setText(label)
+
+        if len(label) == 0:
+            self._label_item.hide()
+        else:
+            self._label_item.show()
+
+        self._label = label
 
     @property
     def index(self):
@@ -552,6 +579,13 @@ class RectROI(pg.ROI):
             self.translatable = True
             self._addHandle()
             self._handle_info = self.handles[0]
+
+    def configureFromMetroROI(self, metro_roi: MetroRectROI):
+        if not isinstance(metro_roi, MetroRectROI):
+            raise RuntimeError(f"Input must be a MetroRectROI, not {type(metro_roi)}")
+
+        self.setPos(metro_roi.x, metro_roi.y)
+        self.setSize((metro_roi.width, metro_roi.height))
 
     def _addHandle(self):
         """An alternative to addHandle in parent class."""

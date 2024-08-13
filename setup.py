@@ -302,8 +302,6 @@ setup(
         'msgpack-numpy',
         'pyzmq',
         'pyFAI',
-        'PyQt5',
-        'PyQt5-sip',
         'EXtra-data',
         'EXtra-geom',
         'karabo-bridge',
@@ -313,6 +311,10 @@ setup(
         'imageio',
         'Pillow',
         'pyyaml',
+        "metropc @ git+ssh://git@git.xfel.eu:10022/karaboDevices/metropc.git@master",
+        "libcst",
+        "lttbc",
+        "pyflakes",
         # These dependencies are not directly used, but are needed to satisfy
         # pip's resolver:
         'pygments',

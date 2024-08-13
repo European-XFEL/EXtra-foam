@@ -67,12 +67,6 @@ class GotthardPpProcessor(QThreadWorker):
     def onDarkPoiIndexChanged(self, value: int):
         self._dark_poi_index = value
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._output_channel, self._ppt, 1),
-        ]
-
     @profiler("Gotthard Processor (pump-probe)")
     def process(self, data):
         """Override."""

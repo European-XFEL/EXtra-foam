@@ -13,14 +13,58 @@ from collections import OrderedDict
 import numpy as np
 
 from PyQt5.QtGui import (
-    QImage, QPainter, QPainterPath, QPicture, QPixmap, QTransform
+    QImage, QPainter, QPainterPath, QPicture, QPixmap, QTransform, QFont
 )
-from PyQt5.QtCore import pyqtSignal, QByteArray, QDataStream, QRectF, Qt
+from PyQt5.QtCore import pyqtSignal, QByteArray, QDataStream, QRectF, Qt, QPointF
 
 from .. import pyqtgraph as pg
 from ..pyqtgraph import functions as fn
-
 from ..misc_widgets import FColor
+from ...utils import LinearROI as MetroLinearROI
+
+
+class LinearROI(pg.LinearRegionItem):
+    def __init__(self, plot_widget, *args, label="", pen=FColor.mkPen("g"), **kwargs):
+        super().__init__(*args, pen=pen, **kwargs)
+
+        self._plot_widget = plot_widget
+        self._label = None
+
+        self._label_item = pg.TextItem(color=pen.color(), angle=90)
+        self._label_item.setParentItem(self)
+        self.sigRegionChanged.connect(self._updateLabelPos)
+        self._plot_widget.getViewBox().sigRangeChanged.connect(self._updateLabelPos)
+
+        font = QFont()
+        font.setPointSizeF(15)
+        self._label_item.setFont(font)
+        self.setLabel(label)
+
+    def _updateLabelPos(self):
+        plot_height = self._plot_widget.range.height()
+        y_pos = self._plot_widget.getViewBox().mapSceneToView(QPointF(0, 0.5 * plot_height)).y()
+
+        x_min, _ = self.getRegion()
+        self._label_item.setPos(x_min, y_pos)
+
+    def label(self):
+        return self._label
+
+    def setLabel(self, label):
+        self._label_item.setText(label)
+
+        if len(label) == 0:
+            self._label_item.hide()
+        else:
+            self._label_item.show()
+
+        self._label = label
+
+    def configureFromMetroROI(self, metro_roi: MetroLinearROI):
+        if not isinstance(metro_roi, MetroLinearROI):
+            raise RuntimeError(f"Input must be a MetroLinearROI, not {type(metro_roi)}")
+
+        self.setRegion((metro_roi.lower_bound, metro_roi.upper_bound))
 
 
 class CurvePlotItem(pg.PlotItem):

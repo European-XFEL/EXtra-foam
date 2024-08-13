@@ -31,14 +31,6 @@ class MultiCamViewProcessor(QThreadWorker):
     def onPropertyChanged(self, idx: int, value: str):
         self._properties[idx] = value
 
-    def sources(self):
-        """Override."""
-        srcs = []
-        for ch, ppt in zip(self._output_channels, self._properties):
-            if ch and ppt:
-                srcs.append((ch, ppt, 1))
-        return srcs
-
     @profiler("Multi-camera views Processor")
     def process(self, data):
         """Override."""

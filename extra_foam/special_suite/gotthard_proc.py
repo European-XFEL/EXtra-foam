@@ -128,12 +128,6 @@ class GotthardProcessor(QThreadWorker):
         del self._dark_ma
         self._dark_mean_ma = None
 
-    def sources(self):
-        """Override."""
-        return [
-            (self._output_channel, self._ppt, 1),
-        ]
-
     @profiler("Gotthard Processor")
     def process(self, data):
         """Override."""

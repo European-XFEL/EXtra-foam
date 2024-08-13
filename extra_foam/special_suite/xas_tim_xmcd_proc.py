@@ -49,12 +49,6 @@ class XasTimXmcdProcessor(XasTimProcessor):
     def onMagnetThresholdChanged(self, value: str):
         self._current_threshold = float(value)
 
-    def sources(self):
-        """Override."""
-        srcs = super().sources()
-        srcs.append((self._magnet_device_id, self._magnet_ppt, 0))
-        return srcs
-
     @profiler("XAS-TIM-XMCD Processor")
     def process(self, data):
         """Override."""
