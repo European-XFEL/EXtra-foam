@@ -161,6 +161,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             mediator.reset_image_level_sgn)
         img_widget.moving_avg_le.value_changed_sgn.connect(
             mediator.onImageMovingAverageChange)
+        img_widget.image_save_in_modules_cb.toggled.connect(
+            corr_view.onImageSaveInModulesChange)
 
         msk_widget = self._mask_ctrl_widget
         msk_widget.draw_mask_btn.toggled.connect(corr_view.onDrawMask)

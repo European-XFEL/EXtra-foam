@@ -37,9 +37,11 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
 
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
+        self.image_save_in_modules_cb = QCheckBox("Save image in modules")
 
         self._non_reconfigurable_widgets = [
-            self.save_image_btn
+            self.save_image_btn,
+            self.image_save_in_modules_cb
         ]
 
         self.initUI()
@@ -63,6 +65,9 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
 
         row += 1
         layout.addWidget(self.save_image_btn, row, 0)
+
+        row +=1
+        layout.addWidget(self.image_save_in_modules_cb, row, 0, 1, 2, AR)
 
         layout.setVerticalSpacing(20)
         self.setLayout(layout)

@@ -50,6 +50,7 @@ class ImageAnalysis(ImageViewF):
         self._require_geometry = config["REQUIRE_GEOMETRY"]
         self._mask_in_modules = None
         self._mask_save_in_modules = False
+        self._image_save_in_modules = False
 
     def setImage(self, image_data, **kwargs):
         """Overload."""
@@ -92,8 +93,33 @@ class ImageAnalysis(ImageViewF):
             directory=osp.expanduser("~"),
             filter=self.IMAGE_FILE_FILTER)[0]
 
+        if not filepath.endswith(".npy") and self._image_save_in_modules:
+            logger.error("Only 2D images can be saved in the selected file format, use .npy to save disassembled images")
+
+        image = self._image
+        if self._image_save_in_modules:
+            try:
+                geom = self._geom_item.geometry
+            except Exception as e:
+                logger.error(
+                    f"Failed to create geometry to dismantle image: "
+                    f"{str(e)}")
+                return
+
+            modules = geom.output_array_for_dismantle_fast(dtype=np.float32)
+            try:
+                geom.dismantle_all_modules(image, out=modules)
+            except ValueError as e:
+                logger.error(f"{str(e)}. "
+                             f"Geometry does not match the assembled "
+                             f"image! Change the geometry back or wait "
+                             f"until update of new assembled image.")
+                return
+
+            image = modules
+
         try:
-            write_image(filepath, self._image)
+            write_image(filepath, image)
             logger.info(f"[Image tool] Image saved in {filepath}")
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
@@ -107,6 +133,9 @@ class ImageAnalysis(ImageViewF):
 
     def setMaskSaveInModules(self, state):
         self._mask_save_in_modules = state
+
+    def setImageSaveInModules(self, state):
+        self._image_save_in_modules = state
 
     def saveImageMask(self):
         if self._image is None:

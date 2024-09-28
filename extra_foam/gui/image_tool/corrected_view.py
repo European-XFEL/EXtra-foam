@@ -226,3 +226,7 @@ class CorrectedView(_AbstractImageToolView):
     @pyqtSlot(bool)
     def onMaskSaveInModulesChange(self, state):
         self._corrected.setMaskSaveInModules(state)
+
+    @pyqtSlot(bool)
+    def onImageSaveInModulesChange(self, state):
+        self._corrected.setImageSaveInModules(state)
