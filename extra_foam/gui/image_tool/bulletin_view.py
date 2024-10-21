@@ -104,8 +104,10 @@ class BulletinView(_AbstractImageToolView):
 
     def updateF(self, data, auto_update):
         """Override."""
-        # always update automatically
-        self._displayed_tid.display(data.tid)
+        # Always update automatically. Note that we convert the trainId to a
+        # float because otherwise it gets cast to an int by PyQt and may
+        # overflow. This way we hit the double overload of QLCDNumber.display().
+        self._displayed_tid.display(data.tid if data.tid is None else float(data.tid))
         self._n_total_pulses.display(data.n_pulses)
         self._n_kept_pulses.display(data.pidx.n_kept(data.n_pulses))
         self._dark_train_counter.display(data.image.dark_count)
@@ -114,7 +116,7 @@ class BulletinView(_AbstractImageToolView):
     def _updateProcessCount(self):
         tid, n_processed, n_dropped, n_processed_pulses = \
             self._mon.get_process_count()
-        self._last_processed_tid.display(tid)
+        self._last_processed_tid.display(tid if tid is None else float(tid))
         self._n_processed_trains.display(n_processed)
         self._n_dropped_trains.display(n_dropped)
         self._n_processed_pulses.display(n_processed_pulses)
