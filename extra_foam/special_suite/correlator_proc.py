@@ -118,7 +118,7 @@ class MetroPipeline(ThreadedFrontend):
         """
         self.queue_to_all(b"context", ctx.to_dict())
 
-    def on_pipeline_ready(self):
+    def on_pipeline_ready(self, reduce_addr, output_addr):
         """Overide"""
         self._ready_event.set()
         self._log.info("Pipeline ready")
