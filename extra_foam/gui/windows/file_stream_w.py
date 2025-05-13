@@ -107,18 +107,18 @@ class _FileStreamCtrlWidget(QWidget):
         lcd.setAutoFillBackground(True)
         lcd.display(None)
         self.curr_tid_lcd = lcd
-        self.tid_start_lb = QLabel("")
-        self.tid_start_sld = QSlider(Qt.Horizontal)
-        self.tid_start_sld.setToolTip("First train ID")
-        self.tid_start_sld.setRange(0, 0)
-        self.tid_end_lb = QLabel("")
-        self.tid_end_sld = QSlider(Qt.Horizontal)
-        self.tid_end_sld.setToolTip("Last train ID")
-        self.tid_end_sld.setRange(0, 0)
-        self.tid_stride_le = QLineEdit("1")
+        self.tidx_start_lb = QLabel("")
+        self.tidx_start_sld = QSlider(Qt.Horizontal)
+        self.tidx_start_sld.setToolTip("First train index")
+        self.tidx_start_sld.setRange(0, 0)
+        self.tidx_end_lb = QLabel("")
+        self.tidx_end_sld = QSlider(Qt.Horizontal)
+        self.tidx_end_sld.setToolTip("Last train index")
+        self.tidx_end_sld.setRange(0, 0)
+        self.tidx_stride_le = QLineEdit("1")
         validator = QIntValidator()
         validator.setBottom(1)
-        self.tid_stride_le.setValidator(validator)
+        self.tidx_stride_le.setValidator(validator)
 
         self.stream_rate_sb = QDoubleSpinBox()
         self.stream_rate_sb.setSuffix(" Hz")
@@ -129,7 +129,7 @@ class _FileStreamCtrlWidget(QWidget):
 
         self.stream_rate_lb = QLabel()
 
-        self.tid_progress_br = QProgressBar()
+        self.tidx_progress_br = QProgressBar()
 
         self._run = None
         self._select_all_cb = QCheckBox("Select all")
@@ -163,9 +163,9 @@ class _FileStreamCtrlWidget(QWidget):
             self._detector_src_tb,
             self._instrument_src_tb,
             self._control_src_tb,
-            self.tid_start_sld,
-            self.tid_end_sld,
-            self.tid_stride_le,
+            self.tidx_start_sld,
+            self.tidx_end_sld,
+            self.tidx_stride_le,
             self.load_run_btn,
             self.mode_cb,
             self.port_le,
@@ -210,7 +210,7 @@ class _FileStreamCtrlWidget(QWidget):
         ctrl_layout.addWidget(self.repeat_serve_start_btn, 1, 3)
         ctrl_layout.addWidget(self.serve_terminate_btn, 1, 4)
         ctrl_layout.addWidget(QLabel("Stride: "), 1, 5, AR)
-        ctrl_layout.addWidget(self.tid_stride_le, 1, 6)
+        ctrl_layout.addWidget(self.tidx_stride_le, 1, 6)
         ctrl_layout.addWidget(QLabel("Mode: "), 1, 7, AR)
         ctrl_layout.addWidget(self.mode_cb, 1, 8, AR)
         ctrl_layout.addWidget(QLabel("Max rate: "), 1, 9, AR)
@@ -220,12 +220,12 @@ class _FileStreamCtrlWidget(QWidget):
 
         progress = QWidget()
         progress_layout = QGridLayout()
-        progress_layout.addWidget(self.tid_start_lb, 2, 0, AR)
+        progress_layout.addWidget(self.tidx_start_lb, 2, 0, AR)
         progress_layout.addWidget(self.curr_tid_lcd, 2, 1)
-        progress_layout.addWidget(self.tid_end_lb, 2, 2)
-        progress_layout.addWidget(self.tid_start_sld, 3, 0)
-        progress_layout.addWidget(self.tid_progress_br, 3, 1)
-        progress_layout.addWidget(self.tid_end_sld, 3, 2)
+        progress_layout.addWidget(self.tidx_end_lb, 2, 2)
+        progress_layout.addWidget(self.tidx_start_sld, 3, 0)
+        progress_layout.addWidget(self.tidx_progress_br, 3, 1)
+        progress_layout.addWidget(self.tidx_end_sld, 3, 2)
         progress.setLayout(progress_layout)
         progress.setFixedHeight(progress.minimumSizeHint().height())
 
@@ -252,8 +252,8 @@ class _FileStreamCtrlWidget(QWidget):
     def initConnections(self):
         self.load_run_btn.clicked.connect(self.onRunFolderLoad)
 
-        self.tid_start_sld.valueChanged.connect(self._onTidStartChanged)
-        self.tid_end_sld.valueChanged.connect(self._onTidEndChanged)
+        self.tidx_start_sld.valueChanged.connect(self._onTidxStartChanged)
+        self.tidx_end_sld.valueChanged.connect(self._onTidxEndChanged)
 
         self._select_all_cb.toggled.connect(
             lambda x: self._setAllChecked(self._detector_src_tb, x))
@@ -267,45 +267,48 @@ class _FileStreamCtrlWidget(QWidget):
         if folder_name:
             self.data_folder_le.setText(folder_name)
 
-    def _onTidStartChanged(self, tid: int):
-        ub = self.tid_end_lb.text()
-        if ub and tid > int(ub):
-            tid = int(ub)
-            self.tid_start_sld.setValue(tid)
+    def _onTidxStartChanged(self, tidx: int):
+        ub = self.tidx_end_lb.text()
+        if ub and tidx > int(ub):
+            tidx = int(ub)
+            self.tidx_start_sld.setValue(tidx)
             # The method will anyway be called again
             return
 
-        self.tid_start_lb.setText(str(tid))
-        self.tid_progress_br.setMinimum(tid)
-        self.tid_progress_br.reset()
+        self.tidx_start_lb.setText(str(tidx))
+        self.tidx_progress_br.setMinimum(tidx)
+        self.tidx_progress_br.reset()
 
-    def _onTidEndChanged(self, tid: int):
-        lb = self.tid_start_lb.text()
-        if lb and tid < int(lb):
-            tid = int(lb)
+    def _onTidxEndChanged(self, tidx: int):
+        lb = self.tidx_start_lb.text()
+        if lb and tidx < int(lb):
+            tidx = int(lb)
             # The method will anyway be called again
-            self.tid_end_sld.setValue(tid)
+            self.tidx_end_sld.setValue(tidx)
             return
 
-        self.tid_end_lb.setText(str(tid))
-        self.tid_progress_br.setMaximum(tid)
-        self.tid_progress_br.reset()
+        self.tidx_end_lb.setText(str(tidx))
+        self.tidx_progress_br.setMaximum(tidx)
+        self.tidx_progress_br.reset()
 
-    def initProgressControl(self, first_tid, last_tid):
-        self.tid_progress_br.setRange(first_tid, last_tid)
-        self.tid_end_sld.setRange(first_tid, last_tid)
-        self.tid_start_sld.setRange(first_tid, last_tid)
+    def initProgressControl(self, n_trains):
+        first_tidx = -1 if n_trains == 0 else 0
+        last_tidx = -1 if n_trains == 0 else n_trains - 1
 
-        if first_tid == -1:
-            self.tid_start_lb.setText("")
-            self.tid_end_lb.setText("")
+        self.tidx_progress_br.setRange(first_tidx, last_tidx)
+        self.tidx_end_sld.setRange(first_tidx, last_tidx)
+        self.tidx_start_sld.setRange(first_tidx, last_tidx)
+
+        if n_trains == 0:
+            self.tidx_start_lb.setText("")
+            self.tidx_end_lb.setText("")
         else:
             # prevent slider from unable to set new value
-            self.tid_start_lb.setText(str(first_tid))
-            self.tid_end_lb.setText(str(last_tid))
+            self.tidx_start_lb.setText(str(first_tidx))
+            self.tidx_end_lb.setText(str(last_tidx))
 
-        self.tid_start_sld.setValue(first_tid)
-        self.tid_end_sld.setValue(last_tid)
+        self.tidx_start_sld.setValue(first_tidx)
+        self.tidx_end_sld.setValue(last_tidx)
 
     def fillSourceTables(self, run_dir):
         detector_srcs, instrument_srcs, control_srcs = gather_sources(run_dir)
@@ -363,9 +366,12 @@ class _FileStreamCtrlWidget(QWidget):
                 self._getSourceListFromTable(self._instrument_src_tb),
                 self._getSourceListFromTable(self._control_src_tb))
 
-    def getTidRange(self):
-        return (self.tid_start_sld.value(), self.tid_end_sld.value() + 1,
-                int(self.tid_stride_le.text()))
+    def getTidRange(self, rd):
+        tids = rd.train_ids
+        start_idx = self.tidx_start_sld.value()
+        end_idx = self.tidx_end_sld.value()
+        return (tids[start_idx], tids[end_idx],
+                int(self.tidx_stride_le.text()))
 
     def _getSourceListFromTable(self, table):
         ret = []
@@ -383,7 +389,7 @@ class _FileStreamCtrlWidget(QWidget):
 
     def resetDisplay(self):
         self.curr_tid_lcd.display(None)
-        self.tid_progress_br.reset()
+        self.tidx_progress_br.reset()
 
     def close(self):
         """Override."""
@@ -407,7 +413,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
         self._rd = None
 
-        self._latest_tid = Value('i', -1)
+        self._latest_tid = Value('I', 0)
         self._rate = Value('f', 0.0)
 
         self._cw = QWidget()
@@ -523,7 +529,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
             n_trains, first_tid, last_tid = run_info(self._rd)
             if n_trains > 0:
                 logger.info(f"Loaded run with {n_trains} trains in total!")
-            self._ctrl_widget.initProgressControl(first_tid, last_tid)
+            self._ctrl_widget.initProgressControl(n_trains)
 
     def _onTcpPortChange(self, connections):
         endpoint = list(connections.keys())[0]
@@ -532,8 +538,10 @@ class FileStreamWindow(_AbstractSatelliteWindow):
     def _updateDisplay(self):
         tid = self._latest_tid.value
         if tid > 0:
-            self._ctrl_widget.curr_tid_lcd.display(tid)
-        self._ctrl_widget.tid_progress_br.setValue(tid)
+            self._ctrl_widget.curr_tid_lcd.display(float(tid))
+
+            tids = self._rd.train_ids
+            self._ctrl_widget.tidx_progress_br.setValue(tids.index(tid))
 
         self._ctrl_widget.stream_rate_lb.setText(
             f"{round(self._rate.value, 1)} Hz")
@@ -547,7 +555,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
         folder = ctrl_widget.data_folder_le.text()
         mode = ctrl_widget.getMode()
-        tid_range = ctrl_widget.getTidRange()
+        tid_range = ctrl_widget.getTidRange(self._rd)
         max_rate = ctrl_widget.stream_rate_sb.value()
 
         if self._port is None:
@@ -594,7 +602,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         logger.info("File streaming stopped!")
 
         self.file_server_stopped_sgn.emit()
-        self._latest_tid.value = -1
+        self._latest_tid.value = 0
         self._rate.value = 0
         self._ctrl_widget.resetDisplay()
 
