@@ -13,6 +13,7 @@ from time import time, sleep
 from collections import deque
 
 from extra_data import by_id
+from extra_data.export import _drop_object_arrays
 from karabo_bridge import ServerInThread
 
 from .offline_config import StreamMode
@@ -190,6 +191,7 @@ def serve_files(run, port, shared_tid, shared_rate, max_rate,
                 train_range=by_id[tid_range[0]:tid_range[1]:tid_range[2]],
                 require_all=require_all):
             if train_data:
+                _drop_object_arrays(train_data)
                 if mode == StreamMode.NORMAL:
                     # Generate fake meta data with monotonically increasing
                     # train IDs only after the actual trains in corrected data
