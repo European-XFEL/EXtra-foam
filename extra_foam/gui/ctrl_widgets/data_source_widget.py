@@ -717,8 +717,8 @@ class DataSourceWidget(_AbstractCtrlWidget):
                 super().paint(painter, option, index)
 
     _source_types = {
-        "Run directory": DataSource.FILE,
-        "ZeroMQ bridge": DataSource.BRIDGE,
+        "Per-module sources": DataSource.FILE,
+        "Stacked source": DataSource.BRIDGE,
     }
 
     SPLITTER_HANDLE_WIDTH = 9
